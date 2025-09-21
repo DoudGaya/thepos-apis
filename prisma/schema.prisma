@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String   @unique
+  firstName    String
+  lastName     String
+  passwordHash String
+  isVerified   Boolean  @default(false)
+  referralCode String   @unique
+  referredBy   String?
+  credits      Float    @default(0)
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  transactions           Transaction[]
+  subscriptions          Subscription[]
+  referrals              Referral[]              @relation("ReferrerUser")
+  referredUsers          Referral[]              @relation("ReferredUser")
+  referralEarnings       ReferralEarning[]
+  referralEarningsReferred ReferralEarning[]     @relation("ReferralEarningReferred")
+  notifications          Notification[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  userId    String
+  type      TransactionType
+  amount    Float
+  status    TransactionStatus @default(PENDING)
+  reference String            @unique
+  details   Json // Store transaction-specific data
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relations
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralEarnings ReferralEarning[]
+
+  @@map("transactions")
+}
+
+model Subscription {
+  id          String             @id @default(cuid())
+  userId      String
+  type        SubscriptionType
+  amount      Float
+  frequency   SubscriptionFreq   @default(MONTHLY)
+  status      SubscriptionStatus @default(ACTIVE)
+  details     Json // Store subscription-specific data
+  nextRenewal DateTime
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referredId  String
+  reward      Float    @default(100) // ₦100 default reward
+  status      String   @default("PENDING") // PENDING, COMPLETED
+  createdAt   DateTime @default(now())
+
+  // Relations
+  referrer User @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("ReferredUser", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+  @@map("referrals")
+}
+
+model ReferralEarning {
+  id             String    @id @default(cuid())
+  userId         String    // User who earned the referral
+  referredUserId String?   // User who was referred (optional for agent commissions)
+  transactionId  String?   // Transaction that generated the earning
+  amount         Float     // Amount earned
+  type           String    // REFERRAL_BONUS, AGENT_COMMISSION, FIRST_PURCHASE_BONUS
+  status         String    @default("PENDING") // PENDING, PAID, CANCELLED
+  description    String?   // Optional description
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referredUser User?        @relation("ReferralEarningReferred", fields: [referredUserId], references: [id], onDelete: SetNull)
+  transaction  Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@map("referral_earnings")
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  type      String // LOGIN, REGISTER, RESET_PASSWORD
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("otps")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TransactionType {
+  DATA
+  AIRTIME
+  ELECTRICITY
+  CABLE
+  WATER
+  CREDIT_PURCHASE
+  REFERRAL_BONUS
+  WALLET_FUNDING
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  COMPLETED
+}
+
+enum SubscriptionType {
+  DATA
+  ELECTRICITY
+  CABLE
+}
+
+enum SubscriptionFreq {
+  MONTHLY
+  WEEKLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType  @default(GENERAL)
+  data      Json?             // Additional metadata
+  isRead    Boolean           @default(false)
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  GENERAL
+  TRANSACTION
+  PROMOTION
+  SYSTEM
+  SECURITY
+}
