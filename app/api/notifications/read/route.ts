@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
-// Mark notification as read
+// Mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -13,19 +13,19 @@ export async function PATCH(request: NextRequest) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    const { searchParams } = new URL(request.url);
-    const notificationId = searchParams.get('id');
+    const body = await request.json();
+    const { notificationIds } = body;
 
-    if (!notificationId) {
+    if (!notificationIds || !Array.isArray(notificationIds) || notificationIds.length === 0) {
       return NextResponse.json(
-        { error: 'Notification ID required' },
+        { error: 'Notification IDs array is required' },
         { status: 400 }
       );
     }
 
-    const notification = await prisma.notification.updateMany({
+    const result = await prisma.notification.updateMany({
       where: {
-        id: notificationId,
+        id: { in: notificationIds },
         userId: decoded.userId,
       },
       data: {
@@ -34,18 +34,14 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    if (notification.count === 0) {
-      return NextResponse.json(
-        { error: 'Notification not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      updatedCount: result.count
+    });
   } catch (error) {
-    console.error('Mark notification read error:', error);
+    console.error('Mark notifications read error:', error);
     return NextResponse.json(
-      { error: 'Failed to mark notification as read' },
+      { error: 'Failed to mark notifications as read' },
       { status: 500 }
     );
   }

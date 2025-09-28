@@ -5,9 +5,9 @@ import { z } from 'zod'
 import { pairgateService } from '@/lib/pairgate'
 
 const purchaseSchema = z.object({
-  network: z.string().min(1, 'Network is required'),
-  planId: z.string().min(1, 'Plan ID is required'),
-  phone: z.string().min(10, 'Phone number is required'),
+  type: z.string().min(1, 'Bill type is required'),
+  provider: z.string().min(1, 'Provider is required'),
+  customerInfo: z.record(z.any()),
   amount: z.number().min(1, 'Amount is required'),
 })
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { network, planId, phone, amount } = purchaseSchema.parse(body)
+    const { type, provider, customerInfo, amount } = purchaseSchema.parse(body)
 
     // Find user
     const user = await prisma.user.findUnique({
@@ -59,30 +59,29 @@ export async function POST(request: NextRequest) {
     const transaction = await prisma.transaction.create({
       data: {
         userId: user.id,
-        type: 'DATA',
+        type: type === 'electricity' ? 'ELECTRICITY' : type === 'cable' ? 'CABLE' : type === 'water' ? 'WATER' : 'ELECTRICITY',
         status: 'PENDING',
         amount: amount,
-        reference: `DATA_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        reference: `BILL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         details: {
-          network,
-          planId,
-          phone,
-          provider: 'Pairgate',
-          description: `Data purchase for ${phone}`,
+          billType: type,
+          provider,
+          customerInfo,
+          description: `${type} bill payment`,
         },
       },
     })
 
     try {
-      // Call Pairgate API to purchase data
-      const purchaseResult = await pairgateService.purchaseData({
-        network,
-        plan: planId,
-        phone,
+      // Call Pairgate API to pay bill
+      const paymentResult = await pairgateService.payBill({
+        type,
+        provider,
+        customerInfo,
         amount
       })
 
-      if (purchaseResult.success) {
+      if (paymentResult.success) {
         // Deduct from wallet
         await prisma.user.update({
           where: { id: user.id },
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
             status: 'COMPLETED',
             details: {
               ...(transaction.details as object || {}),
-              externalReference: purchaseResult.reference,
+              externalReference: paymentResult.reference,
               completedAt: new Date().toISOString(),
             },
           },
@@ -106,9 +105,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          message: 'Data purchase successful',
+          message: 'Bill payment successful',
           transactionId: transaction.id,
-          reference: purchaseResult.reference
+          reference: paymentResult.reference
         })
       } else {
         // Update transaction as failed
@@ -118,18 +117,18 @@ export async function POST(request: NextRequest) {
             status: 'FAILED',
             details: {
               ...(transaction.details as object || {}),
-              error: purchaseResult.message || 'Payment failed',
+              error: paymentResult.message || 'Payment failed',
             },
           },
         })
 
         return NextResponse.json(
-          { error: purchaseResult.message || 'Data purchase failed' },
+          { error: paymentResult.message || 'Bill payment failed' },
           { status: 500 }
         )
       }
-    } catch (purchaseError: any) {
-      console.error('Pairgate purchase error:', purchaseError)
+    } catch (paymentError: any) {
+      console.error('Pairgate payment error:', paymentError)
 
       // Update transaction as failed
       await prisma.transaction.update({
@@ -138,18 +137,18 @@ export async function POST(request: NextRequest) {
           status: 'FAILED',
           details: {
             ...(transaction.details as object || {}),
-            error: purchaseError.message,
+            error: paymentError.message,
           },
         },
       })
 
       return NextResponse.json(
-        { error: 'Data purchase failed. Please try again.' },
+        { error: 'Bill payment failed. Please try again.' },
         { status: 500 }
       )
     }
   } catch (error) {
-    console.error('Data purchase error:', error)
+    console.error('Bill payment error:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

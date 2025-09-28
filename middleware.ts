@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 
+// Force Node.js runtime for JWT crypto support
+export const runtime = 'nodejs'
+
+// Explicitly load environment variables
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.log('Dotenv load error in middleware.ts:', error);
+}
+
 export async function middleware(request: NextRequest) {
   // Handle CORS for API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
@@ -27,7 +37,10 @@ export async function middleware(request: NextRequest) {
     if (
       request.nextUrl.pathname.startsWith('/api/auth/') ||
       request.nextUrl.pathname.startsWith('/api/meta/') ||
-      request.nextUrl.pathname === '/api/data/networks'
+      request.nextUrl.pathname.startsWith('/api/debug/') ||
+      request.nextUrl.pathname.startsWith('/api/test/') ||
+      request.nextUrl.pathname === '/api/data/networks' ||
+      request.nextUrl.pathname === '/api/health'
     ) {
       return response
     }

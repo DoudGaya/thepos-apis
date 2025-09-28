@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+import paystackService from '../../../../lib/paystack';
 
 const prisma = new PrismaClient();
 
 // Fund wallet
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
+    // Get user ID from middleware-set headers
+    const userId = request.headers.get('x-user-id');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
     const body = await request.json();
 
-    const { amount, paymentMethod = 'card', reference, channel } = body;
+    const { amount, paymentMethod = 'card' } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -38,88 +39,94 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique reference if not provided
-    const transactionRef = reference || `FUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Get user details for Paystack
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Generate unique reference
+    const transactionRef = `FUND_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Create transaction record
     const transaction = await prisma.transaction.create({
       data: {
-        userId: decoded.userId,
+        userId: userId,
         type: 'WALLET_FUNDING',
         amount,
         status: 'PENDING',
         reference: transactionRef,
         details: {
           paymentMethod,
-          channel: channel || 'mobile',
+          channel: 'mobile',
           fundingType: 'wallet_topup',
         },
       },
     });
 
-    // Simulate payment processing based on method
-    let response: any = {
-      reference: transactionRef,
-      amount,
-      status: 'pending',
-    };
+    try {
+      // Initialize Paystack transaction with all payment channels
+      const paystackResponse = await paystackService.initializeTransaction({
+        amount: amount * 100, // Convert to kobo
+        email: user.email,
+        reference: transactionRef,
+        callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/wallet/verify?reference=${transactionRef}`,
+        metadata: {
+          user_id: userId,
+          purpose: 'wallet_funding',
+          payment_method: paymentMethod,
+        },
+        channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
+      });
 
-    switch (paymentMethod) {
-      case 'card':
-        // For demo, simulate Paystack integration
-        response.paymentUrl = `https://checkout.paystack.com/pay/${transactionRef}`;
-        break;
-      
-      case 'bank':
-      case 'bank_transfer':
-        // For demo, provide bank details
-        response.bankDetails = {
-          accountName: 'ThePOS Technology',
-          accountNumber: '1234567890',
-          bankName: 'GTBank',
-          reference: transactionRef,
-        };
-        break;
-      
-      case 'ussd':
-        // For demo, provide USSD code
-        response.ussdCode = `*737*000*${amount}*${transactionRef}#`;
-        break;
-      
-      default:
-        return NextResponse.json(
-          { error: 'Invalid payment method' },
-          { status: 400 }
-        );
-    }
-
-    // For demo purposes, auto-complete the transaction after 5 seconds
-    // In production, this would be handled by payment webhook
-    setTimeout(async () => {
-      try {
-        // Update transaction status
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: { status: 'COMPLETED' },
-        });
-
-        // Update user balance
-        await prisma.user.update({
-          where: { id: decoded.userId },
-          data: {
-            credits: {
-              increment: amount,
-            },
-          },
-        });
-
-        console.log(`Wallet funding completed for user ${decoded.userId}: ₦${amount}`);
-      } catch (error) {
-        console.error('Auto-complete funding error:', error);
+      if (!paystackResponse.status) {
+        throw new Error(paystackResponse.message || 'Failed to initialize payment');
       }
-    }, 5000);
 
-    return NextResponse.json(response, { status: 200 });
+      // Update transaction with Paystack reference
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          details: {
+            ...(transaction.details as object || {}),
+            paystackReference: paystackResponse.data.reference,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          authorization_url: paystackResponse.data.authorization_url,
+          reference: transactionRef,
+          access_code: paystackResponse.data.access_code,
+          payment_channels: ['card', 'bank_transfer', 'ussd', 'qr', 'mobile_money']
+        }
+      });
+
+    } catch (paymentError: any) {
+      console.error('Payment initialization error:', paymentError);
+
+      // Update transaction status to failed
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          details: {
+            ...(transaction.details as object || {}),
+            error: paymentError.message,
+          }
+        },
+      });
+
+      return NextResponse.json(
+        { error: paymentError.message || 'Failed to initialize payment' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Wallet funding error:', error);
     return NextResponse.json(

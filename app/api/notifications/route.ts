@@ -46,15 +46,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      notifications,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
-      },
+      data: notifications,
+      total,
+      page,
+      limit,
       unreadCount,
     });
   } catch (error) {
