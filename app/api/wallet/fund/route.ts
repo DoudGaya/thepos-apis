@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         amount: amount * 100, // Convert to kobo
         email: user.email,
         reference: transactionRef,
-        callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/wallet/verify?reference=${transactionRef}`,
+        // Remove callback_url to prevent navigation issues in WebView
         metadata: {
           user_id: userId,
           purpose: 'wallet_funding',
