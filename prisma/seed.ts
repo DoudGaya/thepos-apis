@@ -45,6 +45,80 @@ async function main() {
   console.log('Seed data created:')
   console.log('Admin user:', admin)
   console.log('Test user:', testUser)
+
+  // Seed default profit margins
+  console.log('\n🌱 Seeding profit margins...')
+  
+  const profitMargins = [
+    {
+      service: 'DATA',
+      marginType: 'FIXED',
+      marginValue: 100.00,
+      isActive: true,
+    },
+    {
+      service: 'AIRTIME',
+      marginType: 'PERCENTAGE',
+      marginValue: 5.00,
+      isActive: true,
+    },
+    {
+      service: 'ELECTRICITY',
+      marginType: 'FIXED',
+      marginValue: 50.00,
+      isActive: true,
+    },
+    {
+      service: 'CABLE',
+      marginType: 'FIXED',
+      marginValue: 50.00,
+      isActive: true,
+    },
+    {
+      service: 'BETTING',
+      marginType: 'PERCENTAGE',
+      marginValue: 2.00,
+      isActive: true,
+    },
+    {
+      service: 'EPINS',
+      marginType: 'PERCENTAGE',
+      marginValue: 5.00,
+      isActive: true,
+    },
+  ]
+
+  for (const margin of profitMargins) {
+    // Check if margin already exists
+    const existing = await prisma.profitMargin.findFirst({
+      where: {
+        service: margin.service,
+        vendorName: null,
+        network: null,
+      },
+    })
+
+    if (existing) {
+      // Update existing margin
+      await prisma.profitMargin.update({
+        where: { id: existing.id },
+        data: margin,
+      })
+      console.log(`✅ Updated profit margin for ${margin.service}`)
+    } else {
+      // Create new margin
+      await prisma.profitMargin.create({
+        data: {
+          ...margin,
+          vendorName: null,
+          network: null,
+        },
+      })
+      console.log(`✅ Created profit margin for ${margin.service}`)
+    }
+  }
+
+  console.log('✨ Seeding complete!')
 }
 
 main()

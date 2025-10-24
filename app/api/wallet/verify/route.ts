@@ -1,120 +1,201 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import paystackService from '../../../../lib/paystack';
+/**
+ * Wallet Verification API
+ * POST - Verify Paystack transaction and credit user wallet
+ * GET - Query transaction status
+ */
 
-const prisma = new PrismaClient();
+import { z } from 'zod'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import paystackService from '@/lib/paystack'
+import {
+  apiHandler,
+  successResponse,
+  getAuthenticatedUser,
+  validateRequestBody,
+  BadRequestError,
+} from '@/lib/api-utils'
 
-export async function POST(request: NextRequest) {
+const verifyTransactionSchema = z.object({
+  reference: z.string().min(1, 'Transaction reference is required'),
+})
+
+/**
+ * GET /api/wallet/verify?reference=FUND_XXX
+ * Check transaction status
+ */
+export async function GET(request: NextRequest) {
   try {
-    // Get user ID from middleware-set headers
-    const userId = request.headers.get('x-user-id');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const { reference } = await request.json();
+    const url = new URL(request.url)
+    const reference = url.searchParams.get('reference')
 
     if (!reference) {
-      return NextResponse.json({ error: 'Reference is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Reference is required' }, { status: 400 })
     }
 
     // Find the transaction
     const transaction = await prisma.transaction.findFirst({
       where: {
         reference,
-        userId,
         type: 'WALLET_FUNDING'
-      }
-    });
+      },
+      include: { user: { select: { id: true, email: true } } }
+    })
 
     if (!transaction) {
-      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    if (transaction.status === 'COMPLETED') {
-      return NextResponse.json({
-        success: true,
-        message: 'Payment already verified',
-        status: 'completed',
-        amount: transaction.amount
-      });
-    }
-
-    if (transaction.status === 'FAILED') {
-      return NextResponse.json({
-        success: false,
-        message: 'Payment failed',
-        status: 'failed'
-      });
-    }
-
-    // Verify with Paystack
-    try {
-      const verification = await paystackService.verifyTransaction(reference);
-
-      if (verification.data.status === 'success') {
-        // Update transaction status
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'COMPLETED',
-            details: {
-              ...(transaction.details as object || {}),
-              paystackData: verification.data,
-              verifiedAt: new Date().toISOString(),
-            }
-          },
-        });
-
-        // Update user wallet balance
-        const amountInNaira = verification.data.amount / 100;
-        await prisma.user.update({
-          where: { id: transaction.userId },
-          data: {
-            credits: {
-              increment: amountInNaira,
-            },
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: 'Payment verified successfully',
-          status: 'completed',
-          amount: amountInNaira
-        });
-      } else {
-        // Update transaction as failed
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'FAILED',
-            details: {
-              ...(transaction.details as object || {}),
-              verificationError: 'Payment not successful',
-              paystackData: verification.data,
-            }
-          },
-        });
-
-        return NextResponse.json({
-          success: false,
-          message: 'Payment verification failed',
-          status: 'failed'
-        });
+    return NextResponse.json({
+      success: true,
+      transaction: {
+        id: transaction.id,
+        reference: transaction.reference,
+        amount: transaction.amount,
+        status: transaction.status,
+        createdAt: transaction.createdAt,
+        updatedAt: transaction.updatedAt,
       }
-    } catch (verifyError: any) {
-      console.error('Verification error:', verifyError);
-      return NextResponse.json({
-        success: false,
-        message: 'Unable to verify payment at this time',
-        status: 'pending'
-      });
-    }
-
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    return NextResponse.json({ error: 'Verification failed' }, { status: 500 });
+    })
+  } catch (error: any) {
+    console.error('Transaction status check error:', error)
+    return NextResponse.json({ error: 'Status check failed' }, { status: 500 })
   }
 }
+
+/**
+ * POST /api/wallet/verify
+ * Verify Paystack transaction and credit wallet
+ */
+export const POST = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser()
+  const data = (await validateRequestBody(request, verifyTransactionSchema)) as z.infer<typeof verifyTransactionSchema>
+
+  // Find the transaction
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      reference: data.reference,
+      userId: user.id,
+      type: 'WALLET_FUNDING'
+    }
+  })
+
+  if (!transaction) {
+    throw new BadRequestError('Transaction not found')
+  }
+
+  if (transaction.status === 'SUCCESS') {
+    return successResponse({
+      message: 'Payment already verified',
+      status: 'success',
+      amount: transaction.amount
+    })
+  }
+
+  if (transaction.status === 'FAILED') {
+    throw new BadRequestError('Payment failed')
+  }
+
+  // Verify with Paystack
+  try {
+    const verification = await paystackService.verifyTransaction(data.reference)
+
+    if (verification.data.status === 'success') {
+      // Calculate amount in naira (Paystack returns amount in kobo)
+      const amountInNaira = verification.data.amount / 100
+
+      if (amountInNaira !== transaction.amount) {
+        throw new BadRequestError('Transaction amount mismatch')
+      }
+
+      // Update transaction status
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'SUCCESS',
+          details: {
+            ...(transaction.details as Record<string, any> || {}),
+            paystackData: {
+              paidAt: verification.data.paid_at,
+              channel: verification.data.channel,
+              currency: verification.data.currency,
+              fees: verification.data.fees,
+              gatewayResponse: verification.data.gateway_response,
+            },
+            verifiedAt: new Date().toISOString(),
+          }
+        },
+      })
+
+      // Update user wallet balance
+      await prisma.user.update({
+        where: { id: transaction.userId },
+        data: {
+          credits: {
+            increment: amountInNaira,
+          },
+        },
+      })
+
+      // Create success notification
+      await prisma.notification.create({
+        data: {
+          userId: transaction.userId,
+          title: 'Wallet Funded Successfully',
+          message: `Your wallet has been credited with ₦${amountInNaira.toLocaleString()}`,
+          type: 'TRANSACTION',
+        },
+      })
+
+      return successResponse({
+        message: 'Payment verified and wallet credited successfully',
+        status: 'success',
+        amount: amountInNaira,
+        transaction: {
+          id: transaction.id,
+          reference: transaction.reference,
+          status: 'SUCCESS'
+        }
+      })
+    } else {
+      // Update transaction as failed
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          details: {
+            ...(transaction.details as Record<string, any> || {}),
+            verificationError: 'Payment not successful',
+            paystackData: verification.data,
+          }
+        },
+      })
+
+      // Create failure notification
+      await prisma.notification.create({
+        data: {
+          userId: transaction.userId,
+          title: 'Wallet Funding Failed',
+          message: 'Your wallet funding attempt was not successful. Please try again.',
+          type: 'TRANSACTION',
+        },
+      })
+
+      throw new BadRequestError('Payment verification failed')
+    }
+  } catch (verifyError: any) {
+    // Update transaction as failed
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data: {
+        status: 'FAILED',
+        details: {
+          ...(transaction.details as Record<string, any> || {}),
+          error: verifyError.message,
+        }
+      },
+    })
+
+    throw verifyError
+  }
+})

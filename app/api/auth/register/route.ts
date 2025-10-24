@@ -8,11 +8,15 @@ import { z } from 'zod'
 export const runtime = 'nodejs'
 
 const registerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  // Accept both formats: fullName or firstName/lastName
+  fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   email: z.string().email('Valid email is required'),
-  phoneNumber: z.string().min(10, 'Phone number is required'),
-  pin: z.string().min(6, 'PIN must be 6 digits').max(6, 'PIN must be 6 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
+  phone: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  pin: z.string().min(6, 'PIN must be 6 digits').max(6, 'PIN must be 6 digits').regex(/^\d+$/, 'PIN must contain only numbers').optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   referralCode: z.string().optional(),
   acceptedMarketing: z.boolean().optional(),
 })
@@ -24,7 +28,45 @@ export async function POST(request: NextRequest) {
     console.log('📥 Registration request body:', JSON.stringify(body, null, 2));
     console.log('📝 Registration request body:', JSON.stringify(body, null, 2))
     
-    const { firstName, lastName, email, phoneNumber, pin, referralCode, acceptedMarketing } = registerSchema.parse(body)
+    const parsed = registerSchema.parse(body)
+    
+    // Handle both fullName and firstName/lastName formats
+    let firstName = parsed.firstName || ''
+    let lastName = parsed.lastName || ''
+    
+    if (parsed.fullName && !firstName && !lastName) {
+      const nameParts = parsed.fullName.trim().split(/\s+/)
+      firstName = nameParts[0]
+      lastName = nameParts.slice(1).join(' ') || nameParts[0]
+    }
+    
+    // Validate names are not empty
+    if (!firstName) {
+      return NextResponse.json(
+        { error: 'First name is required' },
+        { status: 400 }
+      )
+    }
+
+    // Handle phone number formats
+    const phoneNumber = parsed.phoneNumber || parsed.phone
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { error: 'Phone number is required' },
+        { status: 400 }
+      )
+    }
+
+    const { email, pin, password, referralCode, acceptedMarketing } = parsed
+
+    // Get password - accept either pin or password field
+    const passwordValue = password || pin
+    if (!passwordValue) {
+      return NextResponse.json(
+        { error: 'Password or PIN is required' },
+        { status: 400 }
+      )
+    }
 
     // Format phone number
     const formattedPhone = formatPhoneNumber(phoneNumber)
@@ -43,11 +85,24 @@ export async function POST(request: NextRequest) {
     console.log('Existing user check result:', existingUser)
 
     if (existingUser) {
-      console.log('User already exists with:', existingUser.email ? 'email' : 'phone')
-      return NextResponse.json(
-        { error: 'User with this email or phone already exists' },
-        { status: 400 }
-      )
+      if (existingUser.email === email) {
+        console.log('Email already exists:', email)
+        return NextResponse.json(
+          { error: `Email already registered: ${email}. Please use a different email or sign in instead.` },
+          { status: 400 }
+        )
+      } else if (existingUser.phone === formattedPhone) {
+        console.log('Phone already exists:', formattedPhone)
+        return NextResponse.json(
+          { error: `Phone number already registered: ${formattedPhone}. Please use a different phone number or sign in instead.` },
+          { status: 400 }
+        )
+      } else {
+        return NextResponse.json(
+          { error: 'User with this email or phone already exists' },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate referral code if provided
@@ -65,8 +120,8 @@ export async function POST(request: NextRequest) {
       referrerId = referrer.id
     }
 
-    // Hash PIN
-    const passwordHash = await hashPassword(pin)
+    // Hash password
+    const passwordHash = await hashPassword(passwordValue)
 
     // Generate unique referral code
     let newReferralCode

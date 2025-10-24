@@ -1,191 +1,118 @@
 /**
- * Referral API endpoints
+ * Referrals API
+ * GET - Fetch referral stats and referred users
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
-// GET /api/referrals - Get user's referral stats
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+import { prisma } from '@/lib/prisma'
+import {
+  apiHandler,
+  successResponse,
+  getAuthenticatedUser,
+  getPaginationParams,
+  createPaginatedResponse,
+} from '@/lib/api-utils'
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+/**
+ * GET /api/referrals
+ * Fetch user's referral information
+ */
+export const GET = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser()
+  const { limit, skip, page } = getPaginationParams(request.url, 20)
 
-    // Get user's referral code
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { 
-        referralCode: true,
-        referredBy: true,
-        createdAt: true,
+  // Get user's referral code
+  const userInfo = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      referralCode: true,
+      referredBy: true,
+    },
+  })
+
+  // Get referred users with pagination
+  const [referrals, totalReferrals] = await Promise.all([
+    prisma.referral.findMany({
+      where: {
+        referrerId: user.id,
       },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Get referral stats
-    const [referralCount, totalEarnings, pendingEarnings, recentReferrals] = await Promise.all([
-      // Count total referrals
-      prisma.user.count({
-        where: { referredBy: userId },
-      }),
-
-      // Total earnings from referrals
-      prisma.referralEarning.aggregate({
-        where: { 
-          userId: userId,
-          status: 'PAID',
-        },
-        _sum: { amount: true },
-      }),
-
-      // Pending earnings
-      prisma.referralEarning.aggregate({
-        where: { 
-          userId: userId,
-          status: 'PENDING',
-        },
-        _sum: { amount: true },
-      }),
-
-      // Recent referrals (last 10)
-      prisma.user.findMany({
-        where: { referredBy: userId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      }),
-    ]);
-
-    // Get recent earnings
-    const recentEarnings = await prisma.referralEarning.findMany({
-      where: { userId: userId },
-      include: {
-        referredUser: {
-          select: {
-            firstName: true,
-            lastName: true,
-            phone: true,
-          },
-        },
-        transaction: {
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
+      select: {
+        id: true,
+        referredId: true,
+        status: true,
+        createdAt: true,
+        referred: {
           select: {
             id: true,
-            type: true,
-            amount: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
             createdAt: true,
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        referralCode: user.referralCode,
-        referralCount,
-        totalEarnings: totalEarnings._sum.amount || 0,
-        pendingEarnings: pendingEarnings._sum.amount || 0,
-        recentReferrals: recentReferrals.map((ref: any) => ({
-          id: ref.id,
-          name: `${ref.firstName} ${ref.lastName}`,
-          phone: ref.phone,
-          joinedAt: ref.createdAt,
-        })),
-        recentEarnings: recentEarnings.map((earning: any) => ({
-          id: earning.id,
-          amount: earning.amount,
-          type: earning.type,
-          status: earning.status,
-          referredUser: earning.referredUser ? {
-            name: `${earning.referredUser.firstName} ${earning.referredUser.lastName}`,
-            phone: earning.referredUser.phone,
-          } : null,
-          transaction: earning.transaction,
-          createdAt: earning.createdAt,
-        })),
+    }),
+    prisma.referral.count({
+      where: {
+        referrerId: user.id,
       },
-    });
-  } catch (error) {
-    console.error('Referral stats error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch referral stats' },
-      { status: 500 }
-    );
-  }
-}
+    }),
+  ])
 
-// POST /api/referrals/validate - Validate referral code
-export async function POST(request: NextRequest) {
-  try {
-    const { referralCode, userId } = await request.json();
+  // Get referral earnings
+  const earnings = await prisma.referralEarning.aggregate({
+    where: {
+      userId: user.id,
+    },
+    _sum: {
+      amount: true,
+    },
+    _count: true,
+  })
 
-    if (!referralCode) {
-      return NextResponse.json({ error: 'Referral code is required' }, { status: 400 });
-    }
+  // Get total earnings withdrawn
+  const withdrawn = await prisma.referralEarning.aggregate({
+    where: {
+      userId: user.id,
+      status: 'WITHDRAWN',
+    },
+    _sum: {
+      amount: true,
+    },
+  })
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+  // Get pending earnings
+  const pending = await prisma.referralEarning.aggregate({
+    where: {
+      userId: user.id,
+      status: 'PENDING',
+    },
+    _sum: {
+      amount: true,
+    },
+  })
 
-    // Find user with this referral code
-    const referrer = await prisma.user.findUnique({
-      where: { referralCode },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        referralCode: true,
-      },
-    });
+  // Calculate available balance (total - withdrawn)
+  const totalEarned = earnings._sum.amount || 0
+  const totalWithdrawn = withdrawn._sum.amount || 0
+  const pendingAmount = pending._sum.amount || 0
+  const availableBalance = totalEarned - totalWithdrawn
 
-    if (!referrer) {
-      return NextResponse.json({ error: 'Invalid referral code' }, { status: 404 });
-    }
-
-    // Check if user is trying to refer themselves
-    if (referrer.id === userId) {
-      return NextResponse.json({ error: 'You cannot refer yourself' }, { status: 400 });
-    }
-
-    // Check if user is already referred
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { referredBy: true },
-    });
-
-    if (currentUser?.referredBy) {
-      return NextResponse.json({ error: 'You have already been referred' }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        referrer: {
-          name: `${referrer.firstName} ${referrer.lastName}`,
-          phone: referrer.phone,
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Referral validation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to validate referral code' },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({
+    referralCode: userInfo?.referralCode,
+    referredBy: userInfo?.referredBy,
+    stats: {
+      totalReferrals,
+      activeReferrals: referrals.filter(r => r.status === 'ACTIVE').length,
+      totalEarned,
+      availableBalance,
+      pendingAmount,
+      totalWithdrawn,
+      earningsCount: earnings._count,
+    },
+    referrals: createPaginatedResponse(referrals, totalReferrals, page, limit),
+  })
+})

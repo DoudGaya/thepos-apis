@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,46 +8,95 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  phone        String   @unique
-  firstName    String
-  lastName     String
-  passwordHash String
-  isVerified   Boolean  @default(false)
-  referralCode String   @unique
-  referredBy   String?
-  credits      Float    @default(0)
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  transactions           Transaction[]
-  subscriptions          Subscription[]
-  referrals              Referral[]              @relation("ReferrerUser")
-  referredUsers          Referral[]              @relation("ReferredUser")
-  referralEarnings       ReferralEarning[]
-  referralEarningsReferred ReferralEarning[]     @relation("ReferralEarningReferred")
-  notifications          Notification[]
-
+  id                       String            @id @default(cuid())
+  email                    String            @unique
+  phone                    String            @unique
+  firstName                String
+  lastName                 String
+  passwordHash             String
+  pinHash                  String?
+  isVerified               Boolean           @default(false)
+  referralCode             String            @unique
+  referredBy               String?
+  credits                  Float             @default(0)
+  role                     Role              @default(USER)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  accounts                 Account[]
+  notifications            Notification[]
+  referralEarningsReferred ReferralEarning[] @relation("ReferralEarningReferred")
+  referralEarnings         ReferralEarning[]
+  referredUsers            Referral[]        @relation("ReferredUser")
+  referrals                Referral[]        @relation("ReferrerUser")
+  sessions                 Session[]
+  subscriptions            Subscription[]
+  transactions             Transaction[]
+  
   @@map("users")
 }
 
-model Transaction {
-  id        String            @id @default(cuid())
-  userId    String
-  type      TransactionType
-  amount    Float
-  status    TransactionStatus @default(PENDING)
-  reference String            @unique
-  details   Json // Store transaction-specific data
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Transaction {
+  id               String            @id @default(cuid())
+  userId           String
+  type             TransactionType
+  amount           Float
+  status           TransactionStatus @default(PENDING)
+  reference        String            @unique
+  details          Json
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  costPrice        Float             @default(0)
+  idempotencyKey   String?           @unique
+  network          String?
+  profit           Float             @default(0)
+  recipient        String?
+  sellingPrice     Float             @default(0)
+  vendorCallAt     DateTime?
+  vendorName       String?
+  vendorReference  String?
+  vendorResponse   Json?
+  vendorResponseAt DateTime?
+  vendorStatus     String?
   referralEarnings ReferralEarning[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("transactions")
 }
@@ -62,50 +108,44 @@ model Subscription {
   amount      Float
   frequency   SubscriptionFreq   @default(MONTHLY)
   status      SubscriptionStatus @default(ACTIVE)
-  details     Json // Store subscription-specific data
+  details     Json
   nextRenewal DateTime
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
 
 model Referral {
-  id          String   @id @default(cuid())
-  referrerId  String
-  referredId  String
-  reward      Float    @default(100) // ₦100 default reward
-  status      String   @default("PENDING") // PENDING, COMPLETED
-  createdAt   DateTime @default(now())
-
-  // Relations
-  referrer User @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred User @relation("ReferredUser", fields: [referredId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  referrerId String
+  referredId String
+  reward     Float    @default(100)
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  referred   User     @relation("ReferredUser", fields: [referredId], references: [id], onDelete: Cascade)
+  referrer   User     @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
 
   @@unique([referrerId, referredId])
   @@map("referrals")
 }
 
 model ReferralEarning {
-  id             String    @id @default(cuid())
-  userId         String    // User who earned the referral
-  referredUserId String?   // User who was referred (optional for agent commissions)
-  transactionId  String?   // Transaction that generated the earning
-  amount         Float     // Amount earned
-  type           String    // REFERRAL_BONUS, AGENT_COMMISSION, FIRST_PURCHASE_BONUS
-  status         String    @default("PENDING") // PENDING, PAID, CANCELLED
-  description    String?   // Optional description
+  id             String       @id @default(cuid())
+  userId         String
+  referredUserId String?
+  transactionId  String?
+  amount         Float
+  type           String
+  status         String       @default("PENDING")
+  description    String?
   paidAt         DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  // Relations
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  referredUser User?        @relation("ReferralEarningReferred", fields: [referredUserId], references: [id], onDelete: SetNull)
-  transaction  Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  referredUser   User?        @relation("ReferralEarningReferred", fields: [referredUserId], references: [id])
+  transaction    Transaction? @relation(fields: [transactionId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("referral_earnings")
 }
@@ -114,12 +154,81 @@ model OTP {
   id        String   @id @default(cuid())
   phone     String
   code      String
-  type      String // LOGIN, REGISTER, RESET_PASSWORD
+  type      String
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@map("otps")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(GENERAL)
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Pricing {
+  id           String   @id @default(cuid())
+  service      String
+  network      String
+  profitMargin Float    @default(2.5)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([service, network])
+  @@map("pricing")
+}
+
+model VendorConfig {
+  id               String    @id @default(cuid())
+  vendorName       String    @unique
+  isEnabled        Boolean   @default(true)
+  isPrimary        Boolean   @default(false)
+  priority         Int       @default(0)
+  supportsAirtime  Boolean   @default(true)
+  supportsData     Boolean   @default(true)
+  supportsElectric Boolean   @default(false)
+  supportsCableTV  Boolean   @default(false)
+  supportsBetting  Boolean   @default(false)
+  supportsEPINS    Boolean   @default(false)
+  credentials      Json
+  lastHealthCheck  DateTime?
+  isHealthy        Boolean   @default(true)
+  failureCount     Int       @default(0)
+  lastFailure      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("vendor_configs")
+}
+
+model ProfitMargin {
+  id          String   @id @default(cuid())
+  service     String
+  vendorName  String?
+  marginType  String
+  marginValue Float
+  minAmount   Float?
+  maxAmount   Float?
+  network     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([service, vendorName, network])
+  @@map("profit_margins")
 }
 
 enum Role {
@@ -132,7 +241,10 @@ enum TransactionType {
   AIRTIME
   ELECTRICITY
   CABLE
+  CABLE_TV
   WATER
+  BETTING
+  EPINS
   CREDIT_PURCHASE
   REFERRAL_BONUS
   WALLET_FUNDING
@@ -161,24 +273,6 @@ enum SubscriptionStatus {
   ACTIVE
   PAUSED
   CANCELLED
-}
-
-model Notification {
-  id        String            @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType  @default(GENERAL)
-  data      Json?             // Additional metadata
-  isRead    Boolean           @default(false)
-  readAt    DateTime?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
 }
 
 enum NotificationType {

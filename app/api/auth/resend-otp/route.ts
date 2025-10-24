@@ -4,6 +4,9 @@ import { generateOTP } from '@/lib/auth'
 import { smsService } from '@/lib/sms'
 import { emailService } from '@/lib/email'
 import { z } from 'zod'
+// import { consumeToken } from '@/lib/rateLimiter'
+import { consumeToken } from '@/lib/rateLimiter'
+// import { consumeToken } from '@/app/lib/rateLimiter'
 
 const resendOTPSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -26,6 +29,12 @@ export async function POST(request: NextRequest) {
         { error: 'User not found' },
         { status: 404 }
       )
+    }
+
+    // Rate limit resend per phone: max 3 per 15 minutes
+    const rl = consumeToken(`resendotp:${user.phone}`, 3, 15 * 60 * 1000)
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many resend attempts. Please try again later.' }, { status: 429 })
     }
 
     if (user.isVerified) {

@@ -11,16 +11,34 @@ class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+    // Support both Gmail service and custom SMTP servers
+    const smtpConfig: any = {
       tls: {
         rejectUnauthorized: false
       }
-    });
+    };
+
+    // Check if using custom SMTP server
+    if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
+      smtpConfig.host = process.env.SMTP_HOST;
+      smtpConfig.port = parseInt(process.env.SMTP_PORT);
+      smtpConfig.secure = process.env.SMTP_PORT === '465'; // true for 465, false for other ports
+      smtpConfig.auth = {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      };
+      console.log(`📧 Email service using SMTP server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+    } else {
+      // Fallback to Gmail
+      smtpConfig.service = 'gmail';
+      smtpConfig.auth = {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      };
+      console.log('📧 Email service using Gmail');
+    }
+
+    this.transporter = nodemailer.createTransport(smtpConfig);
   }
 
   async sendEmail({ to, subject, text, html }: EmailOptions): Promise<boolean> {

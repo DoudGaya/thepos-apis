@@ -5,7 +5,7 @@
 export interface ServiceProvider {
   id: string;
   name: string;
-  type: 'data' | 'bills' | 'electricity' | 'cable' | 'internet';
+  type: 'data' | 'bills' | 'electricity' | 'cable' | 'internet' | 'multi';
   isActive: boolean;
   priority: number; // Lower number = higher priority
   healthCheckUrl?: string;
@@ -15,6 +15,7 @@ export interface ServiceProvider {
     secretKey?: string;
     username?: string;
     password?: string;
+    pin?: string; // For VTU.NG webhook verification
   };
 }
 
@@ -30,17 +31,20 @@ export interface DataPlan {
   originalPrice?: number;
   commission?: number;
   isActive: boolean;
+  providerId?: string; // Provider that offers this plan
+  variationId?: string; // Provider-specific variation ID (e.g., VTU.NG variation_id)
 }
 
 export interface BillService {
   id: string;
   billerId: string;
   name: string;
-  category: 'electricity' | 'cable' | 'internet' | 'water' | 'waste';
+  category: 'electricity' | 'cable' | 'internet' | 'water' | 'waste' | 'betting';
   type: 'prepaid' | 'postpaid';
   commission: number;
   isActive: boolean;
   fields: BillField[];
+  providerId?: string; // Provider that offers this service
 }
 
 export interface BillField {
@@ -54,7 +58,7 @@ export interface BillField {
 
 export interface TransactionRequest {
   id: string;
-  type: 'data' | 'bills' | 'electricity' | 'cable';
+  type: 'data' | 'bills' | 'electricity' | 'cable' | 'airtime' | 'betting' | 'epins';
   amount: number;
   customerInfo: {
     phone?: string;
@@ -63,9 +67,15 @@ export interface TransactionRequest {
     accountNumber?: string;
     email?: string;
     name?: string;
+    customerId?: string; // For electricity/cable/betting
   };
   planId?: string;
   billerId?: string;
+  variationId?: string; // For VTU.NG specific variations
+  subscriptionType?: 'change' | 'renew'; // For cable TV
+  network?: string; // For airtime/data
+  value?: 100 | 200 | 500; // For ePINs
+  quantity?: number; // For ePINs
   metadata?: Record<string, any>;
 }
 
@@ -76,8 +86,14 @@ export interface TransactionResponse {
   status: 'pending' | 'successful' | 'failed' | 'processing';
   message: string;
   balance?: number;
-  token?: string;
-  units?: string;
+  token?: string; // For electricity tokens
+  units?: string; // For electricity units
+  epins?: Array<{ // For ePINs
+    amount: string;
+    pin: string;
+    serial: string;
+    instruction: string;
+  }>;
   metadata?: Record<string, any>;
 }
 
@@ -171,3 +187,101 @@ export interface ProviderServiceConfig {
   enableLoadBalancing: boolean;
   enablePriceComparison: boolean;
 }
+
+// VTU.NG Specific Types
+export interface VTUCustomerVerification {
+  service_name: string;
+  customer_id: string;
+  customer_name: string;
+  customer_address?: string;
+  customer_arrears?: number;
+  outstanding?: number;
+  meter_number?: string;
+  account_number?: string;
+  status?: string;
+  due_date?: string;
+  balance?: number;
+  current_bouquet?: string;
+  renewal_amount?: number;
+  min_purchase_amount?: number;
+  max_purchase_amount?: number;
+  customer_username?: string;
+  customer_email_address?: string;
+  customer_phone_number?: string;
+  minimum_amount?: number;
+  maximum_amount?: number;
+  district?: string;
+  service_band?: string;
+  business_unit?: string;
+  customer_account_type?: string;
+}
+
+export interface AirtimeRequest {
+  phone: string;
+  network: 'mtn' | 'airtel' | 'glo' | '9mobile';
+  amount: number;
+  requestId?: string;
+}
+
+export interface EPINRequest {
+  network: 'mtn' | 'airtel' | 'glo' | '9mobile';
+  value: 100 | 200 | 500;
+  quantity: number;
+  requestId?: string;
+}
+
+export interface ElectricityRequest {
+  serviceId: string;
+  customerId: string;
+  variationId: 'prepaid' | 'postpaid';
+  amount: number;
+  requestId?: string;
+}
+
+export interface CableTVRequest {
+  serviceId: 'dstv' | 'gotv' | 'startimes' | 'showmax';
+  customerId: string;
+  variationId: string;
+  subscriptionType?: 'change' | 'renew';
+  amount?: number;
+  requestId?: string;
+}
+
+export interface BettingRequest {
+  serviceId: string;
+  customerId: string;
+  amount: number;
+  requestId?: string;
+}
+
+// Betting Service IDs supported by VTU.NG
+export type BettingServiceId = 
+  | '1xBet' 
+  | 'BangBet' 
+  | 'Bet9ja' 
+  | 'BetKing' 
+  | 'BetLand' 
+  | 'BetLion' 
+  | 'BetWay' 
+  | 'CloudBet' 
+  | 'LiveScoreBet' 
+  | 'MerryBet' 
+  | 'NaijaBet' 
+  | 'NairaBet' 
+  | 'SupaBet';
+
+// Electricity Service IDs supported by VTU.NG
+export type ElectricityServiceId =
+  | 'ikeja-electric'
+  | 'eko-electric'
+  | 'kano-electric'
+  | 'portharcourt-electric'
+  | 'jos-electric'
+  | 'ibadan-electric'
+  | 'kaduna-electric'
+  | 'abuja-electric'
+  | 'enugu-electric'
+  | 'benin-electric'
+  | 'aba-electric'
+  | 'yola-electric';
+

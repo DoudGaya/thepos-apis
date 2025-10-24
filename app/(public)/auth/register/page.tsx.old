@@ -1,0 +1,402 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Mail, Lock, User, Phone, AlertCircle, CheckCircle2, Loader2, Eye, EyeOff } from 'lucide-react'
+
+export default function RegisterPage() {
+  const router = useRouter()
+  
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  // Password strength validation
+  const getPasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++
+    if (password.match(/\d/)) strength++
+    if (password.match(/[^a-zA-Z\d]/)) strength++
+    return strength
+  }
+
+  const passwordStrength = getPasswordStrength(formData.password)
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    // Full name validation
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required'
+    } else if (formData.fullName.trim().length < 3) {
+      newErrors.fullName = 'Full name must be at least 3 characters'
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email) {
+      newErrors.email = 'Email is required'
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = 'Invalid email address'
+    }
+
+    // Phone validation
+    const phoneRegex = /^[0-9]{11}$/
+    if (!formData.phone) {
+      newErrors.phone = 'Phone number is required'
+    } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Phone number must be 11 digits'
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required'
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters'
+    } else if (passwordStrength < 3) {
+      newErrors.password = 'Password is too weak. Include uppercase, lowercase, numbers, and special characters'
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password'
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) {
+      return
+    }
+
+    setIsLoading(true)
+    setErrors({})
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.errors) {
+          setErrors(data.errors)
+        } else {
+          setErrors({ form: data.message || 'Registration failed' })
+        }
+        setIsLoading(false)
+        return
+      }
+
+      setSuccess(true)
+      // Store phone for OTP verification
+      localStorage.setItem('verifyPhone', formData.phone)
+      
+      setTimeout(() => {
+        router.push(`/auth/verify-otp?phone=${encodeURIComponent(formData.phone)}`)
+      }, 1500)
+    } catch (error) {
+      setErrors({ form: 'An unexpected error occurred. Please try again.' })
+      setIsLoading(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="bg-white p-8 rounded-xl shadow-lg text-center space-y-4">
+        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+          <CheckCircle2 className="h-10 w-10 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Registration Successful!</h2>
+        <p className="text-gray-600">
+          Your account has been created. Redirecting to login...
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Logo/Brand */}
+      <div className="text-center">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          ThePOS
+        </h1>
+        <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          Create your account
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Join thousands of users enjoying seamless transactions
+        </p>
+      </div>
+
+      {/* Error Alert */}
+      {errors.form && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{errors.form}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Form */}
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-xl shadow-lg">
+        {/* Full Name */}
+        <div>
+          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+            Full Name
+          </label>
+          <div className="mt-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <User className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              required
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                errors.fullName ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="John Doe"
+            />
+          </div>
+          {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
+        </div>
+
+        {/* Email */}
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            Email Address
+          </label>
+          <div className="mt-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Mail className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                errors.email ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="you@example.com"
+            />
+          </div>
+          {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+            Phone Number
+          </label>
+          <div className="mt-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Phone className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className={`block w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                errors.phone ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="08012345678"
+            />
+          </div>
+          {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+        </div>
+
+        {/* Password */}
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <div className="mt-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Lock className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                errors.password ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="Create a strong password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              ) : (
+                <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              )}
+            </button>
+          </div>
+          {formData.password && (
+            <div className="mt-2">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded ${
+                      i <= passwordStrength
+                        ? passwordStrength <= 1
+                          ? 'bg-red-500'
+                          : passwordStrength === 2
+                          ? 'bg-yellow-500'
+                          : passwordStrength === 3
+                          ? 'bg-blue-500'
+                          : 'bg-green-500'
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {passwordStrength <= 1 && 'Weak password'}
+                {passwordStrength === 2 && 'Fair password'}
+                {passwordStrength === 3 && 'Good password'}
+                {passwordStrength === 4 && 'Strong password'}
+              </p>
+            </div>
+          )}
+          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            Confirm Password
+          </label>
+          <div className="mt-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Lock className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              className={`block w-full pl-10 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder="Confirm your password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              ) : (
+                <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              )}
+            </button>
+          </div>
+          {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+        </div>
+
+        {/* Terms & Conditions */}
+        <div className="flex items-start">
+          <input
+            id="terms"
+            name="terms"
+            type="checkbox"
+            required
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1"
+          />
+          <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+            I agree to the{' '}
+            <Link href="/terms" className="text-indigo-600 hover:text-indigo-500">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-indigo-600 hover:text-indigo-500">
+              Privacy Policy
+            </Link>
+          </label>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
+              Creating account...
+            </>
+          ) : (
+            'Create Account'
+          )}
+        </button>
+
+        {/* Login Link */}
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </form>
+    </div>
+  )
+}

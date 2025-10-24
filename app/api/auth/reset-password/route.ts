@@ -1,80 +1,105 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/auth'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
+
+export const runtime = 'nodejs'
 
 const resetPasswordSchema = z.object({
   email: z.string().email('Valid email is required'),
-  token: z.string().min(1, 'Reset token is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  otp: z.string().length(6, 'OTP must be 6 digits'),
 })
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 Reset Password endpoint hit')
   try {
     const body = await request.json()
-    const { email, token, password } = resetPasswordSchema.parse(body)
-
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    console.log('📥 Reset Password request:', {
+      email: body.email,
+      otpLength: body.otp?.length,
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid reset token' },
-        { status: 400 }
-      )
-    }
+    const parsed = resetPasswordSchema.parse(body)
 
     // Verify OTP
     const otp = await prisma.oTP.findFirst({
       where: {
-        phone: user.phone,
-        code: token,
-        type: 'PASSWORD_RESET',
-        expiresAt: {
-          gt: new Date(),
-        },
+        phone: parsed.email, // Phone can be email for password reset
+        code: parsed.otp,
+        type: 'FORGOT_PASSWORD',
+        used: false,
       },
     })
 
     if (!otp) {
+      console.log('❌ Invalid or already used OTP')
       return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
+        { error: 'Invalid or expired OTP' },
         { status: 400 }
       )
     }
 
+    // Check OTP expiry
+    if (new Date() > otp.expiresAt) {
+      console.log('❌ OTP expired')
+      return NextResponse.json(
+        { error: 'OTP has expired' },
+        { status: 400 }
+      )
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: parsed.email },
+    })
+
+    if (!user) {
+      console.log('❌ User not found')
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
     // Hash new password
-    const passwordHash = await hashPassword(password)
+    const hashedPassword = await bcrypt.hash(parsed.newPassword, 10)
 
-    // Update user password
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    })
+    // Update user password and mark OTP as used
+    await Promise.all([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashedPassword },
+      }),
+      prisma.oTP.update({
+        where: { id: otp.id },
+        data: { used: true },
+      }),
+    ])
 
-    // Delete used OTP
-    await prisma.oTP.delete({
-      where: { id: otp.id },
-    })
+    console.log('✅ Password reset successfully for:', parsed.email)
 
     return NextResponse.json({
-      message: 'Password reset successfully',
       success: true,
+      message: 'Password reset successfully',
     })
   } catch (error) {
-    console.error('Reset password error:', error)
-    
+    console.error('❌ Reset Password error:', error)
+
     if (error instanceof z.ZodError) {
+      console.log('🔍 Validation errors:', JSON.stringify(error.errors, null, 2))
       return NextResponse.json(
         { error: error.errors[0].message },
         { status: 400 }
       )
     }
 
+    if (error instanceof Error) {
+      console.error('💥 Error message:', error.message)
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'An error occurred while resetting password' },
       { status: 500 }
     )
   }

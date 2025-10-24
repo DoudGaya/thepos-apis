@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateToken, formatPhoneNumber } from '@/lib/auth'
 import { z } from 'zod'
+// import { consumeToken } from '@/lib/rateLimiter'
+import { consumeToken } from '@/lib/rateLimiter'
 
 const verifyOTPSchema = z.object({
   phone: z.string().optional(),
@@ -42,6 +44,12 @@ export async function POST(request: NextRequest) {
     console.log('🔥 Using user phone for OTP lookup:', userPhone)
 
     // Find valid OTP using the user's phone number
+    // Rate limit OTP verification attempts per phone: max 5 per 15 minutes
+    const rl = consumeToken(`verifyotp:${userPhone}`, 5, 15 * 60 * 1000)
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many verification attempts. Please try again later.' }, { status: 429 })
+    }
+
     const otpRecord = await prisma.oTP.findFirst({
       where: {
         phone: userPhone,

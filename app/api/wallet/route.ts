@@ -1,40 +1,93 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+/**
+ * Wallet API
+ * GET - Fetch wallet balance and recent transactions
+ */
 
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma'
+import {
+  apiHandler,
+  successResponse,
+  getAuthenticatedUser,
+  getPaginationParams,
+  createPaginatedResponse,
+} from '@/lib/api-utils'
 
-// Get wallet balance
-export async function GET(request: NextRequest) {
-  try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
-    }
+/**
+ * GET /api/wallet
+ * Fetch user wallet balance and transaction summary
+ */
+export const GET = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser()
+  const { limit, skip } = getPaginationParams(new URL(request.url).toString(), 10)
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+  // Get wallet balance and referral earnings
+  const wallet = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      credits: true,
+    },
+  })
 
-    // Get user with balance
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { credits: true, updatedAt: true },
-    });
+  // Get referral earnings total
+  const referralEarnings = await prisma.referralEarning.aggregate({
+    where: {
+      userId: user.id,
+      status: 'PAID',
+    },
+    _sum: {
+      amount: true,
+    },
+  })
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+  // Get recent transactions (only WALLET_FUNDING for now, as other types don't exist in enum)
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        type: 'WALLET_FUNDING',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        status: true,
+        reference: true,
+        createdAt: true,
+      },
+    }),
+    prisma.transaction.count({
+      where: {
+        userId: user.id,
+        type: 'WALLET_FUNDING',
+      },
+    }),
+  ])
 
-    return NextResponse.json({
-      available: user.credits,
-      pending: 0, // For now, no pending balance logic
-      total: user.credits,
-      lastUpdated: user.updatedAt.toISOString(),
-    });
-  } catch (error) {
-    console.error('Wallet balance error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch wallet balance' },
-      { status: 500 }
-    );
-  }
-}
+  // Calculate stats
+  const stats = await prisma.transaction.aggregate({
+    where: {
+      userId: user.id,
+      status: 'COMPLETED',
+    },
+    _sum: {
+      amount: true,
+    },
+    _count: true,
+  })
+
+  const page = Math.floor(skip / limit) + 1
+
+  return successResponse({
+    balance: wallet?.credits || 0,
+    referralBalance: referralEarnings._sum.amount || 0,
+    totalBalance: (wallet?.credits || 0) + (referralEarnings._sum.amount || 0),
+    stats: {
+      totalTransactions: stats._count,
+      totalSpent: stats._sum.amount || 0,
+    },
+    transactions: createPaginatedResponse(transactions, total, page, limit),
+  })
+})

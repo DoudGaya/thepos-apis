@@ -15,6 +15,7 @@ import {
 } from './types';
 import { QuickSubProvider } from './quicksub';
 import { PayGoldProvider } from './paygold';
+import VTUProvider from './vtu';
 
 export class ProviderServiceManager {
   private providers: Map<string, BaseProvider> = new Map();
@@ -39,6 +40,12 @@ export class ProviderServiceManager {
     if (process.env.PAYGOLD_API_KEY) {
       const paygold = new PayGoldProvider();
       this.providers.set('paygold', paygold);
+    }
+
+    // Initialize VTU.NG provider
+    if (process.env.VTU_USERNAME && process.env.VTU_PASSWORD && process.env.VTU_USER_PIN) {
+      const vtu = new VTUProvider();
+      this.providers.set('vtu', vtu);
     }
 
     console.log(`Initialized ${this.providers.size} providers`);
@@ -394,6 +401,19 @@ const defaultConfig: ProviderServiceConfig = {
       priority: 2,
       baseUrl: process.env.PAYGOLD_BASE_URL || '',
       credentials: {},
+    },
+    {
+      id: 'vtu',
+      name: 'VTU.NG',
+      type: 'multi',
+      isActive: true,
+      priority: 3,
+      baseUrl: 'https://vtu.ng/wp-json/api/v2',
+      credentials: {
+        username: process.env.VTU_USERNAME || '',
+        password: process.env.VTU_PASSWORD || '',
+        pin: process.env.VTU_USER_PIN || '',
+      },
     },
   ],
   defaultCommissionRate: 5,

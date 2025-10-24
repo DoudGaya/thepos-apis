@@ -1,108 +1,90 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+/**
+ * User Notifications API
+ * GET - Fetch user notifications
+ * DELETE - Mark all as read
+ */
 
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma'
+import {
+  apiHandler,
+  successResponse,
+  getAuthenticatedUser,
+  getPaginationParams,
+  createPaginatedResponse,
+  parseQueryParams,
+} from '@/lib/api-utils'
 
-// Get user notifications
-export async function GET(request: NextRequest) {
-  try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
-    }
+/**
+ * GET /api/notifications
+ * Fetch user notifications with pagination
+ * Query params:
+ *  - type (TRANSACTION, GENERAL, SYSTEM)
+ *  - unreadOnly (boolean)
+ *  - page, limit
+ */
+export const GET = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser()
+  const params = parseQueryParams(request.url)
+  const type = params.getString('type')
+  const unreadOnly = params.getBoolean('unreadOnly', false)
+  const { limit, skip, page } = getPaginationParams(request.url, 20)
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    const { searchParams } = new URL(request.url);
-    
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const unreadOnly = searchParams.get('unreadOnly') === 'true';
+  // Build where clause
+  const where: any = { userId: user.id }
 
-    const skip = (page - 1) * limit;
-
-    const where: any = {
-      userId: decoded.userId,
-    };
-
-    if (unreadOnly) {
-      where.isRead = false;
-    }
-
-    const [notifications, total, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.notification.count({ where }),
-      prisma.notification.count({
-        where: {
-          userId: decoded.userId,
-          isRead: false,
-        },
-      }),
-    ]);
-
-    return NextResponse.json({
-      data: notifications,
-      total,
-      page,
-      limit,
-      unreadCount,
-    });
-  } catch (error) {
-    console.error('Notifications fetch error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
-      { status: 500 }
-    );
+  if (type) {
+    where.type = type
   }
-}
 
-// Create notification
-export async function POST(request: NextRequest) {
-  try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
-    }
+  if (unreadOnly) {
+    where.isRead = false
+  }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    const body = await request.json();
-
-    const {
-      title,
-      message,
-      type = 'GENERAL',
-      data = {},
-    } = body;
-
-    if (!title || !message) {
-      return NextResponse.json(
-        { error: 'Title and message are required' },
-        { status: 400 }
-      );
-    }
-
-    const notification = await prisma.notification.create({
-      data: {
-        userId: decoded.userId,
-        title,
-        message,
-        type,
-        data,
+  // Fetch notifications with pagination
+  const [notifications, total, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      skip,
+    }),
+    prisma.notification.count({ where }),
+    prisma.notification.count({
+      where: {
+        userId: user.id,
         isRead: false,
       },
-    });
+    }),
+  ])
 
-    return NextResponse.json(notification, { status: 201 });
-  } catch (error) {
-    console.error('Notification creation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create notification' },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({
+    notifications: createPaginatedResponse(notifications, total, page, limit),
+    unreadCount,
+  })
+})
+
+/**
+ * DELETE /api/notifications
+ * Mark all notifications as read
+ */
+export const DELETE = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser()
+
+  // Update all unread notifications
+  const result = await prisma.notification.updateMany({
+    where: {
+      userId: user.id,
+      isRead: false,
+    },
+    data: {
+      isRead: true,
+    },
+  })
+
+  return successResponse({
+    message: 'All notifications marked as read',
+    count: result.count,
+  })
+})
