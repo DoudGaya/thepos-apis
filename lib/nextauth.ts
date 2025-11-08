@@ -65,11 +65,11 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      // If the user is trying to access dashboard, allow it
+      // If the user is trying to access dashboard or admin, allow it
       if (url.startsWith(baseUrl)) {
         return url;
       }
-      // Otherwise redirect to dashboard
+      // For now, redirect to dashboard - we'll handle admin redirection in middleware
       return `${baseUrl}/dashboard`;
     },
     async jwt({ token, user }) {

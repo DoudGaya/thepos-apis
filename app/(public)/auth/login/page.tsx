@@ -5,12 +5,15 @@ import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Suspense } from 'react'
+import { PublicNavigation } from '@/app/components/PublicNavigation'
+import Footer from '@/app/components/Footer'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,21 +28,16 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Use redirect: true to let NextAuth handle the redirect
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-        redirect: false, // We handle redirect manually
-        callbackUrl: callbackUrl,
+        redirect: false,
+        callbackUrl,
       })
 
-      console.log('SignIn result:', result)
-
       if (result?.error) {
-        // Check if error is "Please verify your account first"
         if (result.error.includes('verify')) {
-          // Redirect to verify-otp
-          localStorage.setItem('verifyPhone', formData.email) // Store for reference
+          localStorage.setItem('verifyPhone', formData.email)
           router.push(`/auth/verify-otp?phone=${encodeURIComponent(formData.email)}`)
         } else {
           setError(result.error)
@@ -48,171 +46,156 @@ export default function LoginPage() {
         return
       }
 
-      // If we get here and status is 200 or ok is true, redirect
       if (result?.ok || result?.status === 200) {
-        console.log('Login successful, redirecting to:', callbackUrl)
-        // Give NextAuth a moment to set the session cookie
-        await new Promise(resolve => setTimeout(resolve, 100))
+        // Signed in successfully; redirect
+        await new Promise((r) => setTimeout(r, 100))
         window.location.href = callbackUrl
       } else {
-        // Unexpected result
         setError('Sign in failed. Please try again.')
         setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Login error:', error)
+    } catch (err) {
+      console.error('Login error:', err)
       setError('An unexpected error occurred. Please try again.')
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="space-y-8">
-      {/* Logo/Brand */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-          ThePOS
-        </h1>
-        <h2 className="mt-6 text-3xl font-bold text-gray-900">
-          Welcome back
-        </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Sign in to access your dashboard
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950 antialiased duration-300 flex items-center justify-center py-12">
+      <main className="mx-auto max-w-md w-full px-4 sm:px-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 sm:p-8">
 
-      {/* Error Alert */}
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Authentication Failed
-              </h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
+          {/* Header / Branding */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-600 shadow-lg mb-4">
+              <span className="text-3xl font-bold text-white">B</span>
             </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+              Bundles
+            </h1>
+            <h2 className="mt-3 text-xl font-semibold text-slate-900 dark:text-white">Welcome back</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Sign in to access your dashboard</p>
           </div>
-        </div>
-      )}
 
-      {/* Login Form */}
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-xl shadow-lg">
-        {/* Email Field */}
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email Address
-          </label>
-          <div className="mt-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
+          {/* Error */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Authentication Failed</p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+                </div>
+              </div>
             </div>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              placeholder="you@example.com"
-            />
-          </div>
-        </div>
-
-        {/* Password Field */}
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <div className="mt-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-              placeholder="Enter your password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-            >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              ) : (
-                <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Remember Me & Forgot Password */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-              Remember me
-            </label>
-          </div>
-          <div className="text-sm">
-            <Link href="/auth/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Forgot password?
-            </Link>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-              Signing in...
-            </>
-          ) : (
-            'Sign In'
           )}
-        </button>
 
-        {/* Register Link */}
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Create account
-            </Link>
-          </p>
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+              <div className="mt-1 relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="you@example.com"
+                  className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+              <div className="mt-1 relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter your password"
+                  className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded" />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700 dark:text-slate-300">Remember me</label>
+              </div>
+              <div className="text-sm">
+                <Link href="/auth/forgot-password" className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">Forgot password?</Link>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+
+              <div className="text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Don't have an account? <Link href="/auth/register" className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500">Create account</Link></p>
+              </div>
+            </div>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">By signing in, you agree to our <Link href="/terms" className="text-emerald-600 dark:text-emerald-400 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 dark:text-emerald-400 hover:underline">Privacy Policy</Link></p>
+          </div>
         </div>
-      </form>
-
-      {/* Additional Info */}
-      <p className="text-center text-xs text-gray-500">
-        By signing in, you agree to our{' '}
-        <Link href="/terms" className="text-indigo-600 hover:text-indigo-500">
-          Terms of Service
-        </Link>{' '}
-        and{' '}
-        <Link href="/privacy" className="text-indigo-600 hover:text-indigo-500">
-          Privacy Policy
-        </Link>
-      </p>
+      </main>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <>
+      <PublicNavigation />
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
+          </div>
+        </div>
+      }>
+        <LoginContent />
+      </Suspense>
+      <Footer />
+    </>
   )
 }

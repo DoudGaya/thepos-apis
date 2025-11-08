@@ -2,65 +2,51 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { AlertCircle, CheckCircle2, Loader2, Wifi, Wallet } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Wifi, Wallet, Lock, X, Eye, EyeOff } from 'lucide-react'
+import Link from 'next/link'
 
-const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'] as const
+const NETWORKS = [
+  { code: 'MTN', name: 'MTN', color: 'bg-yellow-500' },
+  { code: 'GLO', name: 'Glo', color: 'bg-green-500' },
+  { code: 'AIRTEL', name: 'Airtel', color: 'bg-red-500' },
+  { code: '9MOBILE', name: '9mobile', color: 'bg-emerald-500' },
+] as const
 
-// Sample data plans (in production, fetch from API)
-const DATA_PLANS = {
-  MTN: [
-    { code: 'MTN-1GB-30DAYS', name: '1GB - 30 Days', vendorCost: 250 },
-    { code: 'MTN-2GB-30DAYS', name: '2GB - 30 Days', vendorCost: 500 },
-    { code: 'MTN-3GB-30DAYS', name: '3GB - 30 Days', vendorCost: 750 },
-    { code: 'MTN-5GB-30DAYS', name: '5GB - 30 Days', vendorCost: 1200 },
-    { code: 'MTN-10GB-30DAYS', name: '10GB - 30 Days', vendorCost: 2400 },
-  ],
-  GLO: [
-    { code: 'GLO-1GB-30DAYS', name: '1GB - 30 Days', vendorCost: 240 },
-    { code: 'GLO-2GB-30DAYS', name: '2GB - 30 Days', vendorCost: 480 },
-    { code: 'GLO-3GB-30DAYS', name: '3GB - 30 Days', vendorCost: 700 },
-    { code: 'GLO-5GB-30DAYS', name: '5GB - 30 Days', vendorCost: 1150 },
-    { code: 'GLO-10GB-30DAYS', name: '10GB - 30 Days', vendorCost: 2300 },
-  ],
-  AIRTEL: [
-    { code: 'AIRTEL-1GB-30DAYS', name: '1GB - 30 Days', vendorCost: 245 },
-    { code: 'AIRTEL-2GB-30DAYS', name: '2GB - 30 Days', vendorCost: 490 },
-    { code: 'AIRTEL-3GB-30DAYS', name: '3GB - 30 Days', vendorCost: 720 },
-    { code: 'AIRTEL-5GB-30DAYS', name: '5GB - 30 Days', vendorCost: 1180 },
-    { code: 'AIRTEL-10GB-30DAYS', name: '10GB - 30 Days', vendorCost: 2350 },
-  ],
-  '9MOBILE': [
-    { code: '9MOBILE-1GB-30DAYS', name: '1GB - 30 Days', vendorCost: 260 },
-    { code: '9MOBILE-2GB-30DAYS', name: '2GB - 30 Days', vendorCost: 520 },
-    { code: '9MOBILE-3GB-30DAYS', name: '3GB - 30 Days', vendorCost: 760 },
-    { code: '9MOBILE-5GB-30DAYS', name: '5GB - 30 Days', vendorCost: 1250 },
-    { code: '9MOBILE-10GB-30DAYS', name: '10GB - 30 Days', vendorCost: 2450 },
-  ],
+type Network = typeof NETWORKS[number]['code']
+
+interface DataPlan {
+  id: string
+  name: string
+  network: string
+  costPrice: number
+  sellingPrice: number
+  profit: number
+  validity: string
+  description: string
+  dataCapacity: number
+  isAvailable: boolean
 }
-
-const PROFIT_MARGIN = 100
 
 export default function DataPurchasePage() {
   const { data: session } = useSession()
-  const [formData, setFormData] = useState({
-    network: 'MTN' as keyof typeof DATA_PLANS,
-    phone: '',
-    planCode: '',
-    vendorCost: 0,
-  })
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>('MTN')
+  const [phone, setPhone] = useState('')
+  const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null)
+  const [pin, setPin] = useState('')
+  const [showPin, setShowPin] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
+  const [plans, setPlans] = useState<DataPlan[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingPlans, setLoadingPlans] = useState(false)
   const [loadingBalance, setLoadingBalance] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Fetch wallet balance
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const res = await fetch('/api/wallet/balance', {
-          credentials: 'include'
-        })
+        const res = await fetch('/api/wallet/balance', { credentials: 'include' })
         const data = await res.json()
         if (data.success) {
           setWalletBalance(data.data.balance)
@@ -72,269 +58,282 @@ export default function DataPurchasePage() {
       }
     }
     fetchBalance()
-  }, [])
+  }, [success])
 
-  const handleNetworkChange = (network: keyof typeof DATA_PLANS) => {
-    setFormData({ ...formData, network, planCode: '', vendorCost: 0 })
-  }
+  useEffect(() => {
+    const fetchPlans = async () => {
+      setLoadingPlans(true)
+      setSelectedPlan(null)
+      try {
+        const res = await fetch(`/api/data/plans?network=${selectedNetwork}`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.success) {
+          setPlans(data.data.plans || [])
+        } else {
+          setError(data.message || 'Failed to fetch plans')
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch plans:', err)
+        setError('Failed to load data plans. Please try again.')
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+    fetchPlans()
+  }, [selectedNetwork])
 
-  const handlePlanSelect = (planCode: string, vendorCost: number) => {
-    setFormData({ ...formData, planCode, vendorCost })
-  }
-
-  const sellingPrice = formData.vendorCost + PROFIT_MARGIN
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleBuyClick = () => {
     setError('')
     setSuccess('')
-
-    // Validation
-    if (!formData.network) {
-      setError('Please select a network')
-      setLoading(false)
+    if (!phone || phone.length < 11) {
+      setError('Please enter a valid 11-digit phone number')
       return
     }
-    if (!formData.phone || formData.phone.length < 11) {
-      setError('Please enter a valid phone number (11 digits)')
-      setLoading(false)
-      return
-    }
-    if (!formData.planCode) {
+    if (!selectedPlan) {
       setError('Please select a data plan')
-      setLoading(false)
       return
     }
+    if (walletBalance < selectedPlan.sellingPrice) {
+      setError(`Insufficient balance. Required: ₦${selectedPlan.sellingPrice.toLocaleString()}, Available: ₦${walletBalance.toLocaleString()}`)
+      return
+    }
+    setShowPinModal(true)
+  }
 
+  const handlePurchase = async () => {
+    if (!pin || pin.length < 4) {
+      setError('Please enter your 4-6 digit transaction PIN')
+      return
+    }
+    if (!selectedPlan) {
+      setError('Please select a data plan')
+      return
+    }
+    setLoading(true)
+    setError('')
     try {
       const res = await fetch('/api/data/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ network: selectedNetwork, phone, planId: selectedPlan.id, pin }),
       })
-
       const data = await res.json()
-
       if (!res.ok) {
-        throw new Error(data.message || 'Purchase failed')
+        throw new Error(data.message || data.error || 'Purchase failed')
       }
-
-      setSuccess(
-        `Data purchase successful! ${formData.network} data sent to ${formData.phone}. Reference: ${data.data.reference}`
-      )
-      
-      // Update balance
-      setWalletBalance(prev => prev - sellingPrice)
-      
-      // Reset form
-      setFormData({ network: 'MTN', phone: '', planCode: '', vendorCost: 0 })
-      
+      setSuccess(`${selectedPlan.name} data bundle purchased successfully! Delivery in progress...`)
+      setShowPinModal(false)
+      setPin('')
+      setPhone('')
+      setSelectedPlan(null)
+      if (data.data?.wallet?.newBalance !== undefined) {
+        setWalletBalance(data.data.wallet.newBalance)
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to purchase data')
+      console.error('Purchase error:', err)
+      setError(err.message || 'Purchase failed. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const selectedPlan = DATA_PLANS[formData.network].find(p => p.code === formData.planCode)
+  const formatCurrency = (amount: number) => `₦${amount.toLocaleString()}`
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center">
-                <Wifi className="mr-2" size={28} />
-                Buy Data
-              </h1>
-              <p className="text-gray-300 mt-2">
-                All networks • Instant activation
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-gray-400 text-sm">Wallet Balance</p>
-              <p className="text-2xl font-bold flex items-center justify-end">
-                <Wallet className="mr-2" size={20} />
-                {loadingBalance ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  `₦${walletBalance.toLocaleString()}`
-                )}
-              </p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Buy Data</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Purchase data bundles for all Nigerian networks</p>
         </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Network Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Network
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {NETWORKS.map((network) => (
-                  <button
-                    key={network}
-                    type="button"
-                    onClick={() => handleNetworkChange(network)}
-                    className={`p-4 rounded-lg border-2 font-semibold transition-all ${
-                      formData.network === network
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    {network}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Phone Number */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="08012345678"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                maxLength={11}
-              />
-            </div>
-
-            {/* Data Plans */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Data Plan
-              </label>
-              <div className="grid gap-3">
-                {DATA_PLANS[formData.network].map((plan) => {
-                  const planSellingPrice = plan.vendorCost + PROFIT_MARGIN
-                  return (
-                    <button
-                      key={plan.code}
-                      type="button"
-                      onClick={() => handlePlanSelect(plan.code, plan.vendorCost)}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        formData.planCode === plan.code
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold">{plan.name}</p>
-                          <p className={`text-sm ${formData.planCode === plan.code ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Cost: ₦{plan.vendorCost.toLocaleString()} + ₦100 profit
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold">
-                            ₦{planSellingPrice.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Price Breakdown */}
-            {formData.vendorCost > 0 && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2 text-gray-900">Pricing Breakdown</h3>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Vendor Cost:</span>
-                    <span className="font-medium">₦{formData.vendorCost.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Profit Margin:</span>
-                    <span className="font-medium text-green-600">+ ₦{PROFIT_MARGIN}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-200">
-                    <span className="font-bold text-gray-900">You Pay:</span>
-                    <span className="font-bold text-lg text-gray-900">₦{sellingPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || loadingBalance || walletBalance < sellingPrice || !formData.planCode}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={20} />
-                  Processing Purchase...
-                </>
-              ) : (
-                `Purchase ${selectedPlan?.name || 'Data'} - ₦${sellingPrice.toLocaleString()}`
-              )}
-            </button>
-
-            {walletBalance < sellingPrice && formData.planCode && (
-              <p className="text-red-600 text-sm text-center">
-                Insufficient balance. Please fund your wallet first.
-              </p>
-            )}
-          </form>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="text-red-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-red-800 font-semibold">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start">
-              <CheckCircle2 className="text-green-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-green-800 font-semibold">Success!</p>
-                <p className="text-green-600 text-sm">{success}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Info Section */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">��� How to Buy Data</h3>
-          <ol className="space-y-2 text-sm text-gray-600">
-            <li>1. Select your network (MTN, GLO, AIRTEL, 9MOBILE)</li>
-            <li>2. Enter the phone number to receive data</li>
-            <li>3. Choose your preferred data plan</li>
-            <li>4. Review pricing and click "Purchase"</li>
-            <li>5. Data is activated instantly!</li>
-          </ol>
-          
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              <strong>Note:</strong> All data plans come with a fixed ₦100 profit margin. 
-              Data is delivered instantly and activated on the specified number.
-            </p>
+        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
+          <Wallet className="h-5 w-5 text-emerald-600" />
+          <div className="text-right">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Balance</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{loadingBalance ? '...' : formatCurrency(walletBalance)}</p>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+            </div>
+            <button onClick={() => setError('')} className="text-red-600 hover:text-red-700"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">Success!</p>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-1">{success}</p>
+            </div>
+            <button onClick={() => setSuccess('')} className="text-green-600 hover:text-green-700"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select Network</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {NETWORKS.map((network) => (
+                <button
+                  key={network.code}
+                  onClick={() => setSelectedNetwork(network.code)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${selectedNetwork === network.code ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
+                >
+                  <div className={`w-12 h-12 rounded-full ${network.color} flex items-center justify-center mb-2`}>
+                    <Wifi className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{network.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
+            <input
+              type="tel"
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder="08012345678"
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              maxLength={11}
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter 11-digit Nigerian phone number</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select Data Plan</label>
+            {loadingPlans ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
+            ) : plans.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <Wifi className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No data plans available for {selectedNetwork}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                {plans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    onClick={() => setSelectedPlan(plan)}
+                    disabled={!plan.isAvailable}
+                    className={`text-left p-4 rounded-lg border-2 transition-all ${selectedPlan?.id === plan.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'} ${!plan.isAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 dark:text-white">{plan.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{plan.validity}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-emerald-600">{formatCurrency(plan.sellingPrice)}</p>
+                        <p className="text-xs text-gray-500 line-through">{formatCurrency(plan.costPrice)}</p>
+                      </div>
+                    </div>
+                    {plan.description && <p className="text-xs text-gray-600 dark:text-gray-400">{plan.description}</p>}
+                    {!plan.isAvailable && <p className="text-xs text-red-600 dark:text-red-400 mt-2">Unavailable</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedPlan && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Purchase Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Network:</span><span className="font-medium text-gray-900 dark:text-white">{selectedNetwork}</span></div>
+                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Phone:</span><span className="font-medium text-gray-900 dark:text-white">{phone || 'Not entered'}</span></div>
+                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Plan:</span><span className="font-medium text-gray-900 dark:text-white">{selectedPlan.name}</span></div>
+                <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700"><span className="text-gray-900 dark:text-white font-semibold">Total:</span><span className="text-emerald-600 font-bold text-lg">{formatCurrency(selectedPlan.sellingPrice)}</span></div>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleBuyClick}
+            disabled={!phone || !selectedPlan || loading}
+            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white py-3 rounded-lg font-semibold hover:from-emerald-700 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? (<><Loader2 className="h-5 w-5 animate-spin" />Processing...</>) : (<><Lock className="h-5 w-5" />Buy Data</>)}
+          </button>
+
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+            Don't have a transaction PIN?{' '}
+            <Link href="/dashboard/profile" className="text-emerald-600 hover:underline">Set up PIN in your profile</Link>
+          </p>
+        </div>
+      </div>
+
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Enter Transaction PIN</h3>
+              <button onClick={() => { setShowPinModal(false); setPin(''); setError('') }} className="text-gray-500 hover:text-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Please enter your 4-6 digit transaction PIN to authorize this purchase</p>
+              <div>
+                <label htmlFor="pin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Transaction PIN</label>
+                <div className="relative">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    id="pin"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter PIN"
+                    className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    maxLength={6}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowPinModal(false); setPin(''); setError('') }}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePurchase}
+                  disabled={loading || pin.length < 4}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading ? (<><Loader2 className="h-4 w-4 animate-spin" />Processing...</>) : ('Confirm Purchase')}
+                </button>
+              </div>
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                <Link href="/dashboard/profile" className="text-emerald-600 hover:underline">Forgot PIN?</Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -51,13 +51,7 @@ export async function POST(request: NextRequest) {
 
     const { network, recipient, planId, idempotencyKey } = validation.data
 
-    // 3. Process purchase through purchase service
-    // The purchase service will automatically:
-    // - Validate user balance
-    // - Calculate pricing with profit margins
-    // - Deduct wallet atomically
-    // - Try vendors in priority order (VTU.NG → eBills → ClubKonnect → Amigo)
-    // - Auto-refund on failure
+
     const result = await purchaseService.purchase({
       userId: session.user.id,
       service: 'DATA',

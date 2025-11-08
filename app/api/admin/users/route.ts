@@ -9,7 +9,6 @@ import {
   successResponse,
   requireAdmin,
   getPaginationParams,
-  createPaginatedResponse,
   parseQueryParams,
 } from '@/lib/api-utils'
 
@@ -126,6 +125,12 @@ export const GET = apiHandler(async (request: Request) => {
   )
 
   return successResponse({
-    users: createPaginatedResponse(enhancedUsers, total, page, limit),
+    users: enhancedUsers,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   })
 })

@@ -21,10 +21,10 @@ const PasswordField = ({
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    try { console.log('PasswordField DOM node for', label, inputRef.current) } catch (e) {}
+    // Component initialization
   }, [label])
 
-  try { console.log('Render PasswordField:', label) } catch (e) {}
+  try { /* Render logging removed */ } catch (e) {}
 
   return (
     <div className="mb-5">

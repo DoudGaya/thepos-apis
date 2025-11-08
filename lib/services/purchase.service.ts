@@ -95,12 +95,28 @@ export class PurchaseService {
     }
 
     // 8. Calculate pricing (cost + profit margin)
-    const pricing = await pricingService.calculatePrice({
-      service: request.service,
-      network,
-      costPrice,
-      vendorName: null, // Will be set by vendor service
-    })
+    let pricing
+    try {
+      pricing = await pricingService.calculatePrice({
+        service: request.service,
+        network,
+        costPrice,
+        vendorName: null, // Will be set by vendor service
+      })
+    } catch (err: any) {
+      // If no profit margin configured, fallback to fixed ₦100 margin to ensure purchases can proceed
+      if (err.message && err.message.includes('No profit margin')) {
+        const fallbackProfit = 100
+        pricing = {
+          costPrice,
+          sellingPrice: costPrice + fallbackProfit,
+          profit: fallbackProfit,
+          margin: { type: 'FIXED', value: fallbackProfit },
+        }
+      } else {
+        throw err
+      }
+    }
 
     // 9. Get user and check wallet balance
     const user = await prisma.user.findUnique({

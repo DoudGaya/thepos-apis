@@ -23,13 +23,10 @@ const InputField = ({
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    try {
-      // log DOM identity for debugging remounts
-      console.log('InputField DOM node for', label, inputRef.current)
-    } catch (e) {}
+    // Component initialization
   }, [label])
 
-  try { console.log('Render InputField:', label) } catch (e) {}
+  try { /* Render logging removed */ } catch (e) {}
 
   return (
     <div className="mb-5">

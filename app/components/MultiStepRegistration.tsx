@@ -24,7 +24,7 @@ const STORAGE_KEY = 'theme'
 
 type Theme = 'light' | 'dark'
 
-type RegistrationStep = 'personal' | 'contact' | 'otp' | 'password' | 'pin' | 'success'
+type RegistrationStep = 'info' | 'otp' | 'success'
 
 interface FormData {
   firstName: string
@@ -50,7 +50,7 @@ import PasswordField from './ui/PasswordField'
 export default function MultiStepRegistration() {
   const router = useRouter()
   const [theme, setTheme] = useState<Theme>('light')
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('personal')
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('info')
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -74,8 +74,10 @@ export default function MultiStepRegistration() {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    try { console.log('MultiStepRegistration mounted') } catch (e) {}
-    return () => { try { console.log('MultiStepRegistration unmounted') } catch (e) {} }
+    // Component initialization
+    return () => {
+      // Cleanup
+    }
   }, [])
 
   // stable toggles for password/pin visibility to avoid new function identities on each render
@@ -325,15 +327,20 @@ export default function MultiStepRegistration() {
     let validationErrors: FormErrors = {}
 
     switch (currentStep) {
-      case 'personal':
-        validationErrors = validatePersonalInfo()
-        if (Object.keys(validationErrors).length === 0) {
-          setCurrentStep('contact')
+      case 'info':
+        // Validate all information at once
+        const personalErrors = validatePersonalInfo()
+        const contactErrors = validateContactInfo()
+        const passwordErrors = validatePassword()
+        const pinErrors = validatePin()
+        
+        validationErrors = {
+          ...personalErrors,
+          ...contactErrors,
+          ...passwordErrors,
+          ...pinErrors
         }
-        break
-
-      case 'contact':
-        validationErrors = validateContactInfo()
+        
         if (Object.keys(validationErrors).length === 0) {
           setIsLoading(true)
           try {
@@ -358,31 +365,10 @@ export default function MultiStepRegistration() {
           setIsLoading(true)
           try {
             await verifyOTP()
-            setCurrentStep('password')
-          } catch (error: any) {
-            validationErrors.otp = error.message || 'OTP verification failed. Please try again.'
-          } finally {
-            setIsLoading(false)
-          }
-        }
-        break
-
-      case 'password':
-        validationErrors = validatePassword()
-        if (Object.keys(validationErrors).length === 0) {
-          setCurrentStep('pin')
-        }
-        break
-
-      case 'pin':
-        validationErrors = validatePin()
-        if (Object.keys(validationErrors).length === 0) {
-          setIsLoading(true)
-          try {
             await updateUserPassword()
             setCurrentStep('success')
           } catch (error: any) {
-            validationErrors.form = error.message || 'Failed to complete registration. Please try again.'
+            validationErrors.otp = error.message || 'OTP verification failed. Please try again.'
           } finally {
             setIsLoading(false)
           }
@@ -394,9 +380,9 @@ export default function MultiStepRegistration() {
   }
 
   const handleBack = () => {
-    if (currentStep === 'personal') return
+    if (currentStep === 'info') return
 
-    const steps: RegistrationStep[] = ['personal', 'contact', 'otp', 'password', 'pin']
+    const steps: RegistrationStep[] = ['info', 'otp']
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1])
@@ -546,7 +532,7 @@ export default function MultiStepRegistration() {
   }
 
   const getStepNumber = (): number => {
-    const steps: RegistrationStep[] = ['personal', 'contact', 'otp', 'password', 'pin', 'success']
+    const steps: RegistrationStep[] = ['info', 'otp', 'success']
     return steps.indexOf(currentStep) + 1
   }
 
@@ -582,13 +568,13 @@ export default function MultiStepRegistration() {
         {currentStep !== 'success' && (
           <div className="mb-8">
             {/* Progress Bar */}
-            <div className="flex items-center justify-between mb-6">
-              {[1, 2, 3, 4, 5].map((step) => {
+            <div className="flex items-center mx-auto justify-center mb-6">
+              {[1, 2].map((step) => {
                 const stepNum = getStepNumber()
                 const isActive = step <= stepNum
                 const isCompleted = step < stepNum
                 return (
-                  <div key={step} className="flex items-center flex-1">
+                  <div key={step} className="flex items-center justify-center mx-auto flex-1">
                     <div
                       className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm transition-all ${
                         isCompleted
@@ -600,7 +586,7 @@ export default function MultiStepRegistration() {
                     >
                       {isCompleted ? <Check className="h-5 w-5" /> : step}
                     </div>
-                    {step < 5 && (
+                    {step < 2 && (
                       <div
                         className={`flex-1 h-1 mx-2 rounded-full transition-all ${
                           isActive ? 'bg-green-600' : 'bg-slate-200 dark:bg-slate-700'
@@ -613,21 +599,12 @@ export default function MultiStepRegistration() {
             </div>
 
             {/* Step Labels */}
-            <div className="grid grid-cols-5 gap-2 text-center">
+            <div className="grid grid-cols-2 gap-2 text-center">
               <div className={`text-xs font-medium transition-colors ${getStepNumber() >= 1 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                Personal
+                Information
               </div>
               <div className={`text-xs font-medium transition-colors ${getStepNumber() >= 2 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                Contact
-              </div>
-              <div className={`text-xs font-medium transition-colors ${getStepNumber() >= 3 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                Verify
-              </div>
-              <div className={`text-xs font-medium transition-colors ${getStepNumber() >= 4 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                Password
-              </div>
-              <div className={`text-xs font-medium transition-colors ${getStepNumber() >= 5 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                PIN
+                Verification
               </div>
             </div>
           </div>
@@ -645,68 +622,150 @@ export default function MultiStepRegistration() {
             </div>
           )}
 
-          {/* Personal Information Step */}
-          {currentStep === 'personal' && (
+          {/* Information Step */}
+          {currentStep === 'info' && (
             <div>
               <div className="mb-6">
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
                   Create Your Account
                 </h1>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Let's start with your personal information
+                  Please provide your information to get started
                 </p>
               </div>
 
-              <InputField
-                label="First Name"
-                icon={User}
-                value={formData.firstName}
-                onChange={handleFirstNameChange}
-                placeholder="John"
-                error={errors.firstName}
-              />
-
-              <InputField
-                label="Last Name"
-                icon={User}
-                value={formData.lastName}
-                onChange={handleLastNameChange}
-                placeholder="Doe"
-                error={errors.lastName}
-              />
-            </div>
-          )}
-
-          {/* Contact Information Step */}
-          {currentStep === 'contact' && (
-            <div>
+              {/* Personal Information */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  Contact Information
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400">
-                  How can we reach you?
-                </p>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  Personal Information
+                </h2>
+                <InputField
+                  label="First Name"
+                  icon={User}
+                  value={formData.firstName}
+                  onChange={handleFirstNameChange}
+                  placeholder="John"
+                  error={errors.firstName}
+                />
+
+                <InputField
+                  label="Last Name"
+                  icon={User}
+                  value={formData.lastName}
+                  onChange={handleLastNameChange}
+                  placeholder="Doe"
+                  error={errors.lastName}
+                />
               </div>
 
-              <InputField
-                label="Email Address"
-                icon={Mail}
-                type="email"
-                value={formData.email}
-                onChange={handleEmailChange}
-                placeholder="you@example.com"
-                error={errors.email}
-              />
+              {/* Contact Information */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  Contact Information
+                </h2>
+                <InputField
+                  label="Email Address"
+                  icon={Mail}
+                  type="email"
+                  value={formData.email}
+                  onChange={handleEmailChange}
+                  placeholder="you@example.com"
+                  error={errors.email}
+                />
 
-              <InputField
-                label="Phone Number"
-                icon={Phone}
-                value={formData.phone}
-                onChange={handlePhoneChange}
-                placeholder="08012345678"
-                error={errors.phone}
-              />
+                <InputField
+                  label="Phone Number"
+                  icon={Phone}
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  placeholder="08012345678"
+                  error={errors.phone}
+                />
+              </div>
+
+              {/* Password */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  Create Password
+                </h2>
+                <PasswordField
+                  label="Password"
+                  value={formData.password}
+                  onChange={handlePasswordChange}
+                  show={showPassword}
+                  onToggle={toggleShowPassword}
+                  placeholder="Enter your password"
+                  error={errors.password}
+                />
+
+                <PasswordField
+                  label="Confirm Password"
+                  value={formData.confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  show={showConfirmPassword}
+                  onToggle={toggleShowConfirmPassword}
+                  placeholder="Confirm your password"
+                  error={errors.confirmPassword}
+                />
+
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Password requirements:</p>
+                  <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-300">
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
+                      <span>At least 8 characters</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
+                      <span>At least one uppercase letter</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
+                      <span>At least one lowercase letter</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
+                      <span>At least one number</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* PIN */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                  Transaction PIN
+                </h2>
+                <InputField
+                  label="PIN"
+                  icon={Lock}
+                  type="password"
+                  value={formData.pin}
+                  onChange={handlePinChange}
+                  placeholder="••••••"
+                  error={errors.pin}
+                />
+
+                <InputField
+                  label="Confirm PIN"
+                  icon={Lock}
+                  type="password"
+                  value={formData.confirmPin}
+                  onChange={handleConfirmPinChange}
+                  placeholder="••••••"
+                  error={errors.confirmPin}
+                />
+
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0">💡</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-1">Security Tip</p>
+                      <p className="text-sm text-amber-800 dark:text-amber-300">You'll use this PIN to confirm transactions. Keep it safe and don't share it with anyone.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -763,105 +822,7 @@ export default function MultiStepRegistration() {
             </div>
           )}
 
-          {/* Password Step */}
-          {currentStep === 'password' && (
-            <div>
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  Create Password
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Choose a strong password to protect your account
-                </p>
-              </div>
 
-              <PasswordField
-                label="Password"
-                value={formData.password}
-                onChange={handlePasswordChange}
-                show={showPassword}
-                onToggle={toggleShowPassword}
-                placeholder="Enter your password"
-                error={errors.password}
-              />
-
-              <PasswordField
-                label="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleConfirmPasswordChange}
-                show={showConfirmPassword}
-                onToggle={toggleShowConfirmPassword}
-                placeholder="Confirm your password"
-                error={errors.confirmPassword}
-              />
-
-              <div className="mt-5 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Password requirements:</p>
-                <ul className="space-y-1.5 text-sm text-blue-800 dark:text-blue-300">
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
-                    <span>At least 8 characters</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
-                    <span>At least one uppercase letter</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
-                    <span>At least one lowercase letter</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
-                    <span>At least one number</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* PIN Step */}
-          {currentStep === 'pin' && (
-            <div>
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  Create Transaction PIN
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Set a 6-digit PIN for secure transactions
-                </p>
-              </div>
-
-              <InputField
-                label="Transaction PIN"
-                icon={Lock}
-                type="password"
-                value={formData.pin}
-                onChange={handlePinChange}
-                placeholder="••••••"
-                error={errors.pin}
-              />
-
-              <InputField
-                label="Confirm PIN"
-                icon={Lock}
-                type="password"
-                value={formData.confirmPin}
-                onChange={handleConfirmPinChange}
-                placeholder="••••••"
-                error={errors.confirmPin}
-              />
-
-              <div className="mt-5 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <span className="text-xl flex-shrink-0">💡</span>
-                  <div>
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-1">Security Tip</p>
-                    <p className="text-sm text-amber-800 dark:text-amber-300">You'll use this PIN to confirm transactions. Keep it safe and don't share it with anyone.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Success Step */}
           {currentStep === 'success' && (
@@ -908,7 +869,7 @@ export default function MultiStepRegistration() {
               <button
                 type="button"
                 onClick={handleBack}
-                disabled={currentStep === 'personal' || isLoading}
+                disabled={currentStep === 'info' || isLoading}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-5 py-2.5 font-medium text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -928,7 +889,7 @@ export default function MultiStepRegistration() {
                   </>
                 ) : (
                   <>
-                    {currentStep === 'pin' ? 'Complete' : 'Continue'}
+                    {currentStep === 'info' ? 'Send OTP' : 'Verify'}
                     <ArrowRight className="h-5 w-5" />
                   </>
                 )}

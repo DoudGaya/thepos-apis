@@ -8,7 +8,9 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter?: nodemailer.Transporter;
+  private _usingTestAccount = false;
+  private _testAccount: any = null;
 
   constructor() {
     // Support both Gmail service and custom SMTP servers
@@ -28,17 +30,41 @@ class EmailService {
         pass: process.env.SMTP_PASS,
       };
       console.log(`📧 Email service using SMTP server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
-    } else {
-      // Fallback to Gmail
+      this.transporter = nodemailer.createTransport(smtpConfig);
+    } else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      // Try using Gmail or configured provider via 'service' when explicit host/port not provided
       smtpConfig.service = 'gmail';
       smtpConfig.auth = {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       };
-      console.log('📧 Email service using Gmail');
+      console.log('📧 Email service using Gmail (service) with provided SMTP_USER');
+      this.transporter = nodemailer.createTransport(smtpConfig);
+    } else {
+      // No SMTP configured — create a test account using Ethereal for development
+      console.log('📧 No SMTP configuration found — creating Ethereal test account for development');
+      // createTestAccount is async; set transporter once created
+      nodemailer.createTestAccount()
+        .then((testAccount) => {
+          this._testAccount = testAccount
+          this._usingTestAccount = true
+          this.transporter = nodemailer.createTransport({
+            host: testAccount.smtp.host,
+            port: testAccount.smtp.port,
+            secure: testAccount.smtp.secure,
+            auth: {
+              user: testAccount.user,
+              pass: testAccount.pass,
+            },
+          })
+          console.log(`📧 Ethereal test account created — user: ${testAccount.user}`)
+        })
+        .catch((err) => {
+          console.error('❌ Failed to create Ethereal test account:', err)
+          // As a last resort, create a no-op transporter that throws on send
+          this.transporter = nodemailer.createTransport({ jsonTransport: true })
+        })
     }
-
-    this.transporter = nodemailer.createTransport(smtpConfig);
   }
 
   async sendEmail({ to, subject, text, html }: EmailOptions): Promise<boolean> {
@@ -54,11 +80,27 @@ class EmailService {
         html: html || text,
       };
 
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully:', result.messageId);
+      if (!this.transporter) {
+        console.error('❌ No mail transporter configured')
+        return false
+      }
+
+      const result = await this.transporter.sendMail(mailOptions as any);
+      console.log('✅ Email sent successfully:', result?.messageId || '(no messageId)');
+
+      // If using Ethereal test account, print preview URL
+      try {
+        if (this._usingTestAccount) {
+          const preview = nodemailer.getTestMessageUrl(result)
+          if (preview) console.log('📧 Preview URL:', preview)
+        }
+      } catch (err) {
+        // ignore preview errors
+      }
+
       return true;
     } catch (error: any) {
-      console.error('❌ Email sending failed:', error.message);
+      console.error('❌ Email sending failed:', error && error.stack ? error.stack : error)
       return false;
     }
   }
@@ -115,6 +157,10 @@ class EmailService {
 
   async testConnection(): Promise<boolean> {
     try {
+      if (!this.transporter) {
+        console.warn('⚠️ testConnection: no transporter configured')
+        return false
+      }
       await this.transporter.verify();
       console.log('✅ Email service connection verified');
       return true;
@@ -124,5 +170,6 @@ class EmailService {
     }
   }
 }
+
 
 export const emailService = new EmailService();

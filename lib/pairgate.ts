@@ -116,9 +116,10 @@ export const pairgateService = {
   },
 }
 
+
 // Mock data for development
 export const mockDataPlans: DataPlan[] = [
-  { id: 'mtn_1gb', network: 'MTN', name: '1GB Monthly', price: 350, validity: '30 days', dataValue: '1GB' },
+  { id: 'mtn_1gb', network: 'MTN', name: '1GB Monthly', price: 450, validity: '30 days', dataValue: '1GB' },
   { id: 'mtn_2gb', network: 'MTN', name: '2GB Monthly', price: 700, validity: '30 days', dataValue: '2GB' },
   { id: 'mtn_5gb', network: 'MTN', name: '5GB Monthly', price: 1500, validity: '30 days', dataValue: '5GB' },
   { id: 'airtel_1gb', network: 'Airtel', name: '1GB Monthly', price: 350, validity: '30 days', dataValue: '1GB' },
@@ -126,6 +127,7 @@ export const mockDataPlans: DataPlan[] = [
   { id: 'glo_1gb', network: 'Glo', name: '1GB Monthly', price: 350, validity: '30 days', dataValue: '1GB' },
   { id: '9mobile_1gb', network: '9mobile', name: '1GB Monthly', price: 350, validity: '30 days', dataValue: '1GB' },
 ]
+
 
 export const mockBillProviders: BillProvider[] = [
   { id: 'ekedc', name: 'Eko Electricity Distribution Company', type: 'electricity', code: 'EKEDC' },

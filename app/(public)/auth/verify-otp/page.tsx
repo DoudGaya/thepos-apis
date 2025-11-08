@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Phone } from 'lucide-react'
+import { Suspense } from 'react'
 
 // Toast Component
 function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' | 'error' | 'info' | 'warning'; message: string; onClose: () => void; autoClose?: number }) {
@@ -53,7 +54,7 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
   )
 }
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -345,6 +346,35 @@ export default function VerifyOTPPage() {
             Try logging in
           </a>
         </p>
+      </div>
+    </div>
+  )
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <Suspense fallback={
+          <div className="space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                ThePOS
+              </h1>
+              <h2 className="mt-6 text-3xl font-bold text-gray-900">
+                Verify Your Account
+              </h2>
+            </div>
+            <div className="bg-white p-8 rounded-xl shadow-lg">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <VerifyOTPContent />
+        </Suspense>
       </div>
     </div>
   )

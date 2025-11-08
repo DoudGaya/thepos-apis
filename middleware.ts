@@ -45,6 +45,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
+    // Redirect admin users from dashboard to admin panel
+    if (request.nextUrl.pathname.startsWith('/dashboard') && token.role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+
     return NextResponse.next()
   }
 

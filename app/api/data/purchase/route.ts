@@ -1,18 +1,23 @@
 /**
  * Data Purchase API
- * POST - Purchase data bundle for any Nigerian network
+ * POST - Purchase data bundle using Amigo as primary vendor
+ * Features:
+ * - PIN verification before purchase
+ * - Automatic profit margin (₦100) applied
+ * - Wallet balance validation
+ * - Atomic transaction + wallet deduction
+ * - Automatic refund on failure
  */
 
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import vtuService from '@/lib/vtu'
-import { calculateDataPricing, formatTransactionDetails, FIXED_PROFIT_MARGIN } from '@/lib/services/pricing'
+import { comparePassword } from '@/lib/auth'
+import { purchaseService } from '@/lib/services/purchase.service'
 import {
   apiHandler,
   successResponse,
   getAuthenticatedUser,
   validateRequestBody,
-  generateReference,
   BadRequestError,
   InsufficientBalanceError,
   validateNigerianPhone,
@@ -26,157 +31,160 @@ const dataPurchaseSchema = z.object({
   }),
   phone: z.string().min(11, 'Phone number is required'),
   planId: z.string().min(1, 'Plan ID is required'),
-  vendorCost: z.number().min(50, 'Invalid plan amount'), // Cost from VTU provider
-  planName: z.string().optional(),
+  pin: z.string().min(4, 'Transaction PIN is required').max(6, 'PIN must be 4-6 digits'),
+  idempotencyKey: z.string().optional(),
 })
+
+const PROFIT_MARGIN = 100 // ₦100 profit per bundle
 
 /**
  * POST /api/data/purchase
- * Purchase data bundle with ₦100 profit margin
+ * Purchase data bundle with PIN verification
+ * Body: { network, phone, planId, pin, idempotencyKey? }
  */
 export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser()
   const data = (await validateRequestBody(request, dataPurchaseSchema)) as z.infer<typeof dataPurchaseSchema>
 
-  // Validate and format phone number
+  // ========================================
+  // 1. Validate Phone Number
+  // ========================================
   if (!validateNigerianPhone(data.phone)) {
-    throw new BadRequestError('Invalid Nigerian phone number')
+    throw new BadRequestError('Invalid Nigerian phone number format')
   }
 
   const formattedPhone = formatNigerianPhone(data.phone)
 
-  // Calculate selling price with ₦100 profit margin
-  const { sellingPrice, profit } = calculateDataPricing(data.vendorCost, data.network)
-
-  // Check user balance
-  const userBalance = await prisma.user.findUnique({
+  // ========================================
+  // 2. Verify Transaction PIN
+  // ========================================
+  const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { credits: true },
-  })
-
-  if (!userBalance || userBalance.credits < sellingPrice) {
-    throw new InsufficientBalanceError(
-      `Insufficient balance. Available: ₦${userBalance?.credits.toLocaleString() || 0}, Required: ₦${sellingPrice.toLocaleString()}`
-    )
-  }
-
-  // Generate unique reference
-  const reference = generateReference('DATA')
-
-  // Create pending transaction with pricing details
-  const transaction = await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      type: 'DATA',
-      amount: sellingPrice,
-      status: 'PENDING',
-      reference,
-      details: formatTransactionDetails(data.vendorCost, sellingPrice, profit, {
-        network: data.network,
-        phone: formattedPhone,
-        planId: data.planId,
-        planName: data.planName,
-      }),
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      pinHash: true,
+      credits: true,
     },
   })
 
-  try {
-    // Deduct from user wallet first (reversible if VTU fails)
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        credits: {
-          decrement: sellingPrice,
-        },
-      },
-    })
+  if (!dbUser) {
+    throw new BadRequestError('User not found')
+  }
 
-    // Purchase data from VTU.NG
-    const vtuResponse = await vtuService.purchaseData(
-      data.network,
-      formattedPhone,
-      data.planId
+  if (!dbUser.pinHash) {
+    throw new BadRequestError(
+      'Transaction PIN not set. Please create a PIN in your profile settings before making purchases.'
     )
+  }
 
-    // Update transaction as completed
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: 'COMPLETED',
-        details: formatTransactionDetails(data.vendorCost, sellingPrice, profit, {
-          network: data.network,
-          phone: formattedPhone,
-          planId: data.planId,
-          planName: data.planName,
-          vtuTransactionId: vtuResponse.transaction_id,
-          vtuStatus: vtuResponse.status,
-        }),
-      },
-    })
+  const isPinValid = await comparePassword(data.pin, dbUser.pinHash)
+  if (!isPinValid) {
+    throw new BadRequestError('Incorrect PIN. Please try again.')
+  }
 
-    // Create notification
-    await prisma.notification.create({
-      data: {
-        userId: user.id,
-        title: 'Data Purchase Successful',
-        message: `${data.network} ${data.planName || 'data bundle'} sent to ${formattedPhone}. Cost: ₦${sellingPrice.toLocaleString()}`,
-        type: 'TRANSACTION',
-        isRead: false,
-      },
-    })
+  // ========================================
+  // 3. Get Plan Details from Vendor (Amigo)
+  // ========================================
+  const { vendorService } = await import('@/lib/vendors')
+  const plans = await vendorService.getPlans('DATA', data.network)
+  const selectedPlan = plans.find(p => p.id === data.planId)
 
-    // Get updated balance
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { credits: true },
-    })
+  if (!selectedPlan) {
+    throw new BadRequestError('Selected plan not found or unavailable')
+  }
 
-    return successResponse({
-      transaction: {
-        id: transaction.id,
-        reference,
-        network: data.network,
-        phone: formattedPhone,
-        plan: data.planName,
-        vendorCost: data.vendorCost,
+  if (!selectedPlan.isAvailable) {
+    throw new BadRequestError('Selected plan is currently unavailable')
+  }
+
+  // ========================================
+  // 4. Calculate Final Pricing
+  // ========================================
+  const costPrice = selectedPlan.price // Vendor's cost (Amigo price)
+  const sellingPrice = costPrice + PROFIT_MARGIN // What user pays
+  const profit = PROFIT_MARGIN
+
+  // ========================================
+  // 5. Validate Wallet Balance
+  // ========================================
+  if (dbUser.credits < sellingPrice) {
+    throw new InsufficientBalanceError(
+      `Insufficient balance. Required: ₦${sellingPrice.toLocaleString()}, Available: ₦${dbUser.credits.toLocaleString()}. Please fund your wallet to continue.`
+    )
+  }
+
+  // ========================================
+  // 6. Process Purchase via PurchaseService
+  // ========================================
+  try {
+    const result = await purchaseService.purchase({
+      userId: user.id,
+      service: 'DATA',
+      network: data.network,
+      recipient: formattedPhone,
+      planId: data.planId,
+      idempotencyKey: data.idempotencyKey,
+      metadata: {
+        source: 'web_app',
+        planName: selectedPlan.name,
+        costPrice,
         sellingPrice,
         profit,
-        status: 'COMPLETED',
-        createdAt: transaction.createdAt,
+        userAgent: request.headers.get('user-agent') || 'unknown',
       },
-      vtu: {
-        transactionId: vtuResponse.transaction_id,
-        status: vtuResponse.status,
+    })
+
+    // ========================================
+    // 7. Return Success Response
+    // ========================================
+    return successResponse({
+      transaction: {
+        id: result.transaction.id,
+        reference: result.transaction.reference,
+        service: result.transaction.service,
+        network: result.transaction.network,
+        recipient: result.transaction.recipient,
+        amount: result.transaction.amount,
+        sellingPrice: result.transaction.sellingPrice,
+        profit: result.transaction.profit,
+        status: result.transaction.status,
+        createdAt: result.transaction.createdAt,
       },
-      balance: updatedUser?.credits || 0,
-    }, 'Data purchase successful')
+      plan: {
+        name: selectedPlan.name,
+        network: data.network,
+        validity: selectedPlan.validity,
+        costPrice,
+        sellingPrice,
+        profit,
+      },
+      wallet: {
+        previousBalance: dbUser.credits,
+        newBalance: dbUser.credits - sellingPrice,
+        amountDeducted: sellingPrice,
+      },
+      message: result.message,
+    }, 'Data purchase successful! You will receive a notification once processed.')
 
   } catch (error: any) {
-    // Refund user wallet
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        credits: {
-          increment: sellingPrice,
-        },
-      },
-    })
+    // ========================================
+    // 8. Handle Errors with Clear Messages
+    // ========================================
+    console.error('Data purchase error:', error)
 
-    // Mark transaction as failed
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: 'FAILED',
-        details: formatTransactionDetails(data.vendorCost, sellingPrice, profit, {
-          network: data.network,
-          phone: formattedPhone,
-          planId: data.planId,
-          planName: data.planName,
-          error: error.message,
-        }),
-      },
-    })
+    if (error.message && error.message.includes('Insufficient balance')) {
+      throw new InsufficientBalanceError(error.message)
+    }
 
-    throw new BadRequestError(error.message || 'Data purchase failed. Your wallet has been refunded.')
+    if (error.message && error.message.includes('Duplicate')) {
+      throw new BadRequestError('Duplicate transaction detected. Please check your transaction history.')
+    }
+
+    throw new BadRequestError(
+      error.message || 'Purchase failed. Please try again or contact support if the issue persists.'
+    )
   }
 })
