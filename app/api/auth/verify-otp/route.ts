@@ -107,6 +107,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Check if user needs to set password (passwordHash is null)
+    const needsPasswordSetup = !user.passwordHash
+    // Check if user needs to set PIN (pinHash is null)
+    const needsPinSetup = !user.pinHash
+
     // Generate tokens for login after verification
     const accessToken = generateToken({ userId: user.id, role: user.role })
     const refreshToken = generateToken({ userId: user.id, role: user.role })
@@ -115,12 +120,16 @@ export async function POST(request: NextRequest) {
     const { passwordHash, ...userWithoutPassword } = user
 
     return NextResponse.json({
-      message: 'Account verified successfully',
+      message: 'Phone verified successfully',
       success: true,
       token: accessToken,
       accessToken,
       refreshToken,
       user: { ...userWithoutPassword, isVerified: true },
+      // Indicate next steps for client
+      requiresPasswordSetup: needsPasswordSetup,
+      requiresPinSetup: needsPinSetup,
+      nextStep: needsPasswordSetup ? 'SET_PASSWORD' : (needsPinSetup ? 'SET_PIN' : 'COMPLETE'),
     })
   } catch (error) {
     console.error('OTP verification error:', error)

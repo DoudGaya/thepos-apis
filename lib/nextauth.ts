@@ -78,6 +78,32 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.phone = (user as any).phone;
         token.isVerified = (user as any).isVerified;
+        token.firstName = (user as any).firstName;
+        token.lastName = (user as any).lastName;
+      } else if (token.sub) {
+        // Refresh profile data from database on every token use
+        // This ensures firstName/lastName are always up-to-date
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: {
+              firstName: true,
+              lastName: true,
+              role: true,
+              isVerified: true,
+            },
+          });
+
+          if (dbUser) {
+            token.firstName = dbUser.firstName;
+            token.lastName = dbUser.lastName;
+            token.role = dbUser.role;
+            token.isVerified = dbUser.isVerified;
+          }
+        } catch (error) {
+          console.error('Error refreshing user data from database:', error);
+          // Continue with existing token data if database query fails
+        }
       }
       return token;
     },
@@ -87,6 +113,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).phone = token.phone;
         (session.user as any).isVerified = token.isVerified;
+        (session.user as any).firstName = token.firstName;
+        (session.user as any).lastName = token.lastName;
       }
       return session;
     },

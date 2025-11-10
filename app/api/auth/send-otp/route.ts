@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // For REGISTER type, verify user doesn't already exist
+    // For REGISTER type, check if user exists and their verification status
     if (parsed.type === 'REGISTER') {
       const whereConditions: any[] = [{ phone: formattedPhone }]
       if (parsed.email) {
@@ -65,21 +65,28 @@ export async function POST(request: NextRequest) {
       })
 
       if (existingUser) {
-        if (existingUser.email === parsed.email) {
-          return NextResponse.json(
-            { error: `Email ${parsed.email} is already registered. Please sign in or use a different email.` },
-            { status: 400 }
-          )
-        } else if (existingUser.phone === formattedPhone) {
-          return NextResponse.json(
-            { error: `Phone number ${formattedPhone} is already registered. Please sign in or use a different phone number.` },
-            { status: 400 }
-          )
+        // ✅ If user is NOT verified, allow resending OTP
+        if (!existingUser.isVerified) {
+          console.log(`✔️  User exists but not verified (isVerified=false). Allowing OTP resend for: ${formattedPhone}`)
+          // Continue - allow them to get a new OTP
         } else {
-          return NextResponse.json(
-            { error: 'This email or phone number is already registered. Please sign in instead.' },
-            { status: 400 }
-          )
+          // ❌ If user IS verified, reject
+          if (existingUser.email === parsed.email) {
+            return NextResponse.json(
+              { error: `Email ${parsed.email} is already registered and verified. Please sign in or use a different email.` },
+              { status: 400 }
+            )
+          } else if (existingUser.phone === formattedPhone) {
+            return NextResponse.json(
+              { error: `Phone number ${formattedPhone} is already registered and verified. Please sign in or use a different phone number.` },
+              { status: 400 }
+            )
+          } else {
+            return NextResponse.json(
+              { error: 'This email or phone number is already registered and verified. Please sign in instead.' },
+              { status: 400 }
+            )
+          }
         }
       }
     }

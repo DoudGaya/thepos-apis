@@ -30,6 +30,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if user has completed password setup (Phase 3)
+    if (!user.passwordHash) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Your account setup is incomplete. Please complete your registration by setting a password.',
+          requiresPasswordSetup: true,
+          email: user.email,
+          phone: user.phone
+        },
+        { status: 403 }
+      )
+    }
+
     // Check PIN
     const isValidPassword = await comparePassword(pin, user.passwordHash)
     if (!isValidPassword) {

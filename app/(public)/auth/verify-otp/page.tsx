@@ -151,11 +151,24 @@ function VerifyOTPContent() {
         message: 'Phone verified successfully!',
       })
 
-      // Redirect to login after a short delay
+      // Store user data for next steps
+      const nextStep = data.nextStep || 'SET_PASSWORD'
+      localStorage.setItem('userId', data.user?.id || '')
+      localStorage.setItem('userEmail', data.user?.email || '')
+      localStorage.removeItem('verifyPhone')
+
+      // Redirect based on what's needed next
       setTimeout(() => {
-        // Clear stored phone
-        localStorage.removeItem('verifyPhone')
-        router.push('/auth/login?verified=true')
+        if (nextStep === 'SET_PASSWORD' || data.requiresPasswordSetup) {
+          // User needs to set password
+          router.push(`/auth/set-password?userId=${data.user?.id}`)
+        } else if (nextStep === 'SET_PIN' || data.requiresPinSetup) {
+          // User has password, needs to set PIN
+          router.push(`/auth/set-pin?userId=${data.user?.id}`)
+        } else {
+          // All set, go to dashboard
+          router.push('/dashboard')
+        }
       }, 2000)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -221,8 +234,8 @@ function VerifyOTPContent() {
 
   if (success) {
     return (
-      <div className="bg-white p-8 rounded-xl shadow-lg text-center space-y-4">
-        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+      <div className="bg-gray-900 p-8 rounded-xl shadow-lg text-center space-y-4">
+        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-900">
           <CheckCircle2 className="h-10 w-10 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Phone Verified!</h2>
@@ -244,18 +257,7 @@ function VerifyOTPContent() {
         />
       )}
 
-      {/* Logo/Brand */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-          ThePOS
-        </h1>
-        <h2 className="mt-6 text-3xl font-bold text-gray-900">
-          Verify Your Account
-        </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          We've sent a 6-digit code to your phone number
-        </p>
-      </div>
+    
 
       {/* Error Alert */}
       {errors.form && (
@@ -270,12 +272,25 @@ function VerifyOTPContent() {
       )}
 
       {/* Verification Form */}
-      <form onSubmit={handleVerifyOTP} className="space-y-6 bg-white p-8 rounded-xl shadow-lg">
+      <form onSubmit={handleVerifyOTP} className="space-y-6 bg-black p-8 rounded-xl shadow-lg">
+        {/* Info Alert */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Complete Registration</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Enter the 6-digit OTP sent to your phone. If you didn't receive it, you can request a new one below.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Phone Number Display */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-gray-950 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center">
-            <Phone className="h-5 w-5 text-blue-600 mr-2" />
-            <span className="text-sm text-blue-900">
+            <Phone className="h-5 w-5 text-white mr-2" />
+            <span className="text-sm text-green-200">
               Verification code sent to: <strong>{phone || 'your phone'}</strong>
             </span>
           </div>
@@ -283,7 +298,7 @@ function VerifyOTPContent() {
 
         {/* OTP Input */}
         <div>
-          <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="otp" className="block text-sm font-medium text-gray-950">
             6-Digit Code
           </label>
           <div className="mt-1">
@@ -300,7 +315,7 @@ function VerifyOTPContent() {
                 const value = e.target.value.replace(/\D/g, '').slice(0, 6)
                 setOtp(value)
               }}
-              className={`block w-full px-4 py-3 border-2 rounded-lg text-center text-2xl font-bold letter-spacing-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+              className={`block w-full px-4 py-2 border-2 bg-gray-950 rounded-lg text-center text-2xl font-bold letter-spacing-xl focus:ring-2  focus:border-transparent transition-all ${
                 errors.otp ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="000000"
@@ -313,7 +328,7 @@ function VerifyOTPContent() {
         <button
           type="submit"
           disabled={isLoading || otp.length !== 6}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r bg-green-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
         >
           {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
           {isLoading ? 'Verifying...' : 'Verify OTP'}
@@ -347,13 +362,15 @@ function VerifyOTPContent() {
           </a>
         </p>
       </div>
+
+
     </div>
   )
 }
 
 export default function VerifyOTPPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className=" flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <Suspense fallback={
           <div className="space-y-8">
@@ -365,7 +382,7 @@ export default function VerifyOTPPage() {
                 Verify Your Account
               </h2>
             </div>
-            <div className="bg-white p-8 rounded-xl shadow-lg">
+            <div className="bg-black p-8 rounded-xl shadow-lg">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                 <p className="mt-4 text-gray-600">Loading...</p>

@@ -18,6 +18,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Handle profile-completion - allow access without other checks
+  if (request.nextUrl.pathname === '/profile-completion') {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    })
+
+    // If no token, redirect to login
+    if (!token) {
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
+    // If user already has firstName and lastName, redirect to dashboard
+    if ((token as any).firstName && (token as any).lastName) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+
+    return NextResponse.next()
+  }
+
   // Handle NextAuth protected routes (dashboard and admin)
   if (
     request.nextUrl.pathname.startsWith('/dashboard') ||
@@ -38,6 +60,11 @@ export async function middleware(request: NextRequest) {
     // Check if user is verified
     if (!(token as any).isVerified) {
       return NextResponse.redirect(new URL(`/auth/verify-otp?phone=${encodeURIComponent((token as any).phone)}`, request.url))
+    }
+
+    // Check if user has completed profile (firstName and lastName)
+    if (!(token as any).firstName || !(token as any).lastName) {
+      return NextResponse.redirect(new URL('/profile-completion', request.url))
     }
 
     // Role-based access control for admin routes

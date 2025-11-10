@@ -8,12 +8,13 @@ import { z } from 'zod'
 export const runtime = 'nodejs'
 
 const registerSchema = z.object({
-  // Accept both formats: fullName or firstName/lastName
+  // Phase 1: Minimal registration - only email and phone
+  email: z.string().email('Valid email is required'),
+  phone: z.string().min(11, 'Phone number is required'),
+  // Legacy fields for backward compatibility
   fullName: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  email: z.string().email('Valid email is required'),
-  phone: z.string().optional(),
   phoneNumber: z.string().optional(),
   pin: z.string().min(6, 'PIN must be 6 digits').max(6, 'PIN must be 6 digits').regex(/^\d+$/, 'PIN must contain only numbers').optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
@@ -24,55 +25,34 @@ const registerSchema = z.object({
 export async function POST(request: NextRequest) {
   console.log('🚀 Registration endpoint hit');
   try {
+    console.log('📋 Reading request body...')
     const body = await request.json()
-    console.log('📥 Registration request body:', JSON.stringify(body, null, 2));
-    console.log('📝 Registration request body:', JSON.stringify(body, null, 2))
+    console.log('📥 Registration request body:', JSON.stringify(body, null, 2))
     
+    console.log('✔️  Parsing schema...')
     const parsed = registerSchema.parse(body)
+    console.log('✅ Schema validation passed')
     
-    // Handle both fullName and firstName/lastName formats
-    let firstName = parsed.firstName || ''
-    let lastName = parsed.lastName || ''
-    
-    if (parsed.fullName && !firstName && !lastName) {
-      const nameParts = parsed.fullName.trim().split(/\s+/)
-      firstName = nameParts[0]
-      lastName = nameParts.slice(1).join(' ') || nameParts[0]
-    }
-    
-    // Validate names are not empty
-    if (!firstName) {
-      return NextResponse.json(
-        { error: 'First name is required' },
-        { status: 400 }
-      )
-    }
+    // Phase 1: Only email and phone required for OTP generation
+    const { email, phone: phoneNumber, firstName: passedFirstName, lastName: passedLastName } = parsed
+    console.log('📊 Extracted fields:', { email, phoneNumber, passedFirstName, passedLastName })
 
     // Handle phone number formats
-    const phoneNumber = parsed.phoneNumber || parsed.phone
     if (!phoneNumber) {
+      console.error('❌ Phone number missing')
       return NextResponse.json(
         { error: 'Phone number is required' },
         { status: 400 }
       )
     }
 
-    const { email, pin, password, referralCode, acceptedMarketing } = parsed
-
-    // Get password - accept either pin or password field
-    const passwordValue = password || pin
-    if (!passwordValue) {
-      return NextResponse.json(
-        { error: 'Password or PIN is required' },
-        { status: 400 }
-      )
-    }
-
     // Format phone number
+    console.log('📞 Formatting phone number:', phoneNumber)
     const formattedPhone = formatPhoneNumber(phoneNumber)
-    console.log('📞 Formatted phone:', formattedPhone)
+    console.log('✅ Formatted phone:', formattedPhone)
 
     // Check if user already exists
+    console.log('🔍 Checking for existing user with email or phone...')
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -81,99 +61,63 @@ export async function POST(request: NextRequest) {
         ],
       },
     })
-
-    console.log('Existing user check result:', existingUser)
+    console.log('✔️  Existing user check completed')
 
     if (existingUser) {
+      console.log('❌ User already exists:', { email: existingUser.email, phone: existingUser.phone })
       if (existingUser.email === email) {
-        console.log('Email already exists:', email)
         return NextResponse.json(
           { error: `Email already registered: ${email}. Please use a different email or sign in instead.` },
           { status: 400 }
         )
       } else if (existingUser.phone === formattedPhone) {
-        console.log('Phone already exists:', formattedPhone)
         return NextResponse.json(
           { error: `Phone number already registered: ${formattedPhone}. Please use a different phone number or sign in instead.` },
           { status: 400 }
         )
-      } else {
-        return NextResponse.json(
-          { error: 'User with this email or phone already exists' },
-          { status: 400 }
-        )
       }
     }
-
-    // Validate referral code if provided
-    let referrerId = null
-    if (referralCode) {
-      const referrer = await prisma.user.findUnique({
-        where: { referralCode },
-      })
-      if (!referrer) {
-        return NextResponse.json(
-          { error: 'Invalid referral code' },
-          { status: 400 }
-        )
-      }
-      referrerId = referrer.id
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(passwordValue)
 
     // Generate unique referral code
+    console.log('🎲 Generating unique referral code...')
     let newReferralCode
+    let attempts = 0
     do {
       newReferralCode = generateReferralCode()
+      attempts++
+      if (attempts > 100) throw new Error('Could not generate unique referral code after 100 attempts')
     } while (await prisma.user.findUnique({ where: { referralCode: newReferralCode } }))
+    console.log('✅ Unique referral code generated:', newReferralCode, `(attempts: ${attempts})`)
 
-    // Create user (not verified initially)
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        phone: formattedPhone,
-        passwordHash,
-        referralCode: newReferralCode,
-        referredBy: referrerId,
-        credits: referrerId ? 100 : 0, // ₦100 bonus for referred users
-        isVerified: false, // User must verify OTP first
-      },
-    })
-
-    // Create referral record if user was referred
-    if (referrerId) {
-      await prisma.$transaction(async (tx) => {
-        // Create referral record
-        await tx.referral.create({
-          data: {
-            referrerId,
-            referredId: user.id,
-            reward: 100,
-            status: 'COMPLETED',
-          },
-        })
-
-        // Add credits to referrer
-        await tx.user.update({
-          where: { id: referrerId },
-          data: {
-            credits: {
-              increment: 100,
-            },
-          },
-        })
-      })
+    // Prepare user data
+    console.log('📝 Preparing user creation data...')
+    const userCreateData = {
+      firstName: passedFirstName && passedFirstName.trim().length > 0 ? passedFirstName.trim() : null,
+      lastName: passedLastName && passedLastName.trim().length > 0 ? passedLastName.trim() : null,
+      email,
+      phone: formattedPhone,
+      passwordHash: null,
+      referralCode: newReferralCode,
+      isVerified: false,
     }
+    console.log('✔️  User data prepared:', { email, phone: formattedPhone, referralCode: newReferralCode })
 
-    // Generate and store OTP
+    console.log('👤 CREATING USER IN DATABASE...')
+    const user = await prisma.user.create({
+      data: userCreateData,
+    })
+    console.log('✅ USER CREATED SUCCESSFULLY:', user.id)
+    console.log('📊 New user details:', { id: user.id, email: user.email, phone: user.phone, firstName: user.firstName, lastName: user.lastName, passwordHash: user.passwordHash })
+
+    // Generate OTP
+    console.log('🔐 Generating OTP code...')
     const otpCode = generateOTP()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    console.log('✅ OTP Generated:', otpCode, 'Expires at:', expiresAt)
 
-    await prisma.oTP.create({
+    // Create OTP record
+    console.log('💾 STORING OTP IN DATABASE...')
+    const otpRecord = await prisma.oTP.create({
       data: {
         phone: formattedPhone,
         code: otpCode,
@@ -181,61 +125,86 @@ export async function POST(request: NextRequest) {
         expiresAt,
       },
     })
+    console.log('✅ OTP RECORD CREATED SUCCESSFULLY:', otpRecord.id)
 
-    // Send OTP via SMS and Email
-    console.log(`✅ OTP Generated for ${formattedPhone}: ${otpCode}`);
-    
-    // Send SMS
+    // Send OTP via SMS - don't fail if this fails
+    console.log('📱 SENDING SMS OTP...')
     try {
-      const smsPhone = smsService.formatPhoneForSMS(formattedPhone);
-      await smsService.sendOTP(smsPhone, otpCode);
-      console.log(`📱 SMS sent successfully to ${formattedPhone}`);
+      const smsPhone = smsService.formatPhoneForSMS(formattedPhone)
+      console.log('✔️  SMS phone formatted:', smsPhone)
+      await smsService.sendOTP(smsPhone, otpCode)
+      console.log('✅ SMS SENT SUCCESSFULLY')
     } catch (smsError) {
-      console.error('❌ Failed to send SMS:', smsError);
-      console.log(`💡 Use this OTP for testing: ${otpCode}`);
-      // Continue with registration even if SMS fails
+      console.warn('⚠️  SMS FAILED (registration will continue):', smsError instanceof Error ? smsError.message : String(smsError))
     }
 
-    // Send Email
+    // Send Email - don't fail if this fails
+    console.log('📧 SENDING EMAIL OTP...')
     try {
-      await emailService.sendOTP(email, otpCode);
-      console.log(`📧 Email sent successfully to ${email}`);
+      await emailService.sendOTP(email, otpCode)
+      console.log('✅ EMAIL SENT SUCCESSFULLY')
     } catch (emailError) {
-      console.error('❌ Failed to send email:', emailError);
-      console.log(`💡 Use this OTP for testing: ${otpCode}`);
-      // Continue with registration even if email fails
+      console.warn('⚠️  EMAIL FAILED (registration will continue):', emailError instanceof Error ? emailError.message : String(emailError))
     }
 
     const responseData = {
       success: true,
       message: 'Registration successful. Please verify your phone number.',
-      requiresVerification: true, // Signal frontend to show OTP screen
+      requiresVerification: true,
       data: {
         phone: formattedPhone,
-        userId: user.id, // Add user ID for OTP verification
+        userId: user.id,
       }
-    };
+    }
     
-    console.log('📤 Backend sending response:', JSON.stringify(responseData, null, 2));
+    console.log('✅ REGISTRATION SUCCESSFUL, SENDING RESPONSE')
+    console.log('📤 Response:', JSON.stringify(responseData, null, 2))
+    return NextResponse.json(responseData)
     
-    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('❌ Registration error:', error)
+    console.error('❌❌❌ REGISTRATION ERROR ❌❌❌')
+    console.error('Error type:', error instanceof Error ? 'Error' : typeof error)
+    console.error('Full error object:', error)
     
     if (error instanceof z.ZodError) {
-      console.log('🔍 Validation errors:', JSON.stringify(error.errors, null, 2))
+      console.error('🔍 Zod validation error - invalid input format')
+      console.error('Validation errors:', JSON.stringify(error.errors, null, 2))
       return NextResponse.json(
-        { error: error.errors[0].message, validationErrors: error.errors },
+        { error: error.errors[0].message },
         { status: 400 }
       )
     }
 
-    // Add more specific error logging
     if (error instanceof Error) {
-      console.log('💥 Error message:', error.message)
-      console.log('📋 Error stack:', error.stack)
+      console.error('💥 Error message:', error.message)
+      console.error('📋 Error name:', error.name)
+      console.error('📋 Stack trace:', error.stack)
+      
+      // Return more specific error messages for known issues
+      if (error.message.includes('Unique constraint failed')) {
+        console.error('🔑 Unique constraint violation')
+        return NextResponse.json(
+          { error: 'Email or phone number already registered' },
+          { status: 400 }
+        )
+      }
+      
+      if (error.message.includes('Could not generate unique referral code')) {
+        console.error('🎲 Referral code generation failed')
+        return NextResponse.json(
+          { error: 'Unable to generate registration code. Please try again.' },
+          { status: 500 }
+        )
+      }
+
+      // Return the actual error message for debugging
+      return NextResponse.json(
+        { error: `Server error: ${error.message}` },
+        { status: 500 }
+      )
     }
 
+    console.error('❌ Unknown error type')
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

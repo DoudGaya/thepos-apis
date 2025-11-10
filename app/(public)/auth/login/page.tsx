@@ -62,22 +62,9 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950 antialiased duration-300 flex items-center justify-center py-12">
+    <div className="   antialiased duration-300 flex items-center justify-center py-12">
       <main className="mx-auto max-w-md w-full px-4 sm:px-6">
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 sm:p-8">
-
-          {/* Header / Branding */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-600 shadow-lg mb-4">
-              <span className="text-3xl font-bold text-white">B</span>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-              Bundles
-            </h1>
-            <h2 className="mt-3 text-xl font-semibold text-slate-900 dark:text-white">Welcome back</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Sign in to access your dashboard</p>
-          </div>
-
+        <div className=" border-y-2 border-gray-800 p-6 sm:p-8">
           {/* Error */}
           {error && (
             <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
@@ -184,7 +171,6 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <>
-      <PublicNavigation />
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900">
           <div className="text-center">
@@ -195,7 +181,7 @@ export default function LoginPage() {
       }>
         <LoginContent />
       </Suspense>
-      <Footer />
+
     </>
   )
 }
