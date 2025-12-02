@@ -18,9 +18,7 @@ interface Transaction {
     lastName: string
     email: string
   }
-  vendorConfig?: {
-    vendorName: string
-  }
+  vendorName: string | null
 }
 
 interface TransactionsResponse {
@@ -66,6 +64,15 @@ export default function AdminTransactionsPage() {
       if (endDate) params.append('endDate', endDate)
 
       const response = await fetch(`/api/admin/transactions?${params}`)
+      
+      // Check content type to avoid JSON parse errors on HTML responses
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Received non-JSON response:", text.substring(0, 200)); // Log first 200 chars
+        throw new Error("Server returned non-JSON response. Check console.");
+      }
+
       const result: TransactionsResponse = await response.json()
 
       if (result.success) {
@@ -117,7 +124,7 @@ export default function AdminTransactionsPage() {
         <div className="flex gap-2">
           <button
             onClick={handleExport}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
           >
             Export CSV
           </button>
@@ -300,7 +307,7 @@ export default function AdminTransactionsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm text-gray-900">
-                      {tx.vendorConfig?.vendorName || 'N/A'}
+                      {tx.vendorName || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

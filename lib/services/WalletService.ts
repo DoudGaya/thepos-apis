@@ -5,6 +5,7 @@
 
 import { PrismaClient, TransactionStatus, TransactionType } from '@prisma/client';
 import { prisma } from '../prisma';
+import bcrypt from 'bcryptjs';
 
 export interface WalletTransactionData {
   userId: string;
@@ -212,6 +213,82 @@ export class WalletService {
       transactions,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async transferFunds(senderId: string, receiverId: string, amount: number, pin: string, note?: string) {
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      select: { pinHash: true, credits: true }
+    });
+
+    if (!sender) throw new Error('Sender not found');
+    if (!sender.pinHash) throw new Error('Transaction PIN not set');
+
+    const isPinValid = await bcrypt.compare(pin, sender.pinHash);
+    if (!isPinValid) throw new Error('Invalid PIN');
+
+    if (sender.credits < amount) throw new Error('Insufficient funds');
+
+    return await this.prisma.$transaction(async (tx) => {
+      const updatedSender = await tx.user.update({
+        where: { id: senderId },
+        data: { credits: { decrement: amount } }
+      });
+
+      const updatedReceiver = await tx.user.update({
+        where: { id: receiverId },
+        data: { credits: { increment: amount } }
+      });
+
+      // @ts-ignore - Transfer model might not be in generated client yet
+      const transfer = await tx.transfer.create({
+        data: {
+          senderId,
+          receiverId,
+          amount,
+          status: 'COMPLETED',
+          note
+        }
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: senderId,
+          type: 'P2P_TRANSFER' as TransactionType,
+          amount: amount,
+          status: TransactionStatus.SUCCESS,
+          reference: `TRF-${transfer.id}-S`,
+          details: {
+            type: 'DEBIT',
+            recipientId: receiverId,
+            transferId: transfer.id,
+            balanceBefore: sender.credits,
+            balanceAfter: updatedSender.credits,
+            note
+          }
+        }
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId: receiverId,
+          type: 'P2P_TRANSFER' as TransactionType,
+          amount: amount,
+          status: TransactionStatus.SUCCESS,
+          reference: `TRF-${transfer.id}-R`,
+          details: {
+            type: 'CREDIT',
+            senderId: senderId,
+            transferId: transfer.id,
+            balanceBefore: updatedReceiver.credits - amount,
+            balanceAfter: updatedReceiver.credits,
+            note
+          }
+        }
+      });
+
+      return transfer;
+    });
   }
 }
 

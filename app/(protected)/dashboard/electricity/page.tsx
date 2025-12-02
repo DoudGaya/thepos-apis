@@ -26,6 +26,7 @@ export default function ElectricityPurchasePage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [verifying, setVerifying] = useState(false)
+  const [verifiedName, setVerifiedName] = useState('')
 
   // Fetch wallet balance
   useEffect(() => {
@@ -49,6 +50,43 @@ export default function ElectricityPurchasePage() {
 
   const sellingPrice = formData.vendorCost + PROFIT_MARGIN
 
+  const verifyMeter = async () => {
+    if (!formData.meterNumber || formData.meterNumber.length < 10) {
+      setError('Please enter a valid meter number')
+      return
+    }
+    
+    setVerifying(true)
+    setError('')
+    setVerifiedName('')
+    
+    try {
+      const res = await fetch('/api/bills/electricity/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          disco: formData.provider,
+          meterNumber: formData.meterNumber,
+          meterType: formData.meterType.toUpperCase()
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        setVerifiedName(data.data.customerName || data.data.name || 'Verified Customer')
+        setFormData(prev => ({ ...prev, customerName: data.data.customerName || data.data.name }))
+        setSuccess('Meter verified successfully')
+      } else {
+        setError(data.error || 'Verification failed')
+      }
+    } catch (err) {
+      setError('Failed to verify meter')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -63,6 +101,11 @@ export default function ElectricityPurchasePage() {
     }
     if (!formData.meterNumber || formData.meterNumber.length < 10) {
       setError('Please enter a valid meter number (at least 10 digits)')
+      setLoading(false)
+      return
+    }
+    if (!verifiedName) {
+      setError('Please verify the meter number first')
       setLoading(false)
       return
     }
@@ -200,13 +243,45 @@ export default function ElectricityPurchasePage() {
               <label htmlFor="meterNumber" className="block text-sm font-medium text-gray-700 mb-2">
                 Meter Number
               </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="meterNumber"
+                  value={formData.meterNumber}
+                  onChange={(e) => {
+                    setFormData({ ...formData, meterNumber: e.target.value })
+                    setVerifiedName('') // Reset verification on change
+                  }}
+                  placeholder="Enter your meter number"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={verifyMeter}
+                  disabled={verifying || !formData.meterNumber}
+                  className="px-6 py-3 bg-gray-100 text-gray-900 font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {verifying ? <Loader2 className="animate-spin w-5 h-5" /> : 'Verify'}
+                </button>
+              </div>
+            </div>
+
+            {/* Customer Name (Verified) */}
+            <div>
+              <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-2">
+                Customer Name
+              </label>
               <input
                 type="text"
-                id="meterNumber"
-                value={formData.meterNumber}
-                onChange={(e) => setFormData({ ...formData, meterNumber: e.target.value })}
-                placeholder="Enter your meter number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                id="customerName"
+                value={verifiedName || formData.customerName}
+                readOnly
+                placeholder="Verify meter to see name"
+                className={`w-full px-4 py-3 border rounded-lg ${
+                  verifiedName 
+                    ? 'bg-green-50 border-green-200 text-green-700 font-medium' 
+                    : 'bg-gray-50 border-gray-200 text-gray-500'
+                }`}
               />
             </div>
 
@@ -229,21 +304,6 @@ export default function ElectricityPurchasePage() {
               <p className="text-xs text-gray-500 mt-1">
                 Quick amounts: ₦1,000 | ₦2,000 | ₦5,000 | ₦10,000
               </p>
-            </div>
-
-            {/* Customer Name (Optional) */}
-            <div>
-              <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-2">
-                Customer Name (Optional)
-              </label>
-              <input
-                type="text"
-                id="customerName"
-                value={formData.customerName}
-                onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                placeholder="Name on meter (optional)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              />
             </div>
 
             {/* Price Breakdown */}

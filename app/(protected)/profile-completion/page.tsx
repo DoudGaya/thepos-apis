@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function ProfileCompletionPage() {
-  const { data: session, update: updateSession } = useSession()
+  const { data: session, update: updateSession, status } = useSession()
   const router = useRouter()
   
   const [firstName, setFirstName] = useState('')
@@ -15,6 +15,28 @@ export default function ProfileCompletionPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true)
+
+  // Check if user has already completed their profile
+  useEffect(() => {
+    if (status === 'loading') {
+      return
+    }
+
+    if (!session?.user) {
+      router.push('/auth/login')
+      return
+    }
+
+    // If user already has firstName and lastName, redirect to dashboard
+    const userWithNames = session.user as any
+    if (userWithNames.firstName && userWithNames.lastName) {
+      router.push('/dashboard')
+      return
+    }
+
+    setIsCheckingProfile(false)
+  }, [session, status, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,7 +108,18 @@ export default function ProfileCompletionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    <>
+      {isCheckingProfile ? (
+        // Loading state while checking profile completion
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      ) : (
+        // Profile completion form
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -200,6 +233,8 @@ export default function ProfileCompletionPage() {
           </Link>
         </p>
       </div>
-    </div>
+        </div>
+      )}
+    </>
   )
 }

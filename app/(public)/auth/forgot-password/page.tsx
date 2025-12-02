@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { Mail, Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -105,7 +105,7 @@ export default function ForgotPasswordPage() {
 
       setSuccess('OTP verified successfully')
       setStep('reset')
-      setOtp('')
+      // Do NOT clear OTP here, as it is needed for the reset password step
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {
@@ -221,199 +221,221 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/auth/login"
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Login
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Reset Password</h1>
-          <p className="text-gray-600 mt-2">
-            {step === 'email' && 'Enter your email to receive an OTP'}
-            {step === 'otp' && 'Enter the OTP sent to your email'}
-            {step === 'reset' && 'Create a new password'}
+    <div className="antialiased duration-300 flex items-center justify-center py-12">
+      <main className="mx-auto max-w-md w-full px-4 sm:px-6">
+        <div className="border-y-2 border-gray-800 p-6 sm:p-8">
+          {/* Header */}
+          <div className="mb-8">
+            <Link
+              href="/auth/login"
+              className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </Link>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reset Password</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              {step === 'email' && 'Enter your email to receive an OTP'}
+              {step === 'otp' && 'Enter the OTP sent to your email'}
+              {step === 'reset' && 'Create a new password'}
+            </p>
+          </div>
+
+          {/* Error Toast */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Toast */}
+          {success && (
+            <div className="mb-6 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-300">Success</p>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">{success}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Form Card */}
+          <div className="space-y-5">
+            {/* Step 1: Email */}
+            {step === 'email' && (
+              <form onSubmit={handleRequestOTP} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Email Address
+                  </label>
+                  <div className="relative mt-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || !email.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Sending OTP...
+                    </>
+                  ) : (
+                    'Request OTP'
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Step 2: OTP */}
+            {step === 'otp' && (
+              <form onSubmit={handleVerifyOTP} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={handleOTPChange}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="w-full px-4 py-3 text-center text-2xl font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 tracking-widest"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
+                  Check your email for the 6-digit code
+                </p>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || otp.length !== 6}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify Code'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={resendCountdown > 0 || isLoading}
+                  className="w-full text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-2 transition-colors"
+                >
+                  {resendCountdown > 0
+                    ? `Resend OTP in ${resendCountdown}s`
+                    : 'Resend OTP'}
+                </button>
+              </form>
+            )}
+
+            {/* Step 3: Reset Password */}
+            {step === 'reset' && (
+              <form onSubmit={handleResetPassword} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    New Password
+                  </label>
+                  <div className="relative mt-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    At least 8 characters
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <div className="relative mt-1">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || !newPassword.trim() || !confirmPassword.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-6">
+            Remember your password?{' '}
+            <Link href="/auth/login" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-medium">
+              Sign In
+            </Link>
           </p>
         </div>
-
-        {/* Error Toast */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Success Toast */}
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">{success}</p>
-          </div>
-        )}
-
-        {/* Form Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          {/* Step 1: Email */}
-          {step === 'email' && (
-            <form onSubmit={handleRequestOTP} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Sending OTP...
-                  </>
-                ) : (
-                  'Request OTP'
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* Step 2: OTP */}
-          {step === 'otp' && (
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Verification Code
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={handleOTPChange}
-                  placeholder="000000"
-                  maxLength={6}
-                  className="w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 tracking-widest"
-                  disabled={isLoading}
-                />
-              </div>
-
-              <p className="text-sm text-gray-600 text-center">
-                Check your email for the 6-digit code
-              </p>
-
-              <button
-                type="submit"
-                disabled={isLoading || otp.length !== 6}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify Code'
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResendOTP}
-                disabled={resendCountdown > 0 || isLoading}
-                className="w-full text-blue-600 hover:text-blue-700 disabled:text-gray-400 font-medium py-2 transition-colors"
-              >
-                {resendCountdown > 0
-                  ? `Resend OTP in ${resendCountdown}s`
-                  : 'Resend OTP'}
-              </button>
-            </form>
-          )}
-
-          {/* Step 3: Reset Password */}
-          {step === 'reset' && (
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 pr-10"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  At least 8 characters
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  disabled={isLoading}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !newPassword.trim() || !confirmPassword.trim()}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset Password'
-                )}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Remember your password?{' '}
-          <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
-            Sign In
-          </Link>
-        </p>
-      </div>
+      </main>
     </div>
   )
 }

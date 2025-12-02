@@ -16,6 +16,30 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/bills/electricity',
+        destination: '/dashboard/electricity',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/bills/cable',
+        destination: '/dashboard/cable-tv',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/bills/betting',
+        destination: '/dashboard/betting',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/bills/epins',
+        destination: '/dashboard/epins',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

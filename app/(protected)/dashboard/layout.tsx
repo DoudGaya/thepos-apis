@@ -28,10 +28,10 @@ const navigation = [
   { name: 'Buy Airtime', href: '/dashboard/airtime', icon: Smartphone },
   { name: 'Buy Data', href: '/dashboard/data', icon: Wifi },
   { name: 'Utility Bills', href: '/dashboard/bills', icon: Receipt, submenu: [
-    { name: 'Electricity', href: '/dashboard/bills/electricity' },
-    { name: 'Cable TV', href: '/dashboard/bills/cable' },
-    { name: 'Betting Wallet', href: '/dashboard/bills/betting' },
-    { name: 'ePins', href: '/dashboard/bills/epins' },
+    { name: 'Electricity', href: '/dashboard/electricity' },
+    { name: 'Cable TV', href: '/dashboard/cable-tv' },
+    { name: 'Betting Wallet', href: '/dashboard/betting' },
+    { name: 'ePins', href: '/dashboard/epins' },
   ]},
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
   { name: 'Referrals', href: '/dashboard/referrals', icon: Users },
@@ -65,7 +65,7 @@ export default function DashboardLayout({
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     )
   }
@@ -90,10 +90,10 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-gray-900">
                 ThePOS
               </span>
             </Link>
@@ -108,8 +108,8 @@ export default function DashboardLayout({
           {/* User Info */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-gray-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
@@ -136,12 +136,12 @@ export default function DashboardLayout({
                       onClick={() => toggleSubmenu(item.name)}
                       className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-indigo-50 text-indigo-600'
+                          ? 'bg-gray-100 text-gray-900'
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <item.icon className="w-5 h-5" />
+                        <item.icon className={`w-5 h-5 ${isActive ? 'text-gray-900' : 'text-gray-500'}`} />
                         <span>{item.name}</span>
                       </div>
                       <ChevronDown
@@ -155,11 +155,11 @@ export default function DashboardLayout({
                       href={item.href}
                       className={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-indigo-50 text-indigo-600'
+                          ? 'bg-gray-100 text-gray-900'
                           : 'text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <item.icon className="w-5 h-5" />
+                      <item.icon className={`w-5 h-5 ${isActive ? 'text-gray-900' : 'text-gray-500'}`} />
                       <span>{item.name}</span>
                     </Link>
                   )}
@@ -175,7 +175,7 @@ export default function DashboardLayout({
                             href={subitem.href}
                             className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
                               isSubActive
-                                ? 'bg-indigo-50 text-indigo-600'
+                                ? 'bg-gray-100 text-gray-900'
                                 : 'text-gray-600 hover:bg-gray-100'
                             }`}
                           >
@@ -233,8 +233,8 @@ export default function DashboardLayout({
                 href="/dashboard/profile"
                 className="flex items-center space-x-2 p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-indigo-600" />
+                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-gray-900" />
                 </div>
                 <span className="hidden sm:block text-sm font-medium">
                   {session?.user?.name?.split(' ')[0] || 'User'}

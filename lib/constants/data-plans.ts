@@ -1,5 +1,7 @@
-// Temporary data plans while vendor integration is fixed
-// Base prices - we add ₦100 margin to each plan
+/**
+ * DATA PLANS - Fallback Plans (Used when Amigo API is unavailable)
+ * These are temporary plans with fixed ₦100 margin for testing/fallback
+ */
 
 export const DATA_PLANS = {
   MTN: [
@@ -48,7 +50,224 @@ export const DATA_PLANS = {
   ],
 } as const
 
-// Helper to calculate selling price (cost + ₦100 margin)
+/**
+ * AMIGO PLANS - Official Amigo.ng Vendor Plans (17 total: MTN 10, GLO 7)
+ * These use Amigo's actual plan IDs for vendor API compatibility
+ */
+export interface AmigoBasePlan {
+  planId: number // Amigo's actual plan ID
+  networkName: 'MTN' | 'GLO'
+  dataCapacity: string // e.g., "500MB", "1GB", "200GB"
+  dataCapacityValue: number // numeric value in GB
+  validityDays: number
+  validityLabel: string
+  amigoBasePrice: number // Amigo's official price in ₦
+  pricePerGB: number
+  efficiencyRating: number // 100 = 100%
+}
+
+/**
+ * MTN PLANS from Amigo (10 total)
+ * PlanIds: 5000, 1001, 6666, 3333, 9999, 1110, 1515, 424, 379, 301
+ */
+export const AMIGO_MTN_PLANS: AmigoBasePlan[] = [
+  {
+    planId: 5000,
+    networkName: 'MTN',
+    dataCapacity: '500MB',
+    dataCapacityValue: 0.5,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 299,
+    pricePerGB: 598,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 1001,
+    networkName: 'MTN',
+    dataCapacity: '1GB',
+    dataCapacityValue: 1,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 449,
+    pricePerGB: 449,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 6666,
+    networkName: 'MTN',
+    dataCapacity: '2GB',
+    dataCapacityValue: 2,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 849,
+    pricePerGB: 424.5,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 3333,
+    networkName: 'MTN',
+    dataCapacity: '3GB',
+    dataCapacityValue: 3,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 1379,
+    pricePerGB: 459.67,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 9999,
+    networkName: 'MTN',
+    dataCapacity: '5GB',
+    dataCapacityValue: 5,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 1899,
+    pricePerGB: 379.8,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 1110,
+    networkName: 'MTN',
+    dataCapacity: '10GB',
+    dataCapacityValue: 10,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 3899,
+    pricePerGB: 389.9,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 1515,
+    networkName: 'MTN',
+    dataCapacity: '15GB',
+    dataCapacityValue: 15,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 5790,
+    pricePerGB: 386,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 424,
+    networkName: 'MTN',
+    dataCapacity: '20GB',
+    dataCapacityValue: 20,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 7999,
+    pricePerGB: 399.95,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 379,
+    networkName: 'MTN',
+    dataCapacity: '36GB',
+    dataCapacityValue: 36,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 11900,
+    pricePerGB: 330.56,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 301,
+    networkName: 'MTN',
+    dataCapacity: '200GB',
+    dataCapacityValue: 200,
+    validityDays: 60,
+    validityLabel: '60 Days',
+    amigoBasePrice: 49900,
+    pricePerGB: 249.5,
+    efficiencyRating: 100,
+  },
+]
+
+/**
+ * GLO PLANS from Amigo (7 total)
+ * PlanIds: 296, 258, 261, 262, 263, 297, 265
+ */
+export const AMIGO_GLO_PLANS: AmigoBasePlan[] = [
+  {
+    planId: 296,
+    networkName: 'GLO',
+    dataCapacity: '200MB',
+    dataCapacityValue: 0.2,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 99,
+    pricePerGB: 495,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 258,
+    networkName: 'GLO',
+    dataCapacity: '500MB',
+    dataCapacityValue: 0.5,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 239,
+    pricePerGB: 478,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 261,
+    networkName: 'GLO',
+    dataCapacity: '1GB',
+    dataCapacityValue: 1,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 439,
+    pricePerGB: 439,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 262,
+    networkName: 'GLO',
+    dataCapacity: '2GB',
+    dataCapacityValue: 2,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 849,
+    pricePerGB: 424.5,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 263,
+    networkName: 'GLO',
+    dataCapacity: '3GB',
+    dataCapacityValue: 3,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 1289,
+    pricePerGB: 429.67,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 297,
+    networkName: 'GLO',
+    dataCapacity: '5GB',
+    dataCapacityValue: 5,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 2245,
+    pricePerGB: 449,
+    efficiencyRating: 100,
+  },
+  {
+    planId: 265,
+    networkName: 'GLO',
+    dataCapacity: '10GB',
+    dataCapacityValue: 10,
+    validityDays: 30,
+    validityLabel: '30 Days',
+    amigoBasePrice: 4490,
+    pricePerGB: 449,
+    efficiencyRating: 100,
+  },
+]
+
+// Helper to calculate selling price (cost + margin)
 export const calculateSellingPrice = (costPrice: number) => costPrice + 100
 
 // Helper to format data size
@@ -59,7 +278,50 @@ export const formatDataSize = (mb: number) => {
   return `${mb}MB`
 }
 
+// Get Amigo plans by network
+export const getAmigoPlans = (network: 'MTN' | 'GLO'): AmigoBasePlan[] => {
+  return network === 'MTN' ? AMIGO_MTN_PLANS : AMIGO_GLO_PLANS
+}
+
+// Get Amigo plan by ID (planId is Amigo's actual plan ID)
+export const getAmigoPlansById = (planId: number): AmigoBasePlan | undefined => {
+  const allPlans = [...AMIGO_MTN_PLANS, ...AMIGO_GLO_PLANS]
+  return allPlans.find(plan => plan.planId === planId)
+}
+
 export const getAllPlansForNetwork = (network: keyof typeof DATA_PLANS) => {
+  // Use Amigo plans for MTN and GLO
+  if (network === 'MTN') {
+    return AMIGO_MTN_PLANS.map(plan => ({
+      id: plan.planId.toString(),
+      name: plan.dataCapacity,
+      network,
+      costPrice: plan.amigoBasePrice,
+      sellingPrice: calculateSellingPrice(plan.amigoBasePrice),
+      profit: 100,
+      validity: plan.validityLabel,
+      dataCapacity: plan.dataCapacityValue * 1024, // Convert GB to MB
+      description: `${plan.validityLabel} plan`,
+      isAvailable: true,
+    }))
+  }
+
+  if (network === 'GLO') {
+    return AMIGO_GLO_PLANS.map(plan => ({
+      id: plan.planId.toString(),
+      name: plan.dataCapacity,
+      network,
+      costPrice: plan.amigoBasePrice,
+      sellingPrice: calculateSellingPrice(plan.amigoBasePrice),
+      profit: 100,
+      validity: plan.validityLabel,
+      dataCapacity: plan.dataCapacityValue * 1024, // Convert GB to MB
+      description: `${plan.validityLabel} plan`,
+      isAvailable: true,
+    }))
+  }
+
+  // Fallback for other networks
   return DATA_PLANS[network].map(plan => ({
     ...plan,
     network,

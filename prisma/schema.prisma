@@ -6,8 +6,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url  	    = env("DATABASE_URL")
-  // uncomment next line if you use Prisma <5.10
-  // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 model User {
   id                       String            @id @default(cuid())
@@ -18,6 +16,7 @@ model User {
   passwordHash             String?           // Optional - set in Phase 3 (set-password)
   pinHash                  String?
   isVerified               Boolean           @default(false)
+  hasFundedWallet          Boolean           @default(false)
   referralCode             String            @unique
   referredBy               String?
   credits                  Float             @default(0)
@@ -33,6 +32,11 @@ model User {
   sessions                 Session[]
   subscriptions            Subscription[]
   transactions             Transaction[]
+  sentTransfers            Transfer[]        @relation("SentTransfers")
+  receivedTransfers        Transfer[]        @relation("ReceivedTransfers")
+  sentRequests             MoneyRequest[]    @relation("SentRequests")
+  receivedRequests         MoneyRequest[]    @relation("ReceivedRequests")
+  targetProgress           UserTargetProgress[]
   @@map("users")
 }
 
@@ -195,9 +199,12 @@ model Pricing {
 model VendorConfig {
   id               String    @id @default(cuid())
   vendorName       String    @unique
+  adapterId        String    @unique // "AMIGO", "VTU_NG", "CLUBKONNECT"
+  type             VendorType @default(ALL)
   isEnabled        Boolean   @default(true)
   isPrimary        Boolean   @default(false)
   priority         Int       @default(0)
+  balance          Float     @default(0)
   supportsAirtime  Boolean   @default(true)
   supportsData     Boolean   @default(true)
   supportsElectric Boolean   @default(false)
@@ -212,7 +219,54 @@ model VendorConfig {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  // Relations
+  serviceRoutingsPrimary  ServiceRouting[] @relation("PrimaryVendor")
+  serviceRoutingsFallback ServiceRouting[] @relation("FallbackVendor")
+  dataPlans               DataPlan[]
+
   @@map("vendor_configs")
+}
+
+model ServiceRouting {
+  id               String       @id @default(cuid())
+  serviceType      TransactionType
+  network          String       // MTN, GLO, AIRTEL, 9MOBILE, ETC
+  primaryVendorId  String
+  fallbackVendorId String?
+  primaryVendor    VendorConfig @relation("PrimaryVendor", fields: [primaryVendorId], references: [id])
+  fallbackVendor   VendorConfig? @relation("FallbackVendor", fields: [fallbackVendorId], references: [id])
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([serviceType, network])
+  @@map("service_routings")
+}
+
+model DataPlan {
+  id            String       @id @default(cuid())
+  planId        String       // Vendor's Plan ID
+  network       String
+  planType      String       // SME, CG, GIFTING, ETC
+  size          String
+  validity      String
+  vendorId      String
+  vendor        VendorConfig @relation(fields: [vendorId], references: [id])
+  costPrice     Float
+  sellingPrice  Float
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([vendorId, planId])
+  @@map("data_plans")
+}
+
+enum VendorType {
+  DATA
+  AIRTIME
+  UTILITY
+  ALL
 }
 
 model ProfitMargin {
@@ -232,6 +286,29 @@ model ProfitMargin {
   @@map("profit_margins")
 }
 
+model AmigoPlans {
+  id                String   @id @default(cuid())
+  planId            Int      @unique // Amigo's actual plan ID (5000, 1001, etc.)
+  networkName       String   // 'MTN' or 'GLO'
+  dataCapacity      String   // e.g., "500MB", "1GB", "200GB"
+  dataCapacityValue Float    // numeric value in GB
+  validityDays      Int      // 30 or 60
+  validityLabel     String   // e.g., "30 Days", "60 Days"
+  amigoBasePrice    Float    // Amigo's official price in ₦
+  adminOverridePrice Float? // Admin-set price in ₦ (if null, use amigoBasePrice)
+  pricePerGB        Float    // calculated price per GB
+  efficiencyRating  Float    @default(100) // percentage (100 = 100%)
+  isEnabled         Boolean  @default(true) // can admin disable a plan?
+  margin            Float?   // calculated as adminOverridePrice - amigoBasePrice
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([planId, networkName])
+  @@index([networkName])
+  @@index([isEnabled])
+  @@map("amigo_plans")
+}
+
 enum Role {
   USER
   ADMIN
@@ -249,6 +326,7 @@ enum TransactionType {
   CREDIT_PURCHASE
   REFERRAL_BONUS
   WALLET_FUNDING
+  P2P_TRANSFER
 }
 
 enum TransactionStatus {
@@ -282,4 +360,93 @@ enum NotificationType {
   PROMOTION
   SYSTEM
   SECURITY
+}
+
+model Transfer {
+  id          String         @id @default(cuid())
+  senderId    String
+  receiverId  String
+  amount      Float
+  status      TransferStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  sender      User           @relation("SentTransfers", fields: [senderId], references: [id])
+  receiver    User           @relation("ReceivedTransfers", fields: [receiverId], references: [id])
+
+  @@map("transfers")
+}
+
+model MoneyRequest {
+  id          String             @id @default(cuid())
+  requesterId String
+  payerId     String
+  amount      Float
+  status      MoneyRequestStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  requester   User               @relation("SentRequests", fields: [requesterId], references: [id])
+  payer       User               @relation("ReceivedRequests", fields: [payerId], references: [id])
+
+  @@map("money_requests")
+}
+
+model SalesTarget {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  type         TargetType
+  period       TargetPeriod
+  targetValue  Float
+  rewardAmount Float
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  progress     UserTargetProgress[]
+
+  @@map("sales_targets")
+}
+
+model UserTargetProgress {
+  id            String      @id @default(cuid())
+  userId        String
+  targetId      String
+  currentValue  Float       @default(0)
+  isClaimed     Boolean     @default(false)
+  claimedAt     DateTime?
+  periodStart   DateTime
+  periodEnd     DateTime
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target        SalesTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId, periodStart])
+  @@map("user_target_progress")
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum MoneyRequestStatus {
+  PENDING
+  PAID
+  DECLINED
+  CANCELLED
+}
+
+enum TargetType {
+  DATA_VOLUME
+  AMOUNT_SPENT
+  TRANSACTION_COUNT
+}
+
+enum TargetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
 }

@@ -183,7 +183,7 @@ export default function AdminAnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Total Revenue</h3>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold text-gray-900">
               {formatCurrency(salesData.summary.totalRevenue)}
             </p>
             <p className="text-sm text-gray-500">
@@ -192,7 +192,7 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Total Profit</h3>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-2xl font-bold text-gray-900">
               {formatCurrency(salesData.summary.totalProfit)}
             </p>
             <p className="text-sm text-gray-500">
@@ -210,7 +210,7 @@ export default function AdminAnalyticsPage() {
           </div>
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Active Users</h3>
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-2xl font-bold text-gray-900">
               {statsData.users.active.toLocaleString()}
             </p>
             <p className="text-sm text-gray-500">
@@ -444,7 +444,7 @@ export default function AdminAnalyticsPage() {
               // CSV export would be implemented here
               alert('CSV export functionality coming soon')
             }}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
           >
             Export CSV
           </button>

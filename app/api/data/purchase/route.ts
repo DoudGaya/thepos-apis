@@ -80,31 +80,93 @@ export const POST = apiHandler(async (request: Request) => {
     )
   }
 
-  const isPinValid = await comparePassword(data.pin, dbUser.pinHash)
+  console.log('🔒 PIN Verification:')
+  console.log('  - PIN received:', data.pin)
+  console.log('  - PIN received (hex):', Buffer.from(data.pin).toString('hex'))
+  console.log('  - PIN Length:', data.pin.length)
+  console.log('  - PIN Type:', typeof data.pin)
+  console.log('  - PinHash exists:', !!dbUser.pinHash)
+  console.log('  - PinHash starts with:', dbUser.pinHash?.substring(0, 7))
+  
+  // Directly check if bcrypt hash is valid
+  let isPinValid = false
+  try {
+    isPinValid = await comparePassword(data.pin, dbUser.pinHash)
+  } catch (bcryptErr: any) {
+    console.log('❌ Bcrypt comparison error:', bcryptErr.message)
+    isPinValid = false
+  }
+  
+  console.log('  - PIN Valid:', isPinValid)
+  
   if (!isPinValid) {
+    console.log('❌ PIN verification failed')
+    console.log('   User Email:', dbUser.email)
+    console.log('   Checking PIN in database...')
+    // Get fresh user data to verify
+    const freshUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { pinHash: true },
+    })
+    console.log('   Fresh pinHash exists:', !!freshUser?.pinHash)
+    console.log('   Fresh pinHash starts with:', freshUser?.pinHash?.substring(0, 7))
     throw new BadRequestError('Incorrect PIN. Please try again.')
   }
 
   // ========================================
-  // 3. Get Plan Details from Vendor (Amigo)
+  // 3. Get Plan Details from Constants (same source as frontend)
   // ========================================
-  const { vendorService } = await import('@/lib/vendors')
-  const plans = await vendorService.getPlans('DATA', data.network)
+  const { getAllPlansForNetwork, DATA_PLANS } = await import('@/lib/constants/data-plans')
+  
+  console.log('📊 Plan Lookup Debug:')
+  console.log('  - Network received (string):', data.network)
+  console.log('  - Network type:', typeof data.network)
+  console.log('  - Network JSON:', JSON.stringify(data.network))
+  console.log('  - Available network keys in DATA_PLANS:', Object.keys(DATA_PLANS))
+  
+  const plans = getAllPlansForNetwork(data.network as 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE')
+  
+  console.log('  - Plans array length:', plans.length)
+  console.log('  - PlanId received (string):', data.planId)
+  console.log('  - PlanId type:', typeof data.planId)
+  console.log('  - PlanId JSON:', JSON.stringify(data.planId))
+  console.log('  - Available plan IDs:', plans.map(p => p.id).join(', '))
+  
   const selectedPlan = plans.find(p => p.id === data.planId)
 
   if (!selectedPlan) {
-    throw new BadRequestError('Selected plan not found or unavailable')
+    console.error('❌ CRITICAL: Plan not found during purchase!')
+    console.error('  - Network:', data.network)
+    console.error('  - Requested planId:', data.planId)
+    console.error('  - Requested planId type:', typeof data.planId)
+    console.error('  - Requested planId length:', data.planId.length)
+    console.error('  - Available plans count:', plans.length)
+    console.error('  - Available plan IDs:', plans.map(p => p.id).join(', '))
+    console.error('  - Debug comparison:')
+    plans.forEach(p => {
+      const matches = p.id === data.planId
+      console.error(`    "${p.id}" (${p.id.length}) === "${data.planId}" (${data.planId.length}) ? ${matches}`)
+    })
+    
+    // Provide helpful error message
+    const availablePlansStr = plans.length > 0 
+      ? plans.map(p => `${p.name} (${p.id}): ₦${p.sellingPrice}`).join(', ')
+      : 'No plans available'
+    
+    throw new BadRequestError(
+      `Selected plan not found. Requested: "${data.planId}". Available plans for ${data.network}: ${availablePlansStr}`
+    )
   }
 
   if (!selectedPlan.isAvailable) {
-    throw new BadRequestError('Selected plan is currently unavailable')
+    throw new BadRequestError('Selected plan is currently unavailable. Please try another plan.')
   }
 
   // ========================================
   // 4. Calculate Final Pricing
   // ========================================
-  const costPrice = selectedPlan.price // Vendor's cost (Amigo price)
-  const sellingPrice = costPrice + PROFIT_MARGIN // What user pays
+  const costPrice = selectedPlan.costPrice // Base cost from plans
+  const sellingPrice = selectedPlan.sellingPrice // Already includes ₦100 margin
   const profit = PROFIT_MARGIN
 
   // ========================================

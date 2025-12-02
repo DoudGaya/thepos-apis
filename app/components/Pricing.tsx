@@ -36,7 +36,7 @@ const plans = [
     ],
     cta: 'Upgrade to Business',
     popular: true,
-    color: 'from-indigo-600 to-purple-600'
+    color: 'from-gray-800 to-gray-900'
   },
   {
     name: 'Enterprise',
@@ -65,7 +65,7 @@ export default function Pricing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+          <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide mb-2">
             Pricing Plans
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
@@ -82,13 +82,13 @@ export default function Pricing() {
             <div
               key={index}
               className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 hover:-translate-y-2 ${
-                plan.popular ? 'ring-4 ring-indigo-600 scale-105' : ''
+                plan.popular ? 'ring-4 ring-gray-900 scale-105' : ''
               }`}
             >
               {/* Popular Badge */}
               {plan.popular && (
                 <div className="absolute top-0 right-0">
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-bl-2xl font-semibold flex items-center gap-2">
+                  <div className="bg-gray-900 text-white px-6 py-2 rounded-bl-2xl font-semibold flex items-center gap-2">
                     <Star className="w-4 h-4 fill-current" />
                     Most Popular
                   </div>

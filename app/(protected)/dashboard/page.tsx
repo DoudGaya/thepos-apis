@@ -117,55 +117,45 @@ export default function DashboardPage() {
           })
         }
 
-        if (Array.isArray(transactionsData?.data?.transactions)) {
-          const txList = transactionsData.data.transactions.map((tx: any, index: number) => ({
+        // Process transactions once
+        let sanitizedTransactions: RecentTransaction[] = []
+        
+        if (transactionsData?.data?.transactions) {
+          const rawTransactions = Array.isArray(transactionsData.data.transactions)
+            ? transactionsData.data.transactions
+            : [transactionsData.data.transactions]
+            
+          sanitizedTransactions = rawTransactions.map((tx: any, index: number) => ({
             id: tx.id || `tx-${Date.now()}-${index}`,
             type: tx.type,
             description: getTransactionDescription(tx),
-            amount: tx.type === 'WALLET_FUNDING' ? tx.amount : -tx.amount,
+            amount: tx.type === 'WALLET_FUNDING' ? (tx.amount || 0) : -(tx.amount || 0),
             status: tx.status === 'SUCCESS' ? 'COMPLETED' : tx.status,
             createdAt: tx.createdAt,
           }))
-          setTransactions(txList)
-        } else if (transactionsData?.data?.transactions) {
-          // API sometimes returns an object or null; normalize single transaction into array
-          const single = transactionsData.data.transactions
-          const tx = single && typeof single === 'object' ? single : null
-          if (tx) {
-            const txList = [{
-              id: tx.id || `tx-${Date.now()}-0`,
-              type: tx.type,
-              description: getTransactionDescription(tx),
-              amount: tx.type === 'WALLET_FUNDING' ? tx.amount : -tx.amount,
-              status: tx.status === 'SUCCESS' ? 'COMPLETED' : tx.status,
-              createdAt: tx.createdAt,
-            }]
-            setTransactions(txList)
-          }
+          
+          setTransactions(sanitizedTransactions)
         }
 
-        if ((transactionsData?.data?.transactions && (Array.isArray(transactionsData.data.transactions) || typeof transactionsData.data.transactions === 'object')) || referralsData?.data?.stats) {
-          const txList = Array.isArray(transactionsData?.data?.transactions)
-            ? transactionsData.data.transactions
-            : (transactionsData?.data?.transactions ? [transactionsData.data.transactions] : [])
+        if (sanitizedTransactions.length > 0 || referralsData?.data?.stats) {
           const referralStats = referralsData?.data?.stats
           
           setStats([
             { 
               label: 'Total Spent', 
-              value: calculateTotalSpent(txList),
+              value: calculateTotalSpent(sanitizedTransactions),
               change: '+12%', 
               isPositive: true 
             },
             { 
               label: 'Transactions', 
-              value: (transactionsData?.data?.total || 0).toString(),
+              value: (transactionsData?.data?.total || sanitizedTransactions.length).toString(),
               change: '+8%', 
               isPositive: true 
             },
             { 
               label: 'This Month', 
-              value: calculateMonthlySpent(txList),
+              value: calculateMonthlySpent(sanitizedTransactions),
               change: '-3%', 
               isPositive: false 
             },

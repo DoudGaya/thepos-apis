@@ -1,336 +1,330 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { AlertCircle, CheckCircle2, Loader2, Tv, Wallet } from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Loader2, Tv, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useWallet } from '@/hooks/use-wallet';
+import { api } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
-const CABLE_PROVIDERS = ['DSTV', 'GOTV', 'STARTIMES'] as const
+const cableSchema = z.object({
+  provider: z.enum(['DSTV', 'GOTV', 'STARTIMES']),
+  smartCardNumber: z.string().min(10, 'Smart card number must be at least 10 digits'),
+  plan: z.string().min(1, 'Please select a plan'),
+});
 
-// Sample cable TV plans (in production, fetch from API)
-const CABLE_PLANS = {
-  DSTV: [
-    { code: 'dstv-padi', name: 'DStv Padi', vendorCost: 2150 },
-    { code: 'dstv-yanga', name: 'DStv Yanga', vendorCost: 2565 },
-    { code: 'dstv-confam', name: 'DStv Confam', vendorCost: 5300 },
-    { code: 'dstv-compact', name: 'DStv Compact', vendorCost: 9000 },
-    { code: 'dstv-compact-plus', name: 'DStv Compact Plus', vendorCost: 14250 },
-    { code: 'dstv-premium', name: 'DStv Premium', vendorCost: 21000 },
-  ],
-  GOTV: [
-    { code: 'gotv-supa', name: 'GOtv Supa', vendorCost: 5700 },
-    { code: 'gotv-max', name: 'GOtv Max', vendorCost: 4150 },
-    { code: 'gotv-jolli', name: 'GOtv Jolli', vendorCost: 2800 },
-    { code: 'gotv-jinja', name: 'GOtv Jinja', vendorCost: 1900 },
-  ],
-  STARTIMES: [
-    { code: 'startimes-nova', name: 'StarTimes Nova', vendorCost: 900 },
-    { code: 'startimes-basic', name: 'StarTimes Basic', vendorCost: 1850 },
-    { code: 'startimes-smart', name: 'StarTimes Smart', vendorCost: 2600 },
-    { code: 'startimes-classic', name: 'StarTimes Classic', vendorCost: 2750 },
-    { code: 'startimes-super', name: 'StarTimes Super', vendorCost: 4900 },
-  ],
-}
+type CableFormValues = z.infer<typeof cableSchema>;
 
-const PROFIT_MARGIN = 100
+export default function CableTVPage() {
+  const { toast } = useToast();
+  const { balance, refreshWallet } = useWallet();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifiedName, setVerifiedName] = useState<string | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlanAmount, setSelectedPlanAmount] = useState<number>(0);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pin, setPin] = useState('');
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
-export default function CableTVPurchasePage() {
-  const { data: session } = useSession()
-  const [formData, setFormData] = useState({
-    provider: 'DSTV' as keyof typeof CABLE_PLANS,
-    smartcardNumber: '',
-    planCode: '',
-    vendorCost: 0,
-    planName: '',
-  })
-  const [walletBalance, setWalletBalance] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [loadingBalance, setLoadingBalance] = useState(true)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const form = useForm<CableFormValues>({
+    resolver: zodResolver(cableSchema),
+    defaultValues: {
+      provider: 'DSTV',
+      smartCardNumber: '',
+      plan: '',
+    },
+  });
 
-  // Fetch wallet balance
+  const provider = form.watch('provider');
+  const smartCardNumber = form.watch('smartCardNumber');
+
+  // Fetch plans when provider changes
   useEffect(() => {
-    const fetchBalance = async () => {
+    const fetchPlans = async () => {
+      if (!provider) return;
+      
       try {
-        const res = await fetch('/api/wallet/balance', {
-          credentials: 'include'
-        })
-        const data = await res.json()
-        if (data.success) {
-          setWalletBalance(data.data.balance)
+        const response = await api.get(`/bills/cable/variations?provider=${provider}`);
+        if (response.data) {
+          setPlans(response.data);
         }
-      } catch (err) {
-        console.error('Failed to fetch balance:', err)
-      } finally {
-        setLoadingBalance(false)
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load cable plans',
+          variant: 'destructive',
+        });
       }
+    };
+
+    fetchPlans();
+    form.setValue('plan', ''); // Reset plan when provider changes
+    setSelectedPlanAmount(0);
+  }, [provider, form, toast]);
+
+  const handleVerify = async () => {
+    if (!smartCardNumber || smartCardNumber.length < 10) {
+      toast({
+        title: 'Invalid Input',
+        description: 'Please enter a valid smart card number',
+        variant: 'destructive',
+      });
+      return;
     }
-    fetchBalance()
-  }, [])
 
-  const handleProviderChange = (provider: keyof typeof CABLE_PLANS) => {
-    setFormData({ ...formData, provider, planCode: '', vendorCost: 0, planName: '' })
-  }
-
-  const handlePlanSelect = (planCode: string, vendorCost: number, planName: string) => {
-    setFormData({ ...formData, planCode, vendorCost, planName })
-  }
-
-  const sellingPrice = formData.vendorCost + PROFIT_MARGIN
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
-
-    // Validation
-    if (!formData.provider) {
-      setError('Please select a provider')
-      setLoading(false)
-      return
-    }
-    if (!formData.smartcardNumber || formData.smartcardNumber.length < 10) {
-      setError('Please enter a valid smartcard number (at least 10 digits)')
-      setLoading(false)
-      return
-    }
-    if (!formData.planCode) {
-      setError('Please select a subscription plan')
-      setLoading(false)
-      return
-    }
+    setIsVerifying(true);
+    setVerifiedName(null);
 
     try {
-      const res = await fetch('/api/bills/cable-tv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      })
+      const response = await api.post('/bills/cable/verify', {
+        provider,
+        smartCardNumber,
+      });
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Purchase failed')
+      if (response.data?.customerName) {
+        setVerifiedName(response.data.customerName);
+        toast({
+          title: 'Verified',
+          description: `Customer: ${response.data.customerName}`,
+        });
       }
-
-      setSuccess(
-        `Cable TV subscription successful! ${formData.provider} ${formData.planName} activated on ${formData.smartcardNumber}. Reference: ${data.data.reference}`
-      )
-      
-      // Update balance
-      setWalletBalance(prev => prev - sellingPrice)
-      
-      // Reset form
-      setFormData({ provider: 'DSTV', smartcardNumber: '', planCode: '', vendorCost: 0, planName: '' })
-      
-    } catch (err: any) {
-      setError(err.message || 'Failed to purchase cable TV subscription')
+    } catch (error: any) {
+      toast({
+        title: 'Verification Failed',
+        description: error.response?.data?.message || 'Could not verify smart card',
+        variant: 'destructive',
+      });
     } finally {
-      setLoading(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
-  const selectedPlan = CABLE_PLANS[formData.provider].find(p => p.code === formData.planCode)
+  const onSubmit = async (data: CableFormValues) => {
+    if (!verifiedName) {
+      toast({
+        title: 'Verification Required',
+        description: 'Please verify the smart card number first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (balance < selectedPlanAmount) {
+      toast({
+        title: 'Insufficient Balance',
+        description: 'Please fund your wallet to continue',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const handlePurchase = async () => {
+    if (pin.length !== 4) return;
+
+    setIsPurchasing(true);
+    const data = form.getValues();
+
+    try {
+      const response = await api.post('/bills/cable', {
+        ...data,
+        amount: selectedPlanAmount,
+        customerName: verifiedName,
+      });
+
+      toast({
+        title: 'Purchase Successful',
+        description: 'Your cable subscription has been processed',
+      });
+
+      refreshWallet();
+      form.reset({
+        provider: 'DSTV',
+        smartCardNumber: '',
+        plan: '',
+      });
+      setVerifiedName(null);
+      setPin('');
+      setShowPinModal(false);
+
+    } catch (error: any) {
+      toast({
+        title: 'Purchase Failed',
+        description: error.response?.data?.message || 'Transaction failed',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center">
-                <Tv className="mr-2" size={28} />
-                Cable TV Subscription
-              </h1>
-              <p className="text-gray-300 mt-2">
-                DStv, GOtv, StarTimes • Instant activation
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-gray-400 text-sm">Wallet Balance</p>
-              <p className="text-2xl font-bold flex items-center justify-end">
-                <Wallet className="mr-2" size={20} />
-                {loadingBalance ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  `₦${walletBalance.toLocaleString()}`
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Provider Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Provider
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {CABLE_PROVIDERS.map((provider) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    onClick={() => handleProviderChange(provider)}
-                    className={`p-4 rounded-lg border-2 font-semibold transition-all ${
-                      formData.provider === provider
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    {provider}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Smartcard Number */}
-            <div>
-              <label htmlFor="smartcardNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                Smartcard / IUC Number
-              </label>
-              <input
-                type="text"
-                id="smartcardNumber"
-                value={formData.smartcardNumber}
-                onChange={(e) => setFormData({ ...formData, smartcardNumber: e.target.value })}
-                placeholder="Enter your smartcard number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              />
-            </div>
-
-            {/* Subscription Plans */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Subscription Plan
-              </label>
-              <div className="grid gap-3">
-                {CABLE_PLANS[formData.provider].map((plan) => {
-                  const planSellingPrice = plan.vendorCost + PROFIT_MARGIN
-                  return (
-                    <button
-                      key={plan.code}
-                      type="button"
-                      onClick={() => handlePlanSelect(plan.code, plan.vendorCost, plan.name)}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        formData.planCode === plan.code
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold">{plan.name}</p>
-                          <p className={`text-sm ${formData.planCode === plan.code ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Monthly subscription
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold">
-                            ₦{planSellingPrice.toLocaleString()}
-                          </p>
-                          <p className={`text-xs ${formData.planCode === plan.code ? 'text-gray-400' : 'text-gray-500'}`}>
-                            +₦100 fee
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Price Breakdown */}
-            {formData.vendorCost > 0 && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2 text-gray-900">Pricing Breakdown</h3>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subscription Cost:</span>
-                    <span className="font-medium">₦{formData.vendorCost.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Service Charge:</span>
-                    <span className="font-medium text-green-600">+ ₦{PROFIT_MARGIN}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-200">
-                    <span className="font-bold text-gray-900">Total Payment:</span>
-                    <span className="font-bold text-lg text-gray-900">₦{sellingPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || loadingBalance || walletBalance < sellingPrice || !formData.planCode}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={20} />
-                  Processing Subscription...
-                </>
-              ) : (
-                `Subscribe ${selectedPlan?.name || ''} - ₦${sellingPrice.toLocaleString()}`
-              )}
-            </button>
-
-            {walletBalance < sellingPrice && formData.planCode && (
-              <p className="text-red-600 text-sm text-center">
-                Insufficient balance. Please fund your wallet first.
-              </p>
-            )}
-          </form>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="text-red-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-red-800 font-semibold">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start">
-              <CheckCircle2 className="text-green-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-green-800 font-semibold">Success!</p>
-                <p className="text-green-600 text-sm">{success}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Info Section */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">📺 How to Subscribe</h3>
-          <ol className="space-y-2 text-sm text-gray-600">
-            <li>1. Select your cable TV provider (DStv, GOtv, StarTimes)</li>
-            <li>2. Enter your smartcard/IUC number</li>
-            <li>3. Choose your desired subscription plan</li>
-            <li>4. Review pricing and click "Subscribe"</li>
-            <li>5. Your subscription is activated instantly!</li>
-          </ol>
-          
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              <strong>Note:</strong> Fixed ₦100 service charge applies to all subscriptions. 
-              Subscription is activated immediately on your smartcard.
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Cable TV Subscription</h1>
+        <p className="text-muted-foreground">Pay for DSTV, GOTV, and Startimes</p>
       </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription Details</CardTitle>
+            <CardDescription>Enter your smart card details and select a plan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select
+                  onValueChange={(value: any) => form.setValue('provider', value)}
+                  defaultValue={form.getValues('provider')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DSTV">DSTV</SelectItem>
+                    <SelectItem value="GOTV">GOTV</SelectItem>
+                    <SelectItem value="STARTIMES">Startimes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Smart Card / IUC Number</Label>
+                <div className="flex gap-2">
+                  <Input
+                    {...form.register('smartCardNumber')}
+                    placeholder="Enter number"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleVerify}
+                    disabled={isVerifying || !smartCardNumber}
+                  >
+                    {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+                  </Button>
+                </div>
+                {verifiedName && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{verifiedName}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Package / Plan</Label>
+                <Select
+                  onValueChange={(value) => {
+                    form.setValue('plan', value);
+                    const plan = plans.find(p => p.id === value);
+                    if (plan) setSelectedPlanAmount(plan.amount);
+                  }}
+                  disabled={plans.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name} - {formatCurrency(plan.amount)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="pt-4">
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading || !verifiedName || !form.formState.isValid}
+                >
+                  Pay {selectedPlanAmount > 0 && formatCurrency(selectedPlanAmount)}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>Your recent cable TV subscriptions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <Tv className="h-12 w-12 mb-4 opacity-20" />
+              <p>No recent transactions</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={showPinModal} onOpenChange={setShowPinModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Purchase</DialogTitle>
+            <DialogDescription>
+              Enter your 4-digit PIN to confirm payment of {formatCurrency(selectedPlanAmount)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex justify-center py-4">
+            <InputOTP
+              maxLength={4}
+              value={pin}
+              onChange={setPin}
+              render={({ slots }) => (
+                <InputOTPGroup>
+                  {slots.map((slot, index) => (
+                    <InputOTPSlot key={index} {...slot} index={index} />
+                  ))}
+                </InputOTPGroup>
+              )}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPinModal(false)}>Cancel</Button>
+            <Button 
+              onClick={handlePurchase} 
+              disabled={pin.length !== 4 || isPurchasing}
+            >
+              {isPurchasing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirm Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }

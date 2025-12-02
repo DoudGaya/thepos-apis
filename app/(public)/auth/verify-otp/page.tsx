@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AlertCircle, CheckCircle2, Loader2, Phone } from 'lucide-react'
-import { Suspense } from 'react'
+import { AlertCircle, CheckCircle2, Loader2, Phone, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 
 // Toast Component
 function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' | 'error' | 'info' | 'warning'; message: string; onClose: () => void; autoClose?: number }) {
@@ -15,30 +16,30 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
   }, [autoClose, onClose])
 
   const bgColorClass: Record<string, string> = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
-    warning: 'bg-yellow-50 border-yellow-200',
+    success: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800',
+    error: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800',
+    info: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800',
+    warning: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800',
   }
 
   const textColorClass: Record<string, string> = {
-    success: 'text-green-700',
-    error: 'text-red-700',
-    info: 'text-blue-700',
-    warning: 'text-yellow-700',
+    success: 'text-emerald-800 dark:text-emerald-300',
+    error: 'text-red-800 dark:text-red-300',
+    info: 'text-blue-800 dark:text-blue-300',
+    warning: 'text-yellow-800 dark:text-yellow-300',
   }
 
   const iconColorClass: Record<string, string> = {
-    success: 'text-green-600',
-    error: 'text-red-600',
-    info: 'text-blue-600',
-    warning: 'text-yellow-600',
+    success: 'text-emerald-600 dark:text-emerald-400',
+    error: 'text-red-600 dark:text-red-400',
+    info: 'text-blue-600 dark:text-blue-400',
+    warning: 'text-yellow-600 dark:text-yellow-400',
   }
 
   const Icon = type === 'success' ? CheckCircle2 : AlertCircle
 
   return (
-    <div className={`fixed top-4 right-4 max-w-md rounded-lg border ${bgColorClass[type]} p-4 shadow-lg z-50`}>
+    <div className={`fixed top-4 right-4 max-w-md rounded-lg border ${bgColorClass[type]} p-4 shadow-lg z-50 animate-in slide-in-from-top-2`}>
       <div className="flex items-start gap-3">
         <Icon className={`h-5 w-5 ${iconColorClass[type]} flex-shrink-0 mt-0.5`} />
         <p className={`text-sm ${textColorClass[type]} flex-1`}>{message}</p>
@@ -234,20 +235,24 @@ function VerifyOTPContent() {
 
   if (success) {
     return (
-      <div className="bg-gray-900 p-8 rounded-xl shadow-lg text-center space-y-4">
-        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-900">
-          <CheckCircle2 className="h-10 w-10 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900">Phone Verified!</h2>
-        <p className="text-gray-600">
-          Your phone number has been verified. Redirecting to login...
-        </p>
+      <div className="antialiased duration-300 flex items-center justify-center py-12">
+        <main className="mx-auto max-w-md w-full px-4 sm:px-6">
+          <div className="border-y-2 border-gray-800 p-6 sm:p-8 text-center space-y-4">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Phone Verified!</h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              Your phone number has been verified. Redirecting...
+            </p>
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="antialiased duration-300 flex items-center justify-center py-12">
       {/* Toast Notification */}
       {toast && (
         <Toast
@@ -257,142 +262,118 @@ function VerifyOTPContent() {
         />
       )}
 
-    
+      <main className="mx-auto max-w-md w-full px-4 sm:px-6">
+        <div className="border-y-2 border-gray-800 p-6 sm:p-8">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Verify your phone</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              We sent a 6-digit code to <br/>
+              <span className="font-medium text-slate-900 dark:text-white">{phone || 'your phone'}</span>
+            </p>
+          </div>
 
-      {/* Error Alert */}
-      {errors.form && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{errors.form}</p>
+          {/* Error Alert */}
+          {errors.form && (
+            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Verification Failed</p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">{errors.form}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Verification Form */}
-      <form onSubmit={handleVerifyOTP} className="space-y-6 bg-black p-8 rounded-xl shadow-lg">
-        {/* Info Alert */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Complete Registration</p>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Enter the 6-digit OTP sent to your phone. If you didn't receive it, you can request a new one below.
-              </p>
+          {/* Verification Form */}
+          <form onSubmit={handleVerifyOTP} className="space-y-8">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={setOtp}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                  <InputOTPSlot index={1} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                  <InputOTPSlot index={2} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                  <InputOTPSlot index={4} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                  <InputOTPSlot index={5} className="h-12 w-12 border-slate-200 dark:border-slate-700" />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
+            {errors.otp && <p className="text-sm text-red-600 dark:text-red-400 text-center -mt-4">{errors.otp}</p>}
+
+            <div className="space-y-4">
+              <button
+                type="submit"
+                disabled={isLoading || otp.length !== 6}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify Code'
+                )}
+              </button>
+
+              <div className="text-center">
+                {resendCountdown > 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Resend code in <span className="font-medium text-slate-900 dark:text-white">{resendCountdown}s</span>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={isResending}
+                    className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 disabled:opacity-50"
+                  >
+                    {isResending ? (
+                      <span className="flex items-center gap-2 justify-center">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Sending...
+                      </span>
+                    ) : (
+                      "Didn't receive the code? Resend"
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
+            <Link href="/auth/login" className="inline-flex items-center text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to log in
+            </Link>
           </div>
         </div>
-
-        {/* Phone Number Display */}
-        <div className="bg-gray-950 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Phone className="h-5 w-5 text-white mr-2" />
-            <span className="text-sm text-green-200">
-              Verification code sent to: <strong>{phone || 'your phone'}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* OTP Input */}
-        <div>
-          <label htmlFor="otp" className="block text-sm font-medium text-gray-950">
-            6-Digit Code
-          </label>
-          <div className="mt-1">
-            <input
-              id="otp"
-              name="otp"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              pattern="[0-9]*"
-              required
-              value={otp}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 6)
-                setOtp(value)
-              }}
-              className={`block w-full px-4 py-2 border-2 bg-gray-950 rounded-lg text-center text-2xl font-bold letter-spacing-xl focus:ring-2  focus:border-transparent transition-all ${
-                errors.otp ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="000000"
-            />
-          </div>
-          {errors.otp && <p className="mt-1 text-sm text-red-600">{errors.otp}</p>}
-        </div>
-
-        {/* Verify Button */}
-        <button
-          type="submit"
-          disabled={isLoading || otp.length !== 6}
-          className="w-full bg-gradient-to-r bg-green-500 text-white py-3 rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-        >
-          {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
-          {isLoading ? 'Verifying...' : 'Verify OTP'}
-        </button>
-
-        {/* Resend OTP Section */}
-        <div className="pt-4 border-t border-gray-200">
-          <p className="text-center text-sm text-gray-600 mb-4">
-            {resendCountdown > 0
-              ? `Resend code in ${resendCountdown}s`
-              : "Didn't receive the code?"}
-          </p>
-          <button
-            type="button"
-            onClick={handleResendOTP}
-            disabled={isResending || resendCountdown > 0}
-            className="w-full py-2 text-indigo-600 font-semibold hover:bg-indigo-50 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-          >
-            {isResending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isResending ? 'Sending...' : 'Resend Code'}
-          </button>
-        </div>
-      </form>
-
-      {/* Help Text */}
-      <div className="text-center text-sm text-gray-600">
-        <p>
-          Need help?{' '}
-          <a href="/auth/login" className="text-indigo-600 hover:underline">
-            Try logging in
-          </a>
-        </p>
-      </div>
-
-
+      </main>
     </div>
   )
 }
 
 export default function VerifyOTPPage() {
   return (
-    <div className=" flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <Suspense fallback={
-          <div className="space-y-8">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                ThePOS
-              </h1>
-              <h2 className="mt-6 text-3xl font-bold text-gray-900">
-                Verify Your Account
-              </h2>
-            </div>
-            <div className="bg-black p-8 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading...</p>
-              </div>
-            </div>
-          </div>
-        }>
-          <VerifyOTPContent />
-        </Suspense>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600 dark:text-slate-400">Loading...</p>
+        </div>
       </div>
-    </div>
+    }>
+      <VerifyOTPContent />
+    </Suspense>
   )
 }

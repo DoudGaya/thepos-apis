@@ -19,13 +19,13 @@ const features = [
     icon: Clock,
     title: '24/7 Availability',
     description: 'Buy anytime, anywhere. Our platform never sleeps, so you can transact whenever you need.',
-    color: 'from-blue-500 to-indigo-500'
+    color: 'from-gray-600 to-gray-800'
   },
   {
     icon: TrendingUp,
     title: 'Best Prices',
     description: 'Competitive rates with attractive discounts. Maximize your profits with our wholesale pricing.',
-    color: 'from-purple-500 to-pink-500'
+    color: 'from-gray-700 to-gray-900'
   },
   {
     icon: Smartphone,
@@ -47,7 +47,7 @@ export default function Features() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+          <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide mb-2">
             Why Choose ThePOS
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
@@ -94,7 +94,7 @@ export default function Features() {
           </p>
           <a
             href="#pricing"
-            className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+            className="inline-flex items-center px-8 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
           >
             View Pricing Plans
           </a>

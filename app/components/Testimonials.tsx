@@ -28,17 +28,17 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="py-24 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900">
+    <section className="py-24 bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-base font-semibold text-indigo-300 uppercase tracking-wide mb-2">
+          <h2 className="text-base font-semibold text-gray-400 uppercase tracking-wide mb-2">
             Testimonials
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-white mb-4">
             What Our Users Say
           </h3>
-          <p className="text-xl text-indigo-200 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
             Join thousands of satisfied resellers making money with ThePOS
           </p>
         </div>
@@ -51,7 +51,7 @@ export default function Testimonials() {
               className="relative bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all duration-300 transform hover:-translate-y-2"
             >
               {/* Quote Icon */}
-              <div className="absolute -top-4 left-8 w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+              <div className="absolute -top-4 left-8 w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center shadow-lg">
                 <Quote className="w-6 h-6 text-white" />
               </div>
 
@@ -76,7 +76,7 @@ export default function Testimonials() {
                   <div className="font-bold text-white">
                     {testimonial.name}
                   </div>
-                  <div className="text-indigo-300 text-sm">
+                  <div className="text-gray-400 text-sm">
                     {testimonial.role}
                   </div>
                 </div>
@@ -89,19 +89,19 @@ export default function Testimonials() {
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div>
             <div className="text-4xl font-bold text-white mb-2">4.9/5</div>
-            <div className="text-indigo-300">Average Rating</div>
+            <div className="text-gray-400">Average Rating</div>
           </div>
           <div>
             <div className="text-4xl font-bold text-white mb-2">50,000+</div>
-            <div className="text-indigo-300">Happy Users</div>
+            <div className="text-gray-400">Happy Users</div>
           </div>
           <div>
             <div className="text-4xl font-bold text-white mb-2">1M+</div>
-            <div className="text-indigo-300">Transactions</div>
+            <div className="text-gray-400">Transactions</div>
           </div>
           <div>
             <div className="text-4xl font-bold text-white mb-2">99.9%</div>
-            <div className="text-indigo-300">Uptime</div>
+            <div className="text-gray-400">Uptime</div>
           </div>
         </div>
       </div>

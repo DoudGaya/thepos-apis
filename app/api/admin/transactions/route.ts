@@ -22,6 +22,9 @@ import {
  *  - startDate, endDate
  *  - page, limit
  */
+
+export const dynamic = 'force-dynamic'
+
 export const GET = apiHandler(async (request: Request) => {
   await requireAdmin()
   

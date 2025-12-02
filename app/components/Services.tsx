@@ -32,8 +32,8 @@ const services = [
     title: 'Cable TV',
     description: 'DSTV, GOTV, Startimes subscriptions',
     price: 'Instant activation',
-    color: 'from-purple-500 to-pink-500',
-    bgColor: 'bg-purple-50'
+    color: 'from-gray-700 to-gray-900',
+    bgColor: 'bg-gray-50'
   },
   {
     icon: DollarSign,
@@ -48,8 +48,8 @@ const services = [
     title: 'ePins & Vouchers',
     description: 'Waec, Neco, Nabteb result checkers',
     price: 'Bulk available',
-    color: 'from-indigo-500 to-purple-500',
-    bgColor: 'bg-indigo-50'
+    color: 'from-gray-700 to-gray-900',
+    bgColor: 'bg-gray-50'
   }
 ];
 
@@ -59,7 +59,7 @@ export default function Services() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+          <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide mb-2">
             Our Services
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
@@ -77,7 +77,7 @@ export default function Services() {
             return (
               <div
                 key={index}
-                className={`group relative ${service.bgColor} rounded-2xl p-8 border-2 border-transparent hover:border-indigo-600 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl`}
+                className={`group relative ${service.bgColor} rounded-2xl p-8 border-2 border-transparent hover:border-gray-900 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-xl`}
               >
                 {/* Icon */}
                 <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${service.color} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
@@ -98,25 +98,25 @@ export default function Services() {
                 </div>
 
                 {/* Hover Effect */}
-                <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-200 rounded-2xl transition-all duration-300"></div>
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-gray-300 rounded-2xl transition-all duration-300"></div>
               </div>
             );
           })}
         </div>
 
         {/* Stats Section */}
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 p-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-white">
+        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 p-8 bg-gray-900 rounded-2xl text-white">
           <div className="text-center">
             <div className="text-4xl font-bold mb-2">2.5%</div>
-            <div className="text-indigo-200">Airtime Discount</div>
+            <div className="text-gray-400">Airtime Discount</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold mb-2">₦240</div>
-            <div className="text-indigo-200">Per GB Data</div>
+            <div className="text-gray-400">Per GB Data</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold mb-2">5min</div>
-            <div className="text-indigo-200">Setup Time</div>
+            <div className="text-gray-400">Setup Time</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold mb-2">24/7</div>

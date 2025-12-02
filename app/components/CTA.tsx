@@ -7,7 +7,7 @@ export default function CTA() {
   return (
     <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl">
+        <div className="relative overflow-hidden bg-gray-900 rounded-3xl shadow-2xl">
           {/* Decorative Elements */}
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
@@ -27,7 +27,7 @@ export default function CTA() {
             </h2>
 
             {/* Subheading */}
-            <p className="text-xl sm:text-2xl text-indigo-100 mb-12 max-w-3xl mx-auto">
+            <p className="text-xl sm:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
               Join 50,000+ resellers earning daily. Get started in 5 minutes with zero upfront cost.
             </p>
 
@@ -35,7 +35,7 @@ export default function CTA() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Link
                 href="/api/auth/register"
-                className="group px-10 py-5 bg-white text-indigo-600 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                className="group px-10 py-5 bg-white text-gray-900 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
               >
                 Create Free Account
                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />

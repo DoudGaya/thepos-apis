@@ -5,14 +5,13 @@
 
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import vtuService from '@/lib/vtu'
-import { calculateAirtimePricing, formatTransactionDetails } from '@/lib/services/pricing'
+import { comparePassword } from '@/lib/auth'
+import { purchaseService } from '@/lib/services/purchase.service'
 import {
   apiHandler,
   successResponse,
   getAuthenticatedUser,
   validateRequestBody,
-  generateReference,
   BadRequestError,
   InsufficientBalanceError,
   validateNigerianPhone,
@@ -26,15 +25,9 @@ const airtimePurchaseSchema = z.object({
   }),
   phone: z.string().min(11, 'Phone number is required'),
   amount: z.number().min(50, 'Minimum airtime amount is ₦50').max(50000, 'Maximum airtime amount is ₦50,000'),
+  pin: z.string().min(4, 'Transaction PIN is required').max(6, 'PIN must be 4-6 digits'),
+  idempotencyKey: z.string().optional(),
 })
-
-// Profit margins by network (these should ideally come from database)
-const AIRTIME_MARGINS: Record<string, number> = {
-  MTN: 2.5, // 2.5% profit
-  GLO: 3.0,
-  AIRTEL: 2.5,
-  '9MOBILE': 3.0,
-}
 
 /**
  * POST /api/airtime/purchase
@@ -51,135 +44,49 @@ export const POST = apiHandler(async (request: Request) => {
 
   const formattedPhone = formatNigerianPhone(data.phone)
 
-  // Calculate pricing using centralized service
-  const { sellingPrice, profit } = calculateAirtimePricing(data.amount, data.network)
-
-  // Check user balance
-  const userBalance = await prisma.user.findUnique({
+  // Verify Transaction PIN
+  const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { credits: true },
+    select: { pinHash: true },
   })
 
-  if (!userBalance || userBalance.credits < sellingPrice) {
-    throw new InsufficientBalanceError(
-      `Insufficient balance. Available: ₦${userBalance?.credits.toLocaleString() || 0}, Required: ₦${sellingPrice.toLocaleString()}`
-    )
+  if (!dbUser?.pinHash) {
+    throw new BadRequestError('Transaction PIN not set. Please set a PIN in your profile.')
   }
 
-  // Generate unique reference
-  const reference = generateReference('AIRTIME')
-
-  // Create pending transaction
-  const transaction = await prisma.transaction.create({
-    data: {
-      userId: user.id,
-      type: 'AIRTIME',
-      amount: sellingPrice,
-      status: 'PENDING',
-      reference,
-      details: formatTransactionDetails(data.amount, sellingPrice, profit, {
-        description: `${data.network} Airtime - ${formattedPhone}`,
-        network: data.network,
-        phone: formattedPhone,
-        amount: data.amount,
-      }),
-    },
-  })
+  const isPinValid = await comparePassword(data.pin, dbUser.pinHash)
+  if (!isPinValid) {
+    throw new BadRequestError('Invalid transaction PIN')
+  }
 
   try {
-    // Deduct from user wallet first (reversible if VTU fails)
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        credits: {
-          decrement: sellingPrice,
-        },
+    const result = await purchaseService.purchase({
+      userId: user.id,
+      service: 'AIRTIME',
+      network: data.network,
+      recipient: formattedPhone,
+      amount: data.amount,
+      idempotencyKey: data.idempotencyKey,
+      metadata: {
+        source: 'web_app',
+        userAgent: request.headers.get('user-agent') || 'unknown',
       },
-    })
-
-    // Purchase airtime from VTU.NG
-    const vtuResponse = await vtuService.purchaseAirtime(
-      data.network,
-      formattedPhone,
-      data.amount
-    )
-
-    // Update transaction as completed
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: 'COMPLETED',
-        details: formatTransactionDetails(data.amount, sellingPrice, profit, {
-          description: `${data.network} Airtime - ${formattedPhone}`,
-          network: data.network,
-          phone: formattedPhone,
-          amount: data.amount,
-          vtuTransactionId: vtuResponse.transaction_id,
-          vtuStatus: vtuResponse.status,
-        }),
-      },
-    })
-
-    // Create notification
-    await prisma.notification.create({
-      data: {
-        userId: user.id,
-        title: 'Airtime Purchase Successful',
-        message: `${data.network} ₦${data.amount.toLocaleString()} airtime sent to ${formattedPhone}`,
-        type: 'TRANSACTION',
-        isRead: false,
-      },
-    })
-
-    // Get updated balance
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { credits: true },
     })
 
     return successResponse({
-      transaction: {
-        id: transaction.id,
-        reference,
-        network: data.network,
-        phone: formattedPhone,
-        amount: data.amount,
-        status: 'COMPLETED',
-        createdAt: transaction.createdAt,
-      },
-      vtu: {
-        transactionId: vtuResponse.transaction_id,
-        status: vtuResponse.status,
-      },
-      balance: updatedUser?.credits || 0,
+      transaction: result.transaction,
+      message: result.message,
     }, 'Airtime purchase successful')
 
   } catch (error: any) {
-    // Refund user wallet
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        credits: {
-          increment: sellingPrice,
-        },
-      },
-    })
+    console.error('Airtime purchase error:', error)
 
-    // Mark transaction as failed
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: 'FAILED',
-        details: formatTransactionDetails(data.amount, sellingPrice, profit, {
-          description: `${data.network} Airtime - ${formattedPhone}`,
-          network: data.network,
-          phone: formattedPhone,
-          amount: data.amount,
-          error: error.message,
-        }),
-      },
-    })
+    if (error.message && error.message.includes('Insufficient balance')) {
+      throw new InsufficientBalanceError(error.message)
+    }
 
-    throw new BadRequestError(error.message || 'Airtime purchase failed. Your wallet has been refunded.')
+    throw new BadRequestError(
+      error.message || 'Airtime purchase failed. Please try again.'
+    )
   }
 })

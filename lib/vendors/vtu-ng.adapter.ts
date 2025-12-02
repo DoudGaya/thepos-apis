@@ -30,11 +30,24 @@ export class VTUNGAdapter implements VendorAdapter {
   private client: AxiosInstance
   private token: string | null = null
   private tokenExpiry: Date | null = null
+  private username: string
+  private password: string
 
   constructor(
-    private username: string,
-    private password: string
+    configOrUsername: string | { username: string, password: string, baseUrl?: string },
+    password?: string
   ) {
+    if (typeof configOrUsername === 'string') {
+      this.username = configOrUsername
+      this.password = password || ''
+    } else {
+      this.username = configOrUsername.username
+      this.password = configOrUsername.password
+      if (configOrUsername.baseUrl) {
+        this.baseURL = configOrUsername.baseUrl
+      }
+    }
+
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 30000,

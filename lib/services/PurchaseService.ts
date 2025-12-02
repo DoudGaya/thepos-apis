@@ -15,6 +15,8 @@ import { walletService, WalletTransactionData } from './WalletService';
 import { IVendorAdapter, PurchaseDataRequest, PurchaseAirtimeRequest } from './VendorAdapter';
 import { vtuNGAdapter } from './VTUNGAdapter';
 import { prisma } from '../prisma';
+import { targetService } from './TargetService';
+import { referralService } from './ReferralService';
 
 export interface DataPurchaseRequest {
   userId: string;
@@ -118,6 +120,13 @@ class PurchaseService {
               completedAt: new Date().toISOString(),
             },
           },
+        });
+
+        // Trigger post-purchase actions
+        await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.DATA, {
+          planCode,
+          network,
+          phoneNumber
         });
 
         return {
@@ -225,6 +234,12 @@ class PurchaseService {
           },
         });
 
+        // Trigger post-purchase actions
+        await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.AIRTIME, {
+          network,
+          phoneNumber
+        });
+
         return {
           success: true,
           transactionId: walletTransaction.id,
@@ -286,6 +301,212 @@ class PurchaseService {
       }
     } catch (error) {
       console.error('Error handling purchase failure:', error);
+      throw error;
+    }
+  }
+
+  async verifyMeter(disco: string, meterNumber: string, meterType: 'PREPAID' | 'POSTPAID') {
+    return await this.vendorAdapter.verifyMeter({ disco, meterNumber, meterType });
+  }
+
+  async verifySmartCard(provider: string, smartCardNumber: string) {
+    return await this.vendorAdapter.verifySmartCard({ provider, smartCardNumber });
+  }
+
+  async getCablePlans(provider: string) {
+    return await this.vendorAdapter.getCablePlans(provider);
+  }
+
+  async purchaseElectricity(request: {
+    userId: string;
+    disco: string;
+    meterNumber: string;
+    meterType: 'PREPAID' | 'POSTPAID';
+    amount: number;
+    customerName?: string;
+    customerAddress?: string;
+  }): Promise<PurchaseResult> {
+    const { userId, disco, meterNumber, meterType, amount, customerName, customerAddress } = request;
+
+    try {
+      const balance = await walletService.getBalance(userId);
+      if (balance.available < amount) {
+        throw new Error(
+          `Insufficient balance. Required: ₦${amount.toLocaleString()}, Available: ₦${balance.available.toLocaleString()}`
+        );
+      }
+
+      const reference = this.generateReference('ELEC');
+      const walletData: WalletTransactionData = {
+        userId,
+        amount,
+        type: TransactionType.ELECTRICITY,
+        reference,
+        description: `${disco} ${meterType} purchase for ${meterNumber}`,
+        metadata: {
+          disco,
+          meterNumber,
+          meterType,
+          customerName,
+          serviceType: 'ELECTRICITY',
+        },
+      };
+
+      const { transaction: walletTransaction } = await walletService.deductBalance(walletData);
+
+      const vendorRequest = {
+        disco,
+        meterNumber,
+        meterType,
+        amount,
+        customerName,
+        customerAddress,
+        reference,
+      };
+
+      const vendorResult = await this.vendorAdapter.purchaseElectricity(vendorRequest);
+
+      if (vendorResult.success) {
+        const transactionDetails = walletTransaction.details as any;
+        await prisma.transaction.update({
+          where: { id: walletTransaction.id },
+          data: {
+            status: TransactionStatus.SUCCESS,
+            details: {
+              ...transactionDetails,
+              vendorReference: vendorResult.vendorReference,
+              vendorResponse: vendorResult.data,
+              completedAt: new Date().toISOString(),
+            },
+          },
+        });
+
+        // Trigger post-purchase actions
+        await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.ELECTRICITY, {
+          disco,
+          meterNumber,
+          meterType
+        });
+
+        return {
+          success: true,
+          transactionId: walletTransaction.id,
+          reference,
+          message: 'Electricity purchase successful',
+          data: vendorResult.data,
+        };
+      } else {
+        await this.handlePurchaseFailure(
+          userId,
+          walletTransaction.id,
+          vendorResult.error || 'Vendor API failed'
+        );
+
+        return {
+          success: false,
+          transactionId: walletTransaction.id,
+          reference,
+          message: vendorResult.error || 'Purchase failed',
+        };
+      }
+    } catch (error: any) {
+      console.error('Electricity purchase error:', error);
+      throw error;
+    }
+  }
+
+  async purchaseCableTV(request: {
+    userId: string;
+    provider: string;
+    smartCardNumber: string;
+    plan: string;
+    amount: number;
+    customerName?: string;
+  }): Promise<PurchaseResult> {
+    const { userId, provider, smartCardNumber, plan, amount, customerName } = request;
+
+    try {
+      const balance = await walletService.getBalance(userId);
+      if (balance.available < amount) {
+        throw new Error(
+          `Insufficient balance. Required: ₦${amount.toLocaleString()}, Available: ₦${balance.available.toLocaleString()}`
+        );
+      }
+
+      const reference = this.generateReference('CABLE');
+      const walletData: WalletTransactionData = {
+        userId,
+        amount,
+        type: TransactionType.CABLE_TV,
+        reference,
+        description: `${provider} ${plan} purchase for ${smartCardNumber}`,
+        metadata: {
+          provider,
+          smartCardNumber,
+          plan,
+          customerName,
+          serviceType: 'CABLE_TV',
+        },
+      };
+
+      const { transaction: walletTransaction } = await walletService.deductBalance(walletData);
+
+      const vendorRequest = {
+        provider,
+        smartCardNumber,
+        plan,
+        amount,
+        customerName,
+        reference,
+      };
+
+      const vendorResult = await this.vendorAdapter.purchaseCableTV(vendorRequest);
+
+      if (vendorResult.success) {
+        const transactionDetails = walletTransaction.details as any;
+        await prisma.transaction.update({
+          where: { id: walletTransaction.id },
+          data: {
+            status: TransactionStatus.SUCCESS,
+            details: {
+              ...transactionDetails,
+              vendorReference: vendorResult.vendorReference,
+              vendorResponse: vendorResult.data,
+              completedAt: new Date().toISOString(),
+            },
+          },
+        });
+
+        // Trigger post-purchase actions
+        await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.CABLE_TV, {
+          provider,
+          smartCardNumber,
+          plan
+        });
+
+        return {
+          success: true,
+          transactionId: walletTransaction.id,
+          reference,
+          message: 'Cable TV purchase successful',
+          data: vendorResult.data,
+        };
+      } else {
+        await this.handlePurchaseFailure(
+          userId,
+          walletTransaction.id,
+          vendorResult.error || 'Vendor API failed'
+        );
+
+        return {
+          success: false,
+          transactionId: walletTransaction.id,
+          reference,
+          message: vendorResult.error || 'Purchase failed',
+        };
+      }
+    } catch (error: any) {
+      console.error('Cable TV purchase error:', error);
       throw error;
     }
   }
@@ -369,6 +590,28 @@ class PurchaseService {
     } catch (error) {
       console.error('Error checking transaction status:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Handle post-purchase actions (Targets, Referrals)
+   */
+  private async handlePostPurchase(
+    userId: string, 
+    amount: number, 
+    transactionId: string, 
+    type: TransactionType,
+    metadata?: any
+  ) {
+    try {
+      // Update sales targets
+      await targetService.updateProgress(userId, type, amount, metadata);
+
+      // Process referral commission
+      await referralService.processTransactionCommission(userId, amount, transactionId);
+    } catch (error) {
+      console.error('Error in post-purchase processing:', error);
+      // Don't throw, as the purchase was successful
     }
   }
 }

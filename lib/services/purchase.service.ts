@@ -9,6 +9,7 @@
 import { prisma } from '../prisma'
 import { vendorService } from '../vendors'
 import { pricingService } from './pricing.service'
+import { generateReference } from '../api-utils'
 import { generateIdempotencyKey } from '../utils/idempotency'
 import { normalizePhone, detectNetwork } from '../utils/phone-normalizer'
 import { 
@@ -153,6 +154,7 @@ export class PurchaseService {
         profit: pricing.profit,
         status: 'PENDING',
         idempotencyKey,
+        reference: generateReference(request.service),
         details: request.metadata || {},
       },
       pricing.sellingPrice
@@ -377,6 +379,9 @@ export class PurchaseService {
       })
 
       return transaction
+    }, {
+      maxWait: 10000, // Wait up to 10s for a connection
+      timeout: 20000, // Allow transaction to run for up to 20s (fixes "Transaction already closed" on slow DBs)
     })
   }
 
@@ -420,6 +425,9 @@ export class PurchaseService {
           },
         },
       })
+    }, {
+      maxWait: 10000,
+      timeout: 20000,
     })
   }
 

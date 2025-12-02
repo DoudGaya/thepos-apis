@@ -8,28 +8,28 @@ const steps = [
     step: '1',
     title: 'Create Account',
     description: 'Sign up in minutes with your email and phone number. Verify your account and you\'re ready to go.',
-    color: 'from-blue-500 to-cyan-500'
+    color: 'from-gray-600 to-gray-800'
   },
   {
     icon: Wallet,
     step: '2',
     title: 'Fund Wallet',
     description: 'Add money to your wallet via bank transfer, card payment, or USSD. Funds reflect instantly.',
-    color: 'from-green-500 to-emerald-500'
+    color: 'from-gray-700 to-gray-900'
   },
   {
     icon: ShoppingCart,
     step: '3',
     title: 'Make Purchase',
     description: 'Buy data, airtime, or pay bills at wholesale prices. Delivery is automatic and instant.',
-    color: 'from-purple-500 to-pink-500'
+    color: 'from-gray-800 to-black'
   },
   {
     icon: TrendingUp,
     step: '4',
     title: 'Resell & Profit',
     description: 'Resell to your customers at retail prices and enjoy your profit margins. Repeat and scale.',
-    color: 'from-yellow-500 to-orange-500'
+    color: 'from-gray-900 to-black'
   }
 ];
 
@@ -39,7 +39,7 @@ export default function HowItWorks() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+          <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide mb-2">
             How It Works
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
@@ -53,7 +53,7 @@ export default function HowItWorks() {
         {/* Steps */}
         <div className="relative">
           {/* Connection Line (Desktop) */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform -translate-y-1/2"></div>
+          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-1 bg-gray-300 transform -translate-y-1/2"></div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
             {steps.map((step, index) => {
@@ -92,7 +92,7 @@ export default function HowItWorks() {
         <div className="mt-16 text-center">
           <a
             href="/api/auth/register"
-            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+            className="inline-flex items-center px-8 py-4 bg-gray-900 text-white rounded-xl font-semibold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
           >
             Start Your Journey Today
           </a>

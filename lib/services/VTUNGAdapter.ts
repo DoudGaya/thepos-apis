@@ -245,6 +245,40 @@ export class VTUNGAdapter extends BaseVendorAdapter {
   }
 
   /**
+   * Get cable TV plans
+   */
+  async getCablePlans(provider: string): Promise<VendorResponse<any[]>> {
+    try {
+      // Use v2 endpoint for variations as per documentation
+      // We use the full URL to override the default v1 base URL
+      const baseUrl = this.baseUrl?.replace('/v1', '/v2') || 'https://vtu.ng/wp-json/api/v2';
+      const response = await this.client.get(`${baseUrl}/variations/tv`, {
+        params: { service_id: provider.toLowerCase() },
+      });
+
+      if (response.data?.variations) {
+        return {
+          success: true,
+          data: response.data.variations.map((v: any) => ({
+            id: v.variation_id,
+            name: v.name,
+            amount: parseFloat(v.variation_amount),
+            fixedPrice: v.fixedPrice,
+          })),
+          message: 'Cable plans retrieved successfully',
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Failed to retrieve cable plans',
+      };
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
    * Verify cable TV smart card
    */
   async verifySmartCard(request: VerifySmartCardRequest): Promise<VendorResponse> {

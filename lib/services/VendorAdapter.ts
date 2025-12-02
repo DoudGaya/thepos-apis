@@ -90,6 +90,7 @@ export interface IVendorAdapter {
   purchaseElectricity(request: ElectricityRequest): Promise<VendorResponse>;
   
   // Cable TV Services
+  getCablePlans(provider: string): Promise<VendorResponse<any[]>>;
   verifySmartCard(request: VerifySmartCardRequest): Promise<VendorResponse>;
   purchaseCableTV(request: CableTVRequest): Promise<VendorResponse>;
   
@@ -118,6 +119,7 @@ export abstract class BaseVendorAdapter implements IVendorAdapter {
   abstract purchaseAirtime(request: PurchaseAirtimeRequest): Promise<VendorResponse>;
   abstract verifyMeter(request: VerifyMeterRequest): Promise<VendorResponse>;
   abstract purchaseElectricity(request: ElectricityRequest): Promise<VendorResponse>;
+  abstract getCablePlans(provider: string): Promise<VendorResponse<any[]>>;
   abstract verifySmartCard(request: VerifySmartCardRequest): Promise<VendorResponse>;
   abstract purchaseCableTV(request: CableTVRequest): Promise<VendorResponse>;
   abstract checkTransactionStatus(request: TransactionStatusRequest): Promise<VendorResponse>;

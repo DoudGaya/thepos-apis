@@ -200,10 +200,10 @@ export default function ProfilePage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Picture</h2>
         <div className="flex items-center gap-6">
           <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
-              <User className="w-12 h-12 text-indigo-600" />
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+              <User className="w-12 h-12 text-gray-900" />
             </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-lg">
+            <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-lg">
               <Camera className="w-4 h-4" />
             </button>
           </div>
@@ -214,7 +214,7 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-500 mb-3">
               {session?.user?.email}
             </p>
-            <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+            <button className="text-sm text-gray-900 hover:text-gray-700 font-medium">
               Upload new picture
             </button>
           </div>
@@ -237,7 +237,7 @@ export default function ProfilePage() {
               type="text"
               value={profileData.fullName}
               onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
-              className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             />
           </div>
 
@@ -254,7 +254,7 @@ export default function ProfilePage() {
                 type="email"
                 value={profileData.email}
                 onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function ProfilePage() {
                 type="tel"
                 value={profileData.phone}
                 onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function ProfilePage() {
           <button
             onClick={handleProfileUpdate}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <>
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                 type={showPasswords.current ? 'text' : 'password'}
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -340,7 +340,7 @@ export default function ProfilePage() {
                 type={showPasswords.new ? 'text' : 'password'}
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -366,7 +366,7 @@ export default function ProfilePage() {
                 type={showPasswords.confirm ? 'text' : 'password'}
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full pr-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               />
               <button
                 type="button"
@@ -385,7 +385,7 @@ export default function ProfilePage() {
           <button
             onClick={handlePasswordChange}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <>
@@ -418,7 +418,7 @@ export default function ProfilePage() {
               type="checkbox"
               checked={settings.emailNotifications}
               onChange={(e) => setSettings({ ...settings, emailNotifications: e.target.checked })}
-              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-5 w-5 text-gray-900 focus:ring-gray-500 border-gray-300 rounded"
             />
           </label>
 
@@ -431,7 +431,7 @@ export default function ProfilePage() {
               type="checkbox"
               checked={settings.smsNotifications}
               onChange={(e) => setSettings({ ...settings, smsNotifications: e.target.checked })}
-              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-5 w-5 text-gray-900 focus:ring-gray-500 border-gray-300 rounded"
             />
           </label>
 
@@ -444,14 +444,14 @@ export default function ProfilePage() {
               type="checkbox"
               checked={settings.marketingEmails}
               onChange={(e) => setSettings({ ...settings, marketingEmails: e.target.checked })}
-              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-5 w-5 text-gray-900 focus:ring-gray-500 border-gray-300 rounded"
             />
           </label>
 
           <button
             onClick={handleSettingsUpdate}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
               <>
@@ -475,6 +475,23 @@ export default function ProfilePage() {
           Security
         </h2>
         <div className="space-y-4">
+          {/* Transaction PIN */}
+          <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="font-medium text-gray-900">Transaction PIN</p>
+                <p className="text-sm text-gray-500">Secure your data purchases with a 4-digit PIN</p>
+              </div>
+              <Lock className="w-5 h-5 text-gray-400" />
+            </div>
+            <button
+              onClick={() => window.location.href = '/dashboard/settings/security'}
+              className="mt-3 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              Set Up PIN
+            </button>
+          </div>
+
           <label className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
             <div>
               <p className="font-medium text-gray-900">Two-Factor Authentication</p>
@@ -484,7 +501,7 @@ export default function ProfilePage() {
               type="checkbox"
               checked={settings.twoFactorAuth}
               onChange={(e) => setSettings({ ...settings, twoFactorAuth: e.target.checked })}
-              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-5 w-5 text-gray-900 focus:ring-gray-500 border-gray-300 rounded"
             />
           </label>
 

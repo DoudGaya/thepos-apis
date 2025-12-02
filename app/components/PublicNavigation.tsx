@@ -72,7 +72,7 @@ export function PublicNavigation() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
           <Link href="/" className="group inline-flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-green-600 text-white ring-1 ring-inset ring-green-500/70 transition-all duration-300 group-hover:shadow-sm group-hover:ring-green-400/80">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-gray-900 text-white ring-1 ring-inset ring-gray-500/70 transition-all duration-300 group-hover:shadow-sm group-hover:ring-gray-400/80">
               <span className="text-sm font-semibold tracking-tight">V</span>
             </span>
             <span className="text-base font-semibold tracking-tight">VTU</span>
@@ -95,7 +95,7 @@ export function PublicNavigation() {
               type="button"
               aria-label="Toggle theme"
               onClick={toggleTheme}
-              className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
             >
               {theme === 'dark' ? (
                 <Moon className="h-4 w-4 text-slate-200" />
@@ -105,7 +105,7 @@ export function PublicNavigation() {
             </button>
               <Link
               href="/auth/login"
-              className="hidden md:inline-flex items-center gap-2 rounded-md border bg-white px-3.5 py-2 text-sm font-medium text-black shadow-sm hover:bg-green-500 hover:border-green-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+              className="hidden md:inline-flex items-center gap-2 rounded-md border bg-white px-3.5 py-2 text-sm font-medium text-black shadow-sm hover:bg-gray-800 hover:text-white hover:border-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
             >
               Log In
               <ArrowRight className="h-4 w-4 opacity-90" />
@@ -113,7 +113,7 @@ export function PublicNavigation() {
 
             <Link
               href="/auth/register"
-              className="hidden md:inline-flex items-center gap-2 rounded-md border border-green-600 bg-green-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 hover:border-green-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+              className="hidden md:inline-flex items-center gap-2 rounded-md border border-gray-900 bg-gray-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 hover:border-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
             >
               Get started
               <ArrowRight className="h-4 w-4 opacity-90" />
@@ -121,7 +121,7 @@ export function PublicNavigation() {
 
             <button
               onClick={() => setIsOpen((prev) => !prev)}
-              className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+              className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
               aria-label="Toggle menu"
             >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -137,7 +137,7 @@ export function PublicNavigation() {
                   key={href}
                   href={href}
                   onClick={closeMenu}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-green-600 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 dark:text-slate-300 hover:text-gray-900 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
                 >
                   {label}
                 </Link>
@@ -147,7 +147,7 @@ export function PublicNavigation() {
               <Link
                 href="/auth/register"
                 onClick={closeMenu}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-green-600 bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 hover:border-green-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-900 bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 hover:border-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
               >
                 Get started
                 <ArrowRight className="h-4 w-4 opacity-90" />
@@ -155,7 +155,7 @@ export function PublicNavigation() {
               <Link
                 href="/auth/login"
                 onClick={closeMenu}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 px-4 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-gray-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-all"
               >
                 Sign in
               </Link>

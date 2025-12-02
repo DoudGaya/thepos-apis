@@ -46,6 +46,8 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           phone: user.phone,
           isVerified: user.isVerified,
+          firstName: user.firstName,
+          lastName: user.lastName,
         };
       },
     }),
@@ -72,17 +74,18 @@ export const authOptions: NextAuthOptions = {
       // For now, redirect to dashboard - we'll handle admin redirection in middleware
       return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
+        // Initial sign in - populate token from user object
         token.id = user.id;
         token.role = (user as any).role;
         token.phone = (user as any).phone;
         token.isVerified = (user as any).isVerified;
         token.firstName = (user as any).firstName;
         token.lastName = (user as any).lastName;
-      } else if (token.sub) {
-        // Refresh profile data from database on every token use
-        // This ensures firstName/lastName are always up-to-date
+      } else if (trigger === 'update' && session) {
+        // Only refresh from database when explicitly triggered by session update
+        // This prevents excessive database queries on every request
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.sub },
@@ -99,12 +102,14 @@ export const authOptions: NextAuthOptions = {
             token.lastName = dbUser.lastName;
             token.role = dbUser.role;
             token.isVerified = dbUser.isVerified;
+            token.name = `${dbUser.firstName} ${dbUser.lastName}`;
           }
         } catch (error) {
           console.error('Error refreshing user data from database:', error);
           // Continue with existing token data if database query fails
         }
       }
+      // Otherwise, return existing token without database query
       return token;
     },
     async session({ session, token }) {
@@ -115,6 +120,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).isVerified = token.isVerified;
         (session.user as any).firstName = token.firstName;
         (session.user as any).lastName = token.lastName;
+        session.user.name = token.name || "";
       }
       return session;
     },

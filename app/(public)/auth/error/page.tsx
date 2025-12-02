@@ -70,7 +70,7 @@ function AuthErrorContent() {
     <div className="space-y-8">
       {/* Logo/Brand */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold text-gray-900">
           ThePOS
         </h1>
       </div>
@@ -105,14 +105,14 @@ function AuthErrorContent() {
         <div className="space-y-3">
           <Link
             href="/login"
-            className="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+            className="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all"
           >
             Try Again
           </Link>
 
           <Link
             href="/"
-            className="w-full flex justify-center items-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+            className="w-full flex justify-center items-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
@@ -123,7 +123,7 @@ function AuthErrorContent() {
         <div className="text-center pt-4 border-t border-gray-200">
           <p className="text-sm text-gray-600">
             Need help?{' '}
-            <Link href="/support" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link href="/support" className="font-medium text-gray-900 hover:text-gray-700">
               Contact Support
             </Link>
           </p>
@@ -140,13 +140,13 @@ export default function AuthErrorPage() {
         <Suspense fallback={
           <div className="space-y-8">
             <div className="text-center">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-gray-900">
                 ThePOS
               </h1>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                 <p className="mt-4 text-gray-600">Loading...</p>
               </div>
             </div>

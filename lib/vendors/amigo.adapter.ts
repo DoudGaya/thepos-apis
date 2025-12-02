@@ -10,6 +10,7 @@
 import axios, { AxiosInstance } from 'axios'
 import { v4 as uuidv4 } from 'uuid'
 import { retry } from '../utils/retry'
+import { AMIGO_MTN_PLANS, AMIGO_GLO_PLANS } from '../constants/data-plans'
 import {
   VendorAdapter,
   VendorName,
@@ -92,15 +93,22 @@ export class AmigoAdapter implements VendorAdapter {
   private planCacheExpiry: Date | null = null
   private readonly CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
-  constructor(apiToken: string) {
-    this.apiToken = apiToken
+  constructor(config: string | { apiKey: string, baseUrl?: string }) {
+    if (typeof config === 'string') {
+      this.apiToken = config
+    } else {
+      this.apiToken = config.apiKey
+      if (config.baseUrl) {
+        this.baseURL = config.baseUrl
+      }
+    }
 
     // Initialize axios client
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 30000,
       headers: {
-        'Authorization': `Token ${this.apiToken}`,
+        'X-API-Key': this.apiToken,
         'Content-Type': 'application/json',
       },
     })
@@ -364,13 +372,49 @@ export class AmigoAdapter implements VendorAdapter {
 
       return allPlans
     } catch (error: any) {
-      throw new VendorError(
-        'Failed to fetch plans from Amigo',
-        'AMIGO',
-        error.response?.status || 500,
-        error.response?.data || error
-      )
+      console.warn('[Amigo] API fetch failed, using fallback plans:', error.message)
+      
+      // Use fallback plans
+      return this.getFallbackPlans()
     }
+  }
+
+  /**
+   * Get fallback plans when API is down
+   */
+  private getFallbackPlans(): ServicePlan[] {
+    const fallbackPlans: ServicePlan[] = []
+
+    // MTN Plans
+    const mtnPlans: ServicePlan[] = AMIGO_MTN_PLANS.map(p => ({
+      id: p.planId.toString(),
+      name: `${p.dataCapacity} - ${p.validityLabel}`,
+      network: 'MTN',
+      price: p.amigoBasePrice,
+      faceValue: p.amigoBasePrice,
+      validity: p.validityLabel,
+      isAvailable: true,
+      metadata: { data_capacity_gb: p.dataCapacityValue, validity_days: p.validityDays, source: 'fallback' }
+    }))
+    fallbackPlans.push(...mtnPlans)
+    this.planCache.set('MTN', mtnPlans)
+
+    // Glo Plans
+    const gloPlans: ServicePlan[] = AMIGO_GLO_PLANS.map(p => ({
+      id: p.planId.toString(),
+      name: `${p.dataCapacity} - ${p.validityLabel}`,
+      network: 'GLO',
+      price: p.amigoBasePrice,
+      faceValue: p.amigoBasePrice,
+      validity: p.validityLabel,
+      isAvailable: true,
+      metadata: { data_capacity_gb: p.dataCapacityValue, validity_days: p.validityDays, source: 'fallback' }
+    }))
+    fallbackPlans.push(...gloPlans)
+    this.planCache.set('GLO', gloPlans)
+
+    console.warn('[Amigo] Using fallback plans - Amigo API is currently unavailable')
+    return fallbackPlans
   }
 
   /**

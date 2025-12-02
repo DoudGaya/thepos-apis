@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, generateReferralCode, formatPhoneNumber, generateOTP } from '@/lib/auth'
 import { smsService } from '@/lib/sms'
 import { emailService } from '@/lib/email'
+import { referralService } from '@/lib/services/ReferralService'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -34,8 +35,8 @@ export async function POST(request: NextRequest) {
     console.log('✅ Schema validation passed')
     
     // Phase 1: Only email and phone required for OTP generation
-    const { email, phone: phoneNumber, firstName: passedFirstName, lastName: passedLastName } = parsed
-    console.log('📊 Extracted fields:', { email, phoneNumber, passedFirstName, passedLastName })
+    const { email, phone: phoneNumber, firstName: passedFirstName, lastName: passedLastName, referralCode: referrerCode } = parsed
+    console.log('📊 Extracted fields:', { email, phoneNumber, passedFirstName, passedLastName, referrerCode })
 
     // Handle phone number formats
     if (!phoneNumber) {
@@ -108,6 +109,17 @@ export async function POST(request: NextRequest) {
     })
     console.log('✅ USER CREATED SUCCESSFULLY:', user.id)
     console.log('📊 New user details:', { id: user.id, email: user.email, phone: user.phone, firstName: user.firstName, lastName: user.lastName, passwordHash: user.passwordHash })
+
+    // Process referral if code provided
+    if (referrerCode) {
+      console.log('🔗 Processing referral for code:', referrerCode)
+      try {
+        await referralService.processSignupReward(user.id, referrerCode)
+        console.log('✅ Referral processed successfully')
+      } catch (refError) {
+        console.warn('⚠️ Referral processing failed:', refError)
+      }
+    }
 
     // Generate OTP
     console.log('🔐 Generating OTP code...')

@@ -326,7 +326,7 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     )
   }
@@ -372,7 +372,7 @@ export default function TransactionsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search transactions..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
             />
           </div>
 
@@ -388,7 +388,7 @@ export default function TransactionsPage() {
           {/* Export Button */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
           >
             <Download className="w-4 h-4" />
             Export
@@ -405,7 +405,7 @@ export default function TransactionsPage() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               >
                 {transactionTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -420,7 +420,7 @@ export default function TransactionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
               >
                 {statusFilters.map((status) => (
                   <option key={status.value} value={status.value}>
@@ -449,7 +449,7 @@ export default function TransactionsPage() {
                         className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                           transaction.amount > 0
                             ? 'bg-green-100 text-green-600'
-                            : 'bg-indigo-100 text-indigo-600'
+                            : 'bg-gray-100 text-gray-900'
                         }`}
                       >
                         {transaction.amount > 0 ? (

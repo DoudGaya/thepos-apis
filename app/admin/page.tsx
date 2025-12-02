@@ -1,320 +1,259 @@
-"use client"
+import { prisma } from '@/lib/prisma'
+import { DashboardStats } from './_components/dashboard-stats'
+import { RevenueChart, DistributionChart } from './_components/dashboard-charts'
+import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import React, { useEffect, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
+export const dynamic = 'force-dynamic'
 
-interface DashboardData {
-  period: string
-  overview: {
-    users: {
-      total: number
-      new: number
-      active: number
-    }
-    transactions: {
-      total: number
-      pending: number
-      failed: number
-      completed: number
-    }
-    revenue: {
-      total: number
-      profit: number
-      profitMargin: number
-      growth: number
-    }
-    wallet: {
-      totalBalance: number
-    }
-  }
-  revenueByType: Array<{
-    type: string
-    revenue: number
-    count: number
+interface PageProps {
+  searchParams: Promise<{
+    period?: string
   }>
-  recentActivity: {
-    transactions: Array<{
-      id: string
-      type: string
-      amount: number
-      status: string
-      createdAt: string
-      user: {
-        firstName: string
-        lastName: string
-        email: string
-      }
-    }>
-    users: Array<{
-      id: string
-      firstName: string
-      lastName: string
-      email: string
-      createdAt: string
-      role: string
-    }>
-  }
-  systemHealth: {
-    database: string
-    uptime: number
-    memory: any
-    timestamp: string
-  }
-  vendorStatus: Record<string, number>
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+export default async function AdminDashboard({ searchParams }: PageProps) {
+  const resolvedParams = await searchParams
+  const period = resolvedParams.period || 'month'
 
-export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState('month')
+  // Calculate date range
+  let startDate: Date | undefined
+  const now = new Date()
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [period])
+  switch (period) {
+    case 'today':
+      startDate = new Date(now.setHours(0, 0, 0, 0))
+      break
+    case 'week':
+      startDate = new Date(now.setDate(now.getDate() - 7))
+      break
+    case 'month':
+      startDate = new Date(now.setMonth(now.getMonth() - 1))
+      break
+    default:
+      startDate = undefined
+  }
 
-  const fetchDashboardData = async () => {
-    try {
-      const response = await fetch(`/api/admin/dashboard?period=${period}`)
-      const result = await response.json()
-      if (result.success) {
-        setData(result.data)
+  const whereDate = startDate ? { createdAt: { gte: startDate } } : {}
+
+  // Fetch Data in Parallel
+  const [
+    totalUsers,
+    newUsers,
+    activeUsers,
+    transactions,
+    revenueByType,
+    walletBalance,
+    recentTransactions,
+    pendingCount,
+    failedCount
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: whereDate }),
+    prisma.user.count({
+      where: {
+        ...whereDate,
+        transactions: { some: { status: 'COMPLETED' } },
+      },
+    }),
+    prisma.transaction.aggregate({
+      where: { ...whereDate, status: 'COMPLETED' },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.transaction.groupBy({
+      by: ['type'],
+      where: { ...whereDate, status: 'COMPLETED' },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.user.aggregate({
+      _sum: { credits: true },
+    }),
+    prisma.transaction.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: { firstName: true, lastName: true, email: true }
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
-    } finally {
-      setLoading(false)
+    }),
+    prisma.transaction.count({ where: { ...whereDate, status: 'PENDING' } }),
+    prisma.transaction.count({ where: { ...whereDate, status: 'FAILED' } })
+  ])
+
+  const stats = {
+    users: {
+      total: totalUsers,
+      new: newUsers,
+      active: activeUsers
+    },
+    transactions: {
+      total: (transactions._count || 0) + pendingCount + failedCount,
+      completed: transactions._count || 0,
+      pending: pendingCount,
+      failed: failedCount
+    },
+    revenue: {
+      total: transactions._sum.amount || 0,
+      profit: (transactions._sum.amount || 0) * 0.03 // Estimated 3%
+    },
+    wallet: {
+      totalBalance: walletBalance._sum.credits || 0
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading dashboard...</div>
-      </div>
-    )
-  }
-
-  if (!data) {
-    return (
-      <div className="text-center text-red-500">
-        Failed to load dashboard data
-      </div>
-    )
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount)
-  }
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-US').format(num)
-  }
+  const chartData = revenueByType.map(item => ({
+    type: item.type,
+    revenue: item._sum.amount || 0,
+    count: item._count
+  })).sort((a, b) => b.revenue - a.revenue)
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard Overview</h1>
-          <p className="text-sm text-gray-600">Welcome back, Admin</p>
-        </div>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md"
-        >
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-          <option value="all">All Time</option>
-        </select>
-      </div>
-
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold">{formatNumber(data.overview.users.total)}</p>
-            </div>
-            <div className="text-green-500">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            +{formatNumber(data.overview.users.new)} new this period
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            Monitor your system performance and business metrics.
           </p>
         </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold">{formatCurrency(data.overview.revenue.total)}</p>
-            </div>
-            <div className="text-blue-500">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            {data.overview.revenue.growth >= 0 ? '+' : ''}{data.overview.revenue.growth.toFixed(1)}% from last period
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Transactions</p>
-              <p className="text-2xl font-bold">{formatNumber(data.overview.transactions.total)}</p>
-            </div>
-            <div className="text-purple-500">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            {formatNumber(data.overview.transactions.pending)} pending
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Wallet Balance</p>
-              <p className="text-2xl font-bold">{formatCurrency(data.overview.wallet.totalBalance)}</p>
-            </div>
-            <div className="text-green-500">
-              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Total user credits
-          </p>
-        </div>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue by Type Chart */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Revenue by Transaction Type</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={data.revenueByType}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ type, percent }) => `${type} ${((percent as number) * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="revenue"
-              >
-                {data.revenueByType.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatCurrency(value as number)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Revenue Trend Chart (placeholder - would need time series data) */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Revenue Trend</h3>
-          <div className="h-64 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <p>Revenue trend chart</p>
-              <p className="text-sm">Would show time series data from /api/admin/sales</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Transactions */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Recent Transactions</h3>
-          <div className="space-y-3">
-            {data.recentActivity.transactions.slice(0, 5).map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <div>
-                  <p className="font-medium">{tx.type}</p>
-                  <p className="text-sm text-gray-600">
-                    {tx.user.firstName} {tx.user.lastName}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">{formatCurrency(tx.amount)}</p>
-                  <p className={`text-xs ${
-                    tx.status === 'COMPLETED' ? 'text-green-600' :
-                    tx.status === 'PENDING' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {tx.status}
-                  </p>
-                </div>
-              </div>
+        
+        <Tabs defaultValue={period} className="w-auto">
+          <TabsList className="grid w-full grid-cols-4">
+            {['today', 'week', 'month', 'all'].map((p) => (
+              <TabsTrigger key={p} value={p} asChild>
+                <Link href={`/admin?period=${p}`}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </Link>
+              </TabsTrigger>
             ))}
-          </div>
-        </div>
-
-        {/* Recent Users */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Recent Users</h3>
-          <div className="space-y-3">
-            {data.recentActivity.users.map((user) => (
-              <div key={user.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <div>
-                  <p className="font-medium">{user.firstName} {user.lastName}</p>
-                  <p className="text-sm text-gray-600">{user.email}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`px-2 py-1 text-xs rounded ${
-                    user.role === 'ADMIN' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* System Health */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-medium mb-4">System Health</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Database Status</p>
-            <p className={`font-medium ${data.systemHealth.database === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
-              {data.systemHealth.database}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Uptime</p>
-            <p className="font-medium">{Math.floor(data.systemHealth.uptime / 3600)}h {Math.floor((data.systemHealth.uptime % 3600) / 60)}m</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Memory Usage</p>
-            <p className="font-medium">{Math.round(data.systemHealth.memory.heapUsed / 1024 / 1024)} MB</p>
-          </div>
-        </div>
+      {/* Stats Cards */}
+      <DashboardStats stats={stats} />
+
+      {/* Charts Section */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Revenue by Service</CardTitle>
+            <CardDescription>
+              Breakdown of revenue across different service types
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RevenueChart data={chartData} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribution</CardTitle>
+            <CardDescription>
+              Transaction count by service type
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DistributionChart data={chartData} />
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>
+              Latest transactions across all services
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/admin/transactions">View All</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTransactions.map((tx) => (
+                <TableRow key={tx.id}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {tx.user.firstName} {tx.user.lastName}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{tx.user.email}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {tx.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono font-medium">
+                    {formatCurrency(tx.amount)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        tx.status === 'COMPLETED' || tx.status === 'SUCCESS'
+                          ? 'default'
+                          : tx.status === 'PENDING'
+                          ? 'secondary'
+                          : 'destructive'
+                      }
+                      className={
+                        tx.status === 'COMPLETED' || tx.status === 'SUCCESS'
+                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400'
+                          : tx.status === 'PENDING'
+                          ? 'bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400'
+                          : ''
+                      }
+                    >
+                      {tx.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {recentTransactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    No recent transactions found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

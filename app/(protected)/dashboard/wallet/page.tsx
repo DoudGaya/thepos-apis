@@ -47,7 +47,7 @@ export default function WalletPage() {
   const [showTransferModal, setShowTransferModal] = useState(action === 'transfer')
   const [fundingMethod, setFundingMethod] = useState<'card' | 'transfer' | null>(null)
   const [fundAmount, setFundAmount] = useState('')
-  const [transferData, setTransferData] = useState({ phone: '', amount: '' })
+  const [transferData, setTransferData] = useState({ phone: '', amount: '', pin: '' })
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -201,24 +201,52 @@ export default function WalletPage() {
   }
 
   const handleTransfer = async () => {
-    if (!transferData.phone || !transferData.amount) {
-      alert('Please fill all fields')
+    if (!transferData.phone || !transferData.amount || !transferData.pin) {
+      setError('Please fill all fields including PIN')
       return
     }
 
     if (parseFloat(transferData.amount) > walletBalance) {
-      alert('Insufficient balance')
+      setError('Insufficient balance')
       return
     }
 
     setLoading(true)
-    // TODO: Implement wallet transfer API
-    setTimeout(() => {
-      setLoading(false)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch('/api/wallet/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientPhone: transferData.phone,
+          amount: parseFloat(transferData.amount),
+          pin: transferData.pin,
+          description: 'Wallet Transfer'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Transfer failed')
+      }
+
+      setSuccess('Transfer successful!')
+      setWalletBalance(prev => prev - parseFloat(transferData.amount))
       setShowTransferModal(false)
-      setTransferData({ phone: '', amount: '' })
-      // Show success message
-    }, 2000)
+      setTransferData({ phone: '', amount: '', pin: '' })
+      
+      // Refresh transactions
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (error: any) {
+      setError(error.message || 'Transfer failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -343,7 +371,7 @@ export default function WalletPage() {
           <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
           <a 
             href="/dashboard/transactions" 
-            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            className="text-sm text-gray-900 hover:text-gray-700 font-medium"
           >
             View All
           </a>
@@ -445,10 +473,10 @@ export default function WalletPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => setFundingMethod('card')}
-                  className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all"
+                  className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg hover:border-gray-900 hover:bg-gray-50 transition-all"
                 >
-                  <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-indigo-600" />
+                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-gray-900" />
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-gray-900">Pay with Card</p>
@@ -458,7 +486,7 @@ export default function WalletPage() {
 
                 <button
                   onClick={() => setFundingMethod('transfer')}
-                  className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition-all"
+                  className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg hover:border-gray-900 hover:bg-gray-50 transition-all"
                 >
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-blue-600" />
@@ -481,7 +509,7 @@ export default function WalletPage() {
                     onChange={(e) => setFundAmount(e.target.value)}
                     placeholder="Enter amount"
                     min="100"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                   />
                   <p className="mt-1 text-xs text-gray-500">Minimum: ₦100</p>
                 </div>
@@ -489,7 +517,7 @@ export default function WalletPage() {
                 <button
                   onClick={handleFundWithCard}
                   disabled={loading || !fundAmount}
-                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? (
                     <>
@@ -535,7 +563,7 @@ export default function WalletPage() {
               <button
                 onClick={() => {
                   setShowTransferModal(false)
-                  setTransferData({ phone: '', amount: '' })
+                  setTransferData({ phone: '', amount: '', pin: '' })
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -559,7 +587,7 @@ export default function WalletPage() {
                       setTransferData({ ...transferData, phone: e.target.value })
                     }
                     placeholder="08012345678"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -577,17 +605,33 @@ export default function WalletPage() {
                   placeholder="Enter amount"
                   min="100"
                   max={walletBalance}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Available: ₦{walletBalance.toLocaleString()}
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction PIN
+                </label>
+                <input
+                  type="password"
+                  value={transferData.pin}
+                  onChange={(e) =>
+                    setTransferData({ ...transferData, pin: e.target.value })
+                  }
+                  placeholder="Enter 4-digit PIN"
+                  maxLength={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                />
+              </div>
+
               <button
                 onClick={handleTransfer}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? (
                   <>

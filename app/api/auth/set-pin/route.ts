@@ -54,8 +54,12 @@ export async function POST(request: NextRequest) {
 
     // Hash PIN
     console.log('🔐 Hashing PIN...')
+    console.log('  - PIN to hash:', parsed.pin)
+    console.log('  - PIN length:', parsed.pin.length)
+    console.log('  - PIN type:', typeof parsed.pin)
     const hashedPin = await hashPassword(parsed.pin)
     console.log('✅ PIN hashed successfully')
+    console.log('  - Hash result:', hashedPin.substring(0, 20) + '...')
 
     // Update user with PIN
     console.log('💾 Updating user with PIN...')

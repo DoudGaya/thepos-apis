@@ -93,7 +93,7 @@ export default function RegisterPage() {
   return (
     <>
       <PublicNavigation />
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950 antialiased duration-300 flex items-center justify-center py-12">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 antialiased duration-300 flex items-center justify-center py-12">
         <main className="mx-auto max-w-md w-full px-4 sm:px-6">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 sm:p-8">
 

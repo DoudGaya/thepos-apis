@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { AlertCircle, CheckCircle2, Loader2, Smartphone, Wallet } from 'lucide-react'
+import { TransactionPinModal } from '@/components/transaction-pin-modal'
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'] as const
 const QUICK_AMOUNTS = [100, 200, 500, 1000, 2000, 5000]
@@ -19,6 +20,7 @@ export default function AirtimePurchasePage() {
   const [loadingBalance, setLoadingBalance] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
 
   // Fetch wallet balance
   useEffect(() => {
@@ -44,40 +46,50 @@ export default function AirtimePurchasePage() {
     setFormData({ ...formData, amount })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInitiatePurchase = (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setSuccess('')
 
     // Validation
     if (!formData.network) {
       setError('Please select a network')
-      setLoading(false)
       return
     }
     if (!formData.phone || formData.phone.length < 11) {
       setError('Please enter a valid phone number (11 digits)')
-      setLoading(false)
       return
     }
     if (formData.amount < 50) {
       setError('Minimum airtime amount is ₦50')
-      setLoading(false)
       return
     }
     if (formData.amount > 50000) {
       setError('Maximum airtime amount is ₦50,000')
-      setLoading(false)
+      return
+    }
+    
+    if (walletBalance < formData.amount) {
+      setError('Insufficient wallet balance')
       return
     }
 
+    setIsPinModalOpen(true)
+  }
+
+  const handleConfirmPurchase = async (pin: string) => {
+    setLoading(true)
+    setError('')
+    
     try {
       const res = await fetch('/api/airtime/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          pin
+        }),
       })
 
       const data = await res.json()
@@ -93,11 +105,17 @@ export default function AirtimePurchasePage() {
       // Update balance
       setWalletBalance(data.data.balance || (walletBalance - formData.amount))
       
-      // Reset form
+      // Reset form and close modal
       setFormData({ network: 'MTN', phone: '', amount: 0 })
+      setIsPinModalOpen(false)
       
     } catch (err: any) {
       setError(err.message || 'Failed to purchase airtime')
+      // Keep modal open on error so user can retry PIN if it was just wrong PIN
+      // But if it's other error, maybe close it? 
+      // For now, let's close it if it's not PIN error, but usually we want to keep it open for PIN retry.
+      // The error message is shown in the main page, so closing modal is safer to see the error.
+      setIsPinModalOpen(false)
     } finally {
       setLoading(false)
     }
@@ -105,6 +123,16 @@ export default function AirtimePurchasePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <TransactionPinModal 
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onConfirm={handleConfirmPurchase}
+        amount={formData.amount}
+        recipient={formData.phone}
+        network={formData.network}
+        isLoading={loading}
+      />
+
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-lg mb-6">
@@ -134,7 +162,7 @@ export default function AirtimePurchasePage() {
 
         {/* Form */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleInitiatePurchase} className="space-y-6">
             {/* Network Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -239,10 +267,10 @@ export default function AirtimePurchasePage() {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin mr-2" size={20} />
-                  Processing Purchase...
+                  Processing...
                 </>
               ) : (
-                `Purchase ₦${formData.amount.toLocaleString()} Airtime`
+                `Proceed to Payment`
               )}
             </button>
 

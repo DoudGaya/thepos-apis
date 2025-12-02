@@ -1,7 +1,7 @@
 // Vendor Adapter Interface and Types
 // This file defines the contract that all vendor adapters must implement
 
-export type VendorName = 'VTU_NG' | 'EBILLS' | 'CLUBKONNECT' | 'AMIGO'
+export type VendorName = 'VTU_NG' | 'EBILLS' | 'CLUBKONNECT' | 'AMIGO' | 'VTPASS'
 
 export type ServiceType = 'AIRTIME' | 'DATA' | 'ELECTRICITY' | 'CABLE' | 'CABLE_TV' | 'BETTING' | 'EPINS'
 

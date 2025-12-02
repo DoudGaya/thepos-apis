@@ -41,7 +41,7 @@ export default function Footer() {
           {/* Company Info */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">TP</span>
               </div>
               <span className="text-2xl font-bold text-white">ThePOS</span>
@@ -54,19 +54,19 @@ export default function Footer() {
             {/* Contact Info */}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-indigo-400" />
+                <Mail className="w-5 h-5 text-gray-400" />
                 <a href="mailto:support@thepos.ng" className="hover:text-white transition-colors">
                   support@thepos.ng
                 </a>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-indigo-400" />
+                <Phone className="w-5 h-5 text-gray-400" />
                 <a href="tel:+2349012345678" className="hover:text-white transition-colors">
                   +234 901 234 5678
                 </a>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-indigo-400" />
+                <MapPin className="w-5 h-5 text-gray-400" />
                 <span>Lagos, Nigeria</span>
               </div>
             </div>

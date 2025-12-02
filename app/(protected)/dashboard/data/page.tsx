@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { AlertCircle, CheckCircle2, Loader2, Wifi, Wallet, Lock, X, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, Wifi, Wallet, Lock, X, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { formatDataSize } from '@/lib/constants/data-plans'
+import { TransactionPinModal } from '@/components/transaction-pin-modal'
 
 const NETWORKS = [
   { code: 'MTN', name: 'MTN', color: 'from-yellow-500 to-yellow-600', lightColor: 'bg-yellow-100' },
@@ -39,8 +40,6 @@ export default function DataPurchasePage() {
   const [selectedNetwork, setSelectedNetwork] = useState<Network>('MTN')
   const [phone, setPhone] = useState('')
   const [selectedPlan, setSelectedPlan] = useState<DataPlan | null>(null)
-  const [pin, setPin] = useState('')
-  const [showPin, setShowPin] = useState(false)
   const [showPinModal, setShowPinModal] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [plans, setPlans] = useState<DataPlan[]>([])
@@ -49,6 +48,8 @@ export default function DataPurchasePage() {
   const [loadingBalance, setLoadingBalance] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [hasPinSet, setHasPinSet] = useState(false)
+  const [checkingPin, setCheckingPin] = useState(false)
 
   useEffect(() => {
     const fetchBalance = async () => {
@@ -66,6 +67,24 @@ export default function DataPurchasePage() {
     }
     fetchBalance()
   }, [success])
+
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      setCheckingPin(true)
+      try {
+        const res = await fetch('/api/auth/check-pin', { credentials: 'include' })
+        const data = await res.json()
+        if (data.success) {
+          setHasPinSet(data.data.hasPinSet)
+        }
+      } catch (err) {
+        console.error('Failed to check PIN status:', err)
+      } finally {
+        setCheckingPin(false)
+      }
+    }
+    checkPinStatus()
+  }, [])
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -100,6 +119,10 @@ export default function DataPurchasePage() {
       setError('Please select a data plan')
       return
     }
+    if (!hasPinSet) {
+      setError('Transaction PIN not set. Please set up your PIN before making purchases.')
+      return
+    }
     if (walletBalance < selectedPlan.sellingPrice) {
       setError(`Insufficient balance. Required: ₦${selectedPlan.sellingPrice.toLocaleString()}, Available: ₦${walletBalance.toLocaleString()}`)
       return
@@ -107,17 +130,14 @@ export default function DataPurchasePage() {
     setShowPinModal(true)
   }
 
-  const handlePurchase = async () => {
-    if (!pin || pin.length < 4) {
-      setError('Please enter your 4-6 digit transaction PIN')
-      return
-    }
+  const handlePurchase = async (pin: string) => {
     if (!selectedPlan) {
       setError('Please select a data plan')
       return
     }
     setLoading(true)
     setError('')
+    
     try {
       const res = await fetch('/api/data/purchase', {
         method: 'POST',
@@ -131,7 +151,6 @@ export default function DataPurchasePage() {
       }
       setSuccess(`${selectedPlan.name} data bundle purchased successfully! Delivery in progress...`)
       setShowPinModal(false)
-      setPin('')
       setPhone('')
       setSelectedPlan(null)
       if (data.data?.wallet?.newBalance !== undefined) {
@@ -140,6 +159,7 @@ export default function DataPurchasePage() {
     } catch (err: any) {
       console.error('Purchase error:', err)
       setError(err.message || 'Purchase failed. Please try again.')
+      setShowPinModal(false)
     } finally {
       setLoading(false)
     }
@@ -193,6 +213,19 @@ export default function DataPurchasePage() {
             <div>
               <p className="text-green-800 font-semibold">Success!</p>
               <p className="text-green-600 text-sm">{success}</p>
+            </div>
+          </div>
+        )}
+
+        {!hasPinSet && !checkingPin && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
+            <AlertCircle className="text-yellow-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
+            <div>
+              <p className="text-yellow-800 font-semibold">PIN Required</p>
+              <p className="text-yellow-600 text-sm">Set up your transaction PIN to purchase data bundles. This adds an extra layer of security to your account.</p>
+              <Link href="/dashboard/profile" className="text-yellow-700 hover:text-yellow-800 underline text-sm mt-2 inline-block font-medium">
+                Go to Profile Settings
+              </Link>
             </div>
           </div>
         )}
@@ -328,13 +361,18 @@ export default function DataPurchasePage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!phone || !selectedPlan || loading || loadingPlans || walletBalance < (selectedPlan?.sellingPrice || 0)}
+            disabled={!phone || !selectedPlan || loading || loadingPlans || !hasPinSet || walletBalance < (selectedPlan?.sellingPrice || 0)}
             className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {loading ? (
               <>
                 <Loader2 className="animate-spin" size={20} />
                 Processing Purchase...
+              </>
+            ) : !hasPinSet ? (
+              <>
+                <Lock className="h-5 w-5" />
+                PIN Required - Go to Settings
               </>
             ) : (
               <>
@@ -378,88 +416,15 @@ export default function DataPurchasePage() {
       </div>
 
       {/* PIN Modal */}
-      {showPinModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Enter Transaction PIN</h3>
-              <button 
-                onClick={() => { setShowPinModal(false); setPin(''); setError('') }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Plan:</span>
-                  <span className="font-medium text-gray-900">{selectedPlan?.name}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-1">
-                  <span className="text-gray-600">Amount:</span>
-                  <span className="font-bold text-gray-900">₦{selectedPlan?.sellingPrice.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
-                  Transaction PIN
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPin ? 'text' : 'password'}
-                    id="pin"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 4-6 digit PIN"
-                    className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                    maxLength={6}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowPinModal(false); setPin(''); setError('') }}
-                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handlePurchase}
-                  disabled={loading || pin.length < 4}
-                  className="flex-1 px-4 py-3 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={20} />
-                      Processing...
-                    </>
-                  ) : (
-                    'Confirm Purchase'
-                  )}
-                </button>
-              </div>
-
-              <p className="text-xs text-center text-gray-500">
-                <Link href="/dashboard/settings/security" className="text-gray-900 hover:underline">
-                  Forgot PIN?
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransactionPinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onConfirm={handlePurchase}
+        amount={selectedPlan?.sellingPrice || 0}
+        recipient={phone}
+        network={selectedNetwork}
+        isLoading={loading}
+      />
       </div>
     </div>
   )
