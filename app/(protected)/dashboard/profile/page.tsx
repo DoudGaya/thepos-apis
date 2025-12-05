@@ -18,6 +18,8 @@ import {
   Globe,
   Camera,
 } from 'lucide-react'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
 export default function ProfilePage() {
   const { data: session, update } = useSession()
@@ -264,15 +266,13 @@ export default function ProfilePage() {
               Phone Number
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Phone className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="phone"
-                type="tel"
+              <PhoneInput
+                international
+                defaultCountry="NG"
                 value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                onChange={(value) => setProfileData({ ...profileData, phone: value || '' })}
+                placeholder="Enter phone number"
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
               />
             </div>
           </div>

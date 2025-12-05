@@ -6,6 +6,8 @@ import { AlertCircle, CheckCircle2, Loader2, Wifi, Wallet, Lock, X, ArrowRight }
 import Link from 'next/link'
 import { formatDataSize } from '@/lib/constants/data-plans'
 import { TransactionPinModal } from '@/components/transaction-pin-modal'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
 const NETWORKS = [
   { code: 'MTN', name: 'MTN', color: 'from-yellow-500 to-yellow-600', lightColor: 'bg-yellow-100' },
@@ -261,14 +263,13 @@ export default function DataPurchasePage() {
           {/* Phone Number */}
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-            <input
-              type="tel"
-              id="phone"
+            <PhoneInput
+              international
+              defaultCountry="NG"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-              placeholder="08012345678"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              maxLength={11}
+              onChange={(value) => setPhone(value || '')}
+              placeholder="Enter phone number"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
             />
             <p className="text-xs text-gray-500 mt-1">Enter the phone number to receive data</p>
           </div>

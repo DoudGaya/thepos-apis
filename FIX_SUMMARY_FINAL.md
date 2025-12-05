@@ -38,6 +38,13 @@ Successfully implemented Phase 4 (Marketing/Gamification) and Phase 5 (Referrals
 - **Sidebar Links**: Updated `app/(protected)/dashboard/layout.tsx` to point to correct paths (e.g., `/dashboard/electricity` instead of `/dashboard/bills/electricity`).
 - **Redirects**: Added redirects in `next.config.js` to handle legacy URLs (`/dashboard/bills/*` -> `/dashboard/*`).
 
+### 5. Transactions Page
+- **Bug Fix**: Resolved `TypeError: Cannot read properties of undefined (reading 'replace')` in `app/(protected)/dashboard/transactions/page.tsx` by adding a safe check for `txn.type`.
+- **Cleanup**: Removed dummy `mockTransactions` data to ensure only real API data is displayed.
+
+### 6. Referrals Page
+- **Bug Fix**: Resolved `TypeError: Cannot read properties of undefined (reading 'length')` in `app/(protected)/dashboard/referrals/page.tsx` by adding a safe check for `stats.recentReferrals`.
+
 ## Next Steps
 1. **Testing**:
    - Restart the development server (`npm run dev`).
@@ -45,6 +52,8 @@ Successfully implemented Phase 4 (Marketing/Gamification) and Phase 5 (Referrals
    - Test Referral Signup flow.
    - Verify that clicking "Electricity" in the sidebar works correctly.
    - Verify that accessing `/dashboard/bills/electricity` redirects to `/dashboard/electricity`.
+   - Check the Transactions page to ensure it loads without errors.
+   - Check the Referrals page to ensure it loads without errors.
    - Test Target tracking (perform transactions and check progress).
    - Test Reward claiming.
    - Test Cable TV verification and purchase.

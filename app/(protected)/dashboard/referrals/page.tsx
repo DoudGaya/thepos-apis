@@ -129,12 +129,12 @@ export default function ReferralsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {stats?.recentReferrals.length === 0 ? (
+            {(!stats?.recentReferrals || stats.recentReferrals.length === 0) ? (
               <div className="text-center py-4 text-muted-foreground">
                 No referrals yet. Start sharing your link!
               </div>
             ) : (
-              stats?.recentReferrals.map((referral, index) => (
+              stats.recentReferrals.map((referral, index) => (
                 <div key={index} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
                   <div>
                     <p className="font-medium">{referral.name}</p>

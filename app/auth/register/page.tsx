@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Phone, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
+import { Mail, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
 import { PublicNavigation } from '@/app/components/PublicNavigation'
 import Footer from '@/app/components/Footer'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
 /**
  * Phase 1: Quick Signup (Minimal Data)
@@ -29,10 +31,9 @@ export default function RegisterPage() {
       return false
     }
 
-    // Validate phone (Nigerian format: 11 digits starting with 0)
-    const phoneDigits = formData.phone.replace(/\D/g, '')
-    if (!phoneDigits || phoneDigits.length < 11) {
-      setError('Please enter a valid 11-digit Nigerian phone number')
+    // Validate phone
+    if (!formData.phone) {
+      setError('Please enter a valid phone number')
       return false
     }
 
@@ -156,22 +157,15 @@ export default function RegisterPage() {
                   Phone Number
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                    <Phone className="h-5 w-5" />
-                  </div>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    required
+                  <PhoneInput
+                    international
+                    defaultCountry="NG"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="08012345678"
-                    className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                    onChange={(value) => setFormData({ ...formData, phone: value || '' })}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus-within:ring-2 focus-within:ring-emerald-500 transition-all [&>input]:w-full [&>input]:bg-transparent [&>input]:border-none [&>input]:focus:ring-0 [&>input]:p-2.5 [&>input]:pl-3 [&>.PhoneInputCountry]:pl-3 [&>.PhoneInputCountry]:pr-2"
                   />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter your 11-digit phone number</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter your phone number with country code</p>
               </div>
 
               {/* Terms and Conditions */}

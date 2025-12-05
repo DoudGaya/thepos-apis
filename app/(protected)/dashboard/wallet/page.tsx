@@ -19,6 +19,8 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import Script from 'next/script'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
 declare global {
   interface Window {
@@ -577,17 +579,15 @@ export default function WalletPage() {
                   Recipient Phone Number
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Smartphone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    defaultCountry="NG"
                     value={transferData.phone}
-                    onChange={(e) =>
-                      setTransferData({ ...transferData, phone: e.target.value })
+                    onChange={(value) =>
+                      setTransferData({ ...transferData, phone: value || '' })
                     }
-                    placeholder="08012345678"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
                   />
                 </div>
               </div>

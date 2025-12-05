@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 
 interface SettingsData {
   general: {
@@ -335,11 +337,12 @@ export default function AdminSettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Support Phone
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    defaultCountry="NG"
                     value={settings.general.supportPhone}
-                    onChange={(e) => handleSettingChange('general', 'supportPhone', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(value) => handleSettingChange('general', 'supportPhone', value || '')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
                   />
                 </div>
 

@@ -3,6 +3,7 @@ import { VTUNGAdapter } from './vtu-ng.adapter'
 import { ClubKonnectAdapter } from './clubkonnect.adapter'
 import { EBillsAdapter } from './ebills.adapter'
 import { VTPassAdapter } from './vtpass.adapter'
+import { SubAndGainAdapter } from './subandgain.adapter'
 
 export const ADAPTER_REGISTRY: Record<string, any> = {
   'AMIGO': AmigoAdapter,
@@ -10,4 +11,5 @@ export const ADAPTER_REGISTRY: Record<string, any> = {
   'CLUBKONNECT': ClubKonnectAdapter,
   'EBILLS': EBillsAdapter,
   'VTPASS': VTPassAdapter,
+  'SUBANDGAIN': SubAndGainAdapter,
 }

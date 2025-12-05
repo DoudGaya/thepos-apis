@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { AlertCircle, CheckCircle2, Loader2, Smartphone, Wallet } from 'lucide-react'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { TransactionPinModal } from '@/components/transaction-pin-modal'
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'] as const
@@ -191,14 +193,13 @@ export default function AirtimePurchasePage() {
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                 Phone Number
               </label>
-              <input
-                type="tel"
-                id="phone"
+              <PhoneInput
+                international
+                defaultCountry="NG"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="08012345678"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                maxLength={11}
+                onChange={(value) => setFormData({ ...formData, phone: value || '' })}
+                placeholder="Enter phone number"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
               />
             </div>
 

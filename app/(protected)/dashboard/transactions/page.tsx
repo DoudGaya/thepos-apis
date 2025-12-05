@@ -58,104 +58,6 @@ const statusFilters = [
   { value: 'FAILED', label: 'Failed', color: 'text-red-600 bg-red-50' },
 ]
 
-// Simulated transactions
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'DATA',
-    description: 'MTN 1GB Data Bundle',
-    amount: -240,
-    balanceBefore: 15240,
-    balanceAfter: 15000,
-    status: 'COMPLETED',
-    reference: 'TXN001234567',
-    recipient: '08012345678',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: '2',
-    type: 'AIRTIME',
-    description: 'Airtel ₦200 Airtime',
-    amount: -195,
-    balanceBefore: 15435,
-    balanceAfter: 15240,
-    status: 'COMPLETED',
-    reference: 'TXN001234566',
-    recipient: '08087654321',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: '3',
-    type: 'WALLET',
-    description: 'Wallet Funding via Paystack',
-    amount: 5000,
-    balanceBefore: 10435,
-    balanceAfter: 15435,
-    status: 'COMPLETED',
-    reference: 'TXN001234565',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-  {
-    id: '4',
-    type: 'ELECTRICITY',
-    description: 'EKEDC ₦2,000 Token',
-    amount: -2000,
-    balanceBefore: 12435,
-    balanceAfter: 10435,
-    status: 'PENDING',
-    reference: 'TXN001234564',
-    recipient: '04512345678',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: '5',
-    type: 'TRANSFER',
-    description: 'Transfer to 08098765432',
-    amount: -1000,
-    balanceBefore: 13435,
-    balanceAfter: 12435,
-    status: 'COMPLETED',
-    reference: 'TXN001234563',
-    recipient: '08098765432',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  },
-  {
-    id: '6',
-    type: 'COMMISSION',
-    description: 'Referral Commission from User',
-    amount: 250,
-    balanceBefore: 13185,
-    balanceAfter: 13435,
-    status: 'COMPLETED',
-    reference: 'TXN001234562',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
-  {
-    id: '7',
-    type: 'CABLE',
-    description: 'DSTV Compact Plus Subscription',
-    amount: -12000,
-    balanceBefore: 25185,
-    balanceAfter: 13185,
-    status: 'COMPLETED',
-    reference: 'TXN001234561',
-    recipient: '7012345678',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
-  },
-  {
-    id: '8',
-    type: 'DATA',
-    description: 'Glo 2GB Data Bundle',
-    amount: -460,
-    balanceBefore: 25645,
-    balanceAfter: 25185,
-    status: 'FAILED',
-    reference: 'TXN001234560',
-    recipient: '08054321098',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 144).toISOString(),
-  },
-]
-
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
@@ -194,8 +96,8 @@ export default function TransactionsPage() {
           // Transform API data to match component interface
           const transformedTransactions = txnData.map((txn: any) => ({
             id: txn.id || `tx-${Date.now()}-${Math.random()}`,
-            type: txn.type,
-            description: txn.details?.description || txn.type.replace('_', ' '),
+            type: txn.type || 'UNKNOWN',
+            description: txn.details?.description || (txn.type ? txn.type.replace('_', ' ') : 'Transaction'),
             amount: txn.amount,
             balanceBefore: 0, // Not tracked in current schema
             balanceAfter: 0,  // Not tracked in current schema
@@ -211,9 +113,8 @@ export default function TransactionsPage() {
       } catch (error: any) {
         console.error('Error fetching transactions:', error)
         setError(error.message || 'Failed to load transactions')
-        // Fallback to mock data for demo
-        setTransactions(mockTransactions)
-        setFilteredTransactions(mockTransactions)
+        setTransactions([])
+        setFilteredTransactions([])
       } finally {
         setLoading(false)
       }
