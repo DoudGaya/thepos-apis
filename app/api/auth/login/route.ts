@@ -7,13 +7,13 @@ export const runtime = 'nodejs'
 
 const loginSchema = z.object({
   email: z.string().email('Valid email is required'),
-  pin: z.string().min(6, 'PIN must be 6 digits').max(6, 'PIN must be 6 digits'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, pin } = loginSchema.parse(body)
+    const { email, password } = loginSchema.parse(body)
 
     // Find user by email
     const user = await prisma.user.findUnique({
@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check PIN
-    const isValidPassword = await comparePassword(pin, user.passwordHash)
+    // Check Password
+    const isValidPassword = await comparePassword(password, user.passwordHash)
     if (!isValidPassword) {
       return NextResponse.json(
         { 
