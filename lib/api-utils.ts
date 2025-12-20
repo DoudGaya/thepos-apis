@@ -122,29 +122,72 @@ export function errorResponse(
 /**
  * Get Authenticated User
  * Returns the current user session or throws UnauthorizedError
+ * Supports both NextAuth session (web) and Bearer token (mobile app)
  */
-export async function getAuthenticatedUser() {
+export async function getAuthenticatedUser(request?: Request) {
+  // First try NextAuth session (for web dashboard)
   const session = await getServerSession(authOptions)
-  
-  if (!session || !session.user) {
-    throw new UnauthorizedError('Authentication required')
+
+  if (session && session.user) {
+    return {
+      id: (session.user as any).id || session.user.email!,
+      email: session.user.email!,
+      name: session.user.name!,
+      role: (session.user as any).role as 'USER' | 'ADMIN',
+    }
   }
 
-  return {
-    id: (session.user as any).id || session.user.email!,
-    email: session.user.email!,
-    name: session.user.name!,
-    role: (session.user as any).role as 'USER' | 'ADMIN',
+  // Check request headers if provided
+  if (request) {
+    const userId = request.headers.get('x-user-id')
+    const userRole = request.headers.get('x-user-role')
+    if (userId && userRole) return await fetchUserFromDb(userId)
   }
+
+  // Fallback to next/headers (for Server Components/Route Handlers where request isn't passed)
+  try {
+    const { headers } = await import('next/headers')
+    const headerList = await headers()
+    const userId = headerList.get('x-user-id')
+    const userRole = headerList.get('x-user-role')
+    if (userId && userRole) return await fetchUserFromDb(userId)
+  } catch (e: any) {
+    if (e?.code === 'P2024' || e?.message?.includes('Timed out')) {
+      console.error('🔥 DB Timeout in getAuthenticatedUser fallback:', e);
+      throw new Error('Database connection timed out');
+    }
+    // Ignore error if next/headers is not available
+  }
+
+  throw new UnauthorizedError('Authentication required')
+}
+
+// Helper to fetch user
+async function fetchUserFromDb(userId: string) {
+  const { prisma } = await import('./prisma')
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true }
+  })
+
+  if (user) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      role: user.role as 'USER' | 'ADMIN',
+    }
+  }
+  throw new UnauthorizedError('User not found')
 }
 
 /**
  * Require Admin Role
  * Throws ForbiddenError if user is not admin
  */
-export async function requireAdmin() {
-  const user = await getAuthenticatedUser()
-  
+export async function requireAdmin(request?: Request) {
+  const user = await getAuthenticatedUser(request)
+
   if (user.role !== 'ADMIN') {
     throw new ForbiddenError('Admin access required')
   }
@@ -190,7 +233,7 @@ export async function validateRequestBody<T>(
  */
 export function parseQueryParams(url: string) {
   const { searchParams } = new URL(url)
-  
+
   return {
     get: (key: string) => searchParams.get(key),
     getInt: (key: string, defaultValue?: number) => {
@@ -252,7 +295,7 @@ export function createPaginatedResponse<T>(
   limit: number
 ): PaginatedResponse<T> {
   const totalPages = Math.ceil(total / limit)
-  
+
   return {
     data,
     pagination: {
@@ -372,7 +415,7 @@ export async function retry<T>(
   delay: number = 1000
 ): Promise<T> {
   let lastError: any
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn()
@@ -383,6 +426,6 @@ export async function retry<T>(
       }
     }
   }
-  
+
   throw lastError
 }

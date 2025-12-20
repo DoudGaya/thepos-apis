@@ -10,9 +10,9 @@ import { prisma } from '@/lib/prisma'
  * GET /api/auth/check-pin
  * Check if user has a PIN set
  */
-export const GET = apiHandler(async () => {
-  const user = await getAuthenticatedUser()
-  
+export const GET = apiHandler(async (request: Request) => {
+  const user = await getAuthenticatedUser(request)
+
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { pinHash: true },

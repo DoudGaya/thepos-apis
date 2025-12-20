@@ -14,16 +14,16 @@ import { getAuthenticatedUser, ApiError } from '@/lib/api-utils'
 export async function GET(request: NextRequest) {
   try {
     console.log('🔵 [Wallet Balance] Request received')
-    
+
     // Get authenticated user
     let authUser: any
     try {
-      authUser = await getAuthenticatedUser()
+      authUser = await getAuthenticatedUser(request)
       console.log('✅ [Wallet Balance] User authenticated:', authUser.id)
     } catch (authError: any) {
       console.error('❌ [Wallet Balance] Authentication failed:', authError.message)
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: authError.message || 'Authentication required'
         },
@@ -47,10 +47,10 @@ export async function GET(request: NextRequest) {
     if (!user) {
       console.error('❌ [Wallet Balance] User not found in database:', authUser.id)
       return NextResponse.json(
-        { 
+        {
           success: false,
-          error: 'User not found' 
-        }, 
+          error: 'User not found'
+        },
         { status: 404 }
       )
     }
@@ -98,12 +98,12 @@ export async function GET(request: NextRequest) {
       message: error.message,
       stack: error.stack
     })
-    
+
     // Handle ApiError (includes UnauthorizedError, etc.)
     if (error instanceof ApiError) {
       console.error('🔴 [Wallet Balance] ApiError caught:', error.statusCode, error.message)
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: error.message,
           ...(error.errors && { errors: error.errors })
@@ -111,13 +111,13 @@ export async function GET(request: NextRequest) {
         { status: error.statusCode }
       )
     }
-    
+
     // Handle other errors
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: 'Failed to fetch wallet balance', 
-        details: error.message 
+        error: 'Failed to fetch wallet balance',
+        details: error.message
       },
       { status: 500 }
     )

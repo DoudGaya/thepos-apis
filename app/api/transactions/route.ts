@@ -19,7 +19,7 @@ import {
  * Query params: page, limit, type, status, startDate, endDate, search
  */
 export const GET = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const { limit, skip, page } = getPaginationParams(request.url, 20)
   const params = parseQueryParams(request.url)
 

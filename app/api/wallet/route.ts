@@ -17,7 +17,7 @@ import {
  * Fetch user wallet balance and transaction summary
  */
 export const GET = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const { limit, skip } = getPaginationParams(new URL(request.url).toString(), 10)
 
   // Get wallet balance and referral earnings

@@ -43,7 +43,7 @@ const PROFIT_MARGIN = 100 // ₦100 profit per bundle
  * Body: { network, phone, planId, pin, idempotencyKey? }
  */
 export const POST = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, dataPurchaseSchema)) as z.infer<typeof dataPurchaseSchema>
 
   // ========================================
@@ -87,7 +87,7 @@ export const POST = apiHandler(async (request: Request) => {
   console.log('  - PIN Type:', typeof data.pin)
   console.log('  - PinHash exists:', !!dbUser.pinHash)
   console.log('  - PinHash starts with:', dbUser.pinHash?.substring(0, 7))
-  
+
   // Directly check if bcrypt hash is valid
   let isPinValid = false
   try {
@@ -96,9 +96,9 @@ export const POST = apiHandler(async (request: Request) => {
     console.log('❌ Bcrypt comparison error:', bcryptErr.message)
     isPinValid = false
   }
-  
+
   console.log('  - PIN Valid:', isPinValid)
-  
+
   if (!isPinValid) {
     console.log('❌ PIN verification failed')
     console.log('   User Email:', dbUser.email)
@@ -117,21 +117,21 @@ export const POST = apiHandler(async (request: Request) => {
   // 3. Get Plan Details from Constants (same source as frontend)
   // ========================================
   const { getAllPlansForNetwork, DATA_PLANS } = await import('@/lib/constants/data-plans')
-  
+
   console.log('📊 Plan Lookup Debug:')
   console.log('  - Network received (string):', data.network)
   console.log('  - Network type:', typeof data.network)
   console.log('  - Network JSON:', JSON.stringify(data.network))
   console.log('  - Available network keys in DATA_PLANS:', Object.keys(DATA_PLANS))
-  
+
   const plans = getAllPlansForNetwork(data.network as 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE')
-  
+
   console.log('  - Plans array length:', plans.length)
   console.log('  - PlanId received (string):', data.planId)
   console.log('  - PlanId type:', typeof data.planId)
   console.log('  - PlanId JSON:', JSON.stringify(data.planId))
   console.log('  - Available plan IDs:', plans.map(p => p.id).join(', '))
-  
+
   const selectedPlan = plans.find(p => p.id === data.planId)
 
   if (!selectedPlan) {
@@ -147,12 +147,12 @@ export const POST = apiHandler(async (request: Request) => {
       const matches = p.id === data.planId
       console.error(`    "${p.id}" (${p.id.length}) === "${data.planId}" (${data.planId.length}) ? ${matches}`)
     })
-    
+
     // Provide helpful error message
-    const availablePlansStr = plans.length > 0 
+    const availablePlansStr = plans.length > 0
       ? plans.map(p => `${p.name} (${p.id}): ₦${p.sellingPrice}`).join(', ')
       : 'No plans available'
-    
+
     throw new BadRequestError(
       `Selected plan not found. Requested: "${data.planId}". Available plans for ${data.network}: ${availablePlansStr}`
     )

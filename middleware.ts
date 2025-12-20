@@ -100,10 +100,32 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Origin', '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    
-    // Allow auth endpoints without token verification
+
+    // Allow specific public auth endpoints without token verification
+    const publicAuthRoutes = [
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/refresh',
+      '/api/auth/verify-otp',
+      '/api/auth/request-password-reset',
+      '/api/auth/reset-password'
+    ];
+
+    // Specific NextAuth internal routes to allow
+    const nextAuthRoutes = [
+      '/api/auth/session',
+      '/api/auth/providers',
+      '/api/auth/csrf',
+      '/api/auth/_log',
+      '/api/auth/error',
+      '/api/auth/signin',
+      '/api/auth/signout',
+    ];
+
     if (
-      request.nextUrl.pathname.startsWith('/api/auth/') ||
+      publicAuthRoutes.includes(request.nextUrl.pathname) ||
+      nextAuthRoutes.some(route => request.nextUrl.pathname.startsWith(route)) ||
+      request.nextUrl.pathname.startsWith('/api/auth/callback/') ||
       request.nextUrl.pathname.startsWith('/api/meta/') ||
       request.nextUrl.pathname.startsWith('/api/debug/') ||
       request.nextUrl.pathname.startsWith('/api/test/') ||
@@ -146,7 +168,7 @@ export async function middleware(request: NextRequest) {
         console.error('❌ [Middleware] Bearer token invalid:', error)
         return NextResponse.json(
           { error: 'Invalid token' },
-          { 
+          {
             status: 401,
             headers: {
               'Access-Control-Allow-Origin': '*',
@@ -162,7 +184,7 @@ export async function middleware(request: NextRequest) {
     console.error('❌ [Middleware] No valid authentication found for:', request.nextUrl.pathname)
     return NextResponse.json(
       { error: 'Authorization header required' },
-      { 
+      {
         status: 401,
         headers: {
           'Access-Control-Allow-Origin': '*',

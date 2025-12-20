@@ -12,11 +12,11 @@ import { pricingService } from './pricing.service'
 import { generateReference } from '../api-utils'
 import { generateIdempotencyKey } from '../utils/idempotency'
 import { normalizePhone, detectNetwork } from '../utils/phone-normalizer'
-import { 
-  ServiceType, 
-  NetworkType, 
-  PurchasePayload, 
-  VendorPurchaseResponse 
+import {
+  ServiceType,
+  NetworkType,
+  PurchasePayload,
+  VendorPurchaseResponse
 } from '../vendors/adapter.interface'
 
 export interface PurchaseRequest {
@@ -122,9 +122,9 @@ export class PurchaseService {
     // 9. Get user and check wallet balance
     const user = await prisma.user.findUnique({
       where: { id: request.userId },
-      select: { 
-        id: true, 
-        email: true, 
+      select: {
+        id: true,
+        email: true,
         credits: true,
         firstName: true,
         lastName: true,
@@ -148,7 +148,7 @@ export class PurchaseService {
         type: request.service,
         network: network || null,
         recipient: normalizedRecipient,
-        amount: pricing.costPrice,
+        amount: pricing.sellingPrice,
         costPrice: pricing.costPrice,
         sellingPrice: pricing.sellingPrice,
         profit: pricing.profit,
@@ -164,8 +164,8 @@ export class PurchaseService {
     this.processPurchaseAsync(transaction.id, {
       service: request.service,
       network: network || 'MTN',
-      phone: ['AIRTIME', 'DATA'].includes(request.service) 
-        ? normalizedRecipient 
+      phone: ['AIRTIME', 'DATA'].includes(request.service)
+        ? normalizedRecipient
         : undefined,
       customerId: ['ELECTRICITY', 'CABLE', 'CABLE_TV', 'BETTING'].includes(request.service)
         ? normalizedRecipient

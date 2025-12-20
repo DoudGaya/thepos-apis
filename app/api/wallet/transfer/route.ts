@@ -30,7 +30,7 @@ const transferSchema = z.object({
  * Transfer funds from sender to recipient
  */
 export const POST = apiHandler(async (request: Request) => {
-  const sender = await getAuthenticatedUser()
+  const sender = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, transferSchema)) as z.infer<typeof transferSchema>
 
   // Resolve recipient

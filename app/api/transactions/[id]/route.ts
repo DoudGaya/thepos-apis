@@ -17,7 +17,7 @@ import {
  * Fetch single transaction details
  */
 export const GET = apiHandler(async (request: Request, context: any) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const { id } = context.params
 
   // Fetch transaction

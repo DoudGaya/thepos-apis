@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
  * Verify Paystack transaction and credit wallet
  */
 export const POST = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, verifyTransactionSchema)) as z.infer<typeof verifyTransactionSchema>
 
   // Find the transaction

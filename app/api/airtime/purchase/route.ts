@@ -34,7 +34,7 @@ const airtimePurchaseSchema = z.object({
  * Purchase airtime
  */
 export const POST = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
+  const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, airtimePurchaseSchema)) as z.infer<typeof airtimePurchaseSchema>
 
   // Validate and format phone number
