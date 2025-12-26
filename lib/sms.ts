@@ -103,7 +103,7 @@ class SMSService {
   }
 
   async sendOTP(phone: string, code: string): Promise<void> {
-    const message = `Your ThePOS verification code is: ${code}. This code expires in 10 minutes. Do not share this code with anyone.`;
+    const message = `Your NillarPay verification code is: ${code}. This code expires in 10 minutes. Do not share this code with anyone.`;
     
     await this.sendSMS({
       to: phone,

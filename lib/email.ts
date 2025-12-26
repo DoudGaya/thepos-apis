@@ -106,11 +106,11 @@ class EmailService {
   }
 
   async sendPasswordResetOTP(email: string, otp: string): Promise<boolean> {
-    const subject = 'Password Reset Code - ThePOS';
+    const subject = 'Password Reset Code - NillarPay';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #10b981;">ThePOS Password Reset</h2>
-        <p>You requested a password reset for your ThePOS account.</p>
+        <h2 style="color: #10b981;">NillarPay Password Reset</h2>
+        <p>You requested a password reset for your NillarPay account.</p>
         <p>Your verification code is:</p>
         <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
           <h1 style="color: #10b981; font-size: 32px; margin: 0; letter-spacing: 8px;">${otp}</h1>
@@ -118,7 +118,7 @@ class EmailService {
         <p>This code will expire in 10 minutes.</p>
         <p>If you didn't request this reset, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-        <p style="color: #6b7280; font-size: 14px;">ThePOS - Your Digital Utility Platform</p>
+        <p style="color: #6b7280; font-size: 14px;">NillarPay - Your Digital Utility Platform</p>
       </div>
     `;
 
@@ -126,16 +126,16 @@ class EmailService {
       to: email,
       subject,
       html,
-      text: `Your ThePOS password reset code is: ${otp}. This code expires in 10 minutes.`
+      text: `Your NillarPay password reset code is: ${otp}. This code expires in 10 minutes.`
     });
   }
 
   async sendOTP(email: string, otp: string): Promise<boolean> {
-    const subject = 'Account Verification - ThePOS';
+    const subject = 'Account Verification - NillarPay';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #10b981;">Welcome to ThePOS!</h2>
-        <p>Thank you for registering with ThePOS. Please verify your email address to complete your registration.</p>
+        <h2 style="color: #10b981;">Welcome to NillarPay!</h2>
+        <p>Thank you for registering with NillarPay. Please verify your email address to complete your registration.</p>
         <p>Your verification code is:</p>
         <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
           <h1 style="color: #10b981; font-size: 32px; margin: 0; letter-spacing: 8px;">${otp}</h1>
@@ -143,7 +143,7 @@ class EmailService {
         <p>This code will expire in 10 minutes.</p>
         <p>If you didn't create this account, please ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-        <p style="color: #6b7280; font-size: 14px;">ThePOS - Your Digital Utility Platform</p>
+        <p style="color: #6b7280; font-size: 14px;">NillarPay - Your Digital Utility Platform</p>
       </div>
     `;
 
@@ -151,7 +151,7 @@ class EmailService {
       to: email,
       subject,
       html,
-      text: `Your ThePOS verification code is: ${otp}. This code expires in 10 minutes.`
+      text: `Your NillarPay verification code is: ${otp}. This code expires in 10 minutes.`
     });
   }
 

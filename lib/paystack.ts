@@ -171,7 +171,7 @@ class PaystackService {
           enabled: true,
           description: 'Transfer to our account',
           account_number: '0123456789',
-          account_name: 'ThePOS Wallet Funding',
+          account_name: 'NillarPay Wallet Funding',
           bank_name: 'Paystack Titan Bank',
           fee: 50, // Flat ₦50 for bank transfer
         },

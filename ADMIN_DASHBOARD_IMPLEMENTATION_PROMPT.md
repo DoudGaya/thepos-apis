@@ -1,7 +1,7 @@
 # Comprehensive Admin Dashboard Implementation Prompt
 
 ## **Project Context**
-You are implementing a complete admin dashboard for "The POS" - a Nigerian VTU platform. The system uses Next.js 15 with App Router, TypeScript, Prisma ORM, PostgreSQL, and TailwindCSS. The admin dashboard should provide comprehensive management capabilities for all database records, profit margins, pricing, and system analytics.
+You are implementing a complete admin dashboard for "NillarPay" - a Nigerian VTU platform. The system uses Next.js 15 with App Router, TypeScript, Prisma ORM, PostgreSQL, and TailwindCSS. The admin dashboard should provide comprehensive management capabilities for all database records, profit margins, pricing, and system analytics.
 
 ## **Core Requirements**
 

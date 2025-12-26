@@ -358,7 +358,7 @@ curl -X GET http://localhost:3000/api/admin/metrics
 
 ## ✨ What You Have Now
 
-A fully functional ThePOS platform with:
+A fully functional NillarPay platform with:
 
 ✅ Real payment processing (Paystack)  
 ✅ Real service purchases (VTU.ng)  

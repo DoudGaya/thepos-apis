@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Authentication - ThePOS',
-  description: 'Login or create an account to access ThePOS services',
+  title: 'Authentication - NillarPay',
+  description: 'Login or create an account to access NillarPay services',
 }
 
 export default function AuthLayout({

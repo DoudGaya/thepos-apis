@@ -1,4 +1,4 @@
-# The POS - Backend API & Admin Dashboard
+# NillarPay - Backend API & Admin Dashboard
 
 A Next.js 15 backend with TypeScript, Prisma, and PostgreSQL for a data and utility bills payment platform.
 
@@ -56,7 +56,7 @@ A Next.js 15 backend with TypeScript, Prisma, and PostgreSQL for a data and util
    ```env
    # Database
    DATABASE_URL="postgresql://username:password@
-192.168.0.2:5432/thepos?schema=public"
+192.168.0.2:5432/NillarPay?schema=public"
    
    # JWT Secret (generate a random string)
    JWT_SECRET="your-super-secret-jwt-key-here"
@@ -132,7 +132,7 @@ Access the admin dashboard at `http://
 192.168.0.2:3000/admin`
 
 **Default admin credentials** (from seed):
-- Email: `admin@thepos.com`
+- Email: `admin@NillarPay.com`
 - Password: `admin123`
 
 ### Admin Features
@@ -348,7 +348,7 @@ prisma/
 ### Test Data
 
 The seed script creates:
-- Admin user: `admin@thepos.com` / `admin123`
+- Admin user: `admin@NillarPay.com` / `admin123`
 - Test user: `test@example.com` / `password123`
 
 ### API Testing
@@ -467,4 +467,4 @@ NODE_ENV=development
 ---
 
 **Note**: This backend is designed for high performance and low operational costs. All integrations are optimized for Nigerian market requirements and payment preferences.
-# thepos-apis
+# NillarPay-apis

@@ -27,7 +27,7 @@ export default function AdminSidebar() {
   return (
     <nav className="h-full p-4 overflow-y-auto">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">ThePOS</h2>
+        <h2 className="text-xl font-bold text-gray-900">NillarPay</h2>
         <p className="text-sm text-gray-500">Admin Dashboard</p>
       </div>
       

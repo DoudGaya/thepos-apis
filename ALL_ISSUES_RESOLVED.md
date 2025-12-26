@@ -68,7 +68,7 @@ if (existing) {
 ✨ Seed data created:
 
 Admin user:
-- Email: admin@thepos.com
+- Email: admin@NillarPay.com
 - Phone: 08000000000
 - Role: ADMIN
 - Credits: ₦10,000
@@ -154,7 +154,7 @@ model Transaction {
 
 ### Admin Login
 ```
-Email: admin@thepos.com
+Email: admin@NillarPay.com
 Password: admin123 (or from ADMIN_PASSWORD env var)
 Role: ADMIN
 Wallet: ₦10,000

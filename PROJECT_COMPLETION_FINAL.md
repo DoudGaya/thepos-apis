@@ -545,7 +545,7 @@ Core Services:
 
 ## 📣 ANNOUNCEMENT
 
-**THE POS SYSTEM IS COMPLETE!** 🎉🎉🎉
+**NillarPay SYSTEM IS COMPLETE!** 🎉🎉🎉
 
 After intensive development, we've successfully built a production-ready POS system with:
 - 6 working services

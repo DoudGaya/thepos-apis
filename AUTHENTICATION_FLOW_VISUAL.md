@@ -125,7 +125,7 @@
 ### Web App Request (NextAuth + Cookie)
 ```http
 GET /api/wallet/balance HTTP/1.1
-Host: api.thepos.ng
+Host: api.NillarPay.ng
 Cookie: next-auth.session-token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -142,7 +142,7 @@ Cookie: next-auth.session-token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Mobile App Request (Bearer Token)
 ```http
 GET /api/wallet/balance HTTP/1.1
-Host: api.thepos.ng
+Host: api.NillarPay.ng
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -159,7 +159,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### No Authentication (Should Fail)
 ```http
 GET /api/wallet/balance HTTP/1.1
-Host: api.thepos.ng
+Host: api.NillarPay.ng
 ```
 
 **Middleware Processing:**

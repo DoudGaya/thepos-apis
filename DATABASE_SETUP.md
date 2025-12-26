@@ -12,7 +12,7 @@
 # OPTION 2: LOCAL POSTGRESQL DATABASE
 # ============================================
 # To use local PostgreSQL, update DATABASE_URL in .env to:
-# DATABASE_URL="postgresql://postgres:postgres@localhost:5432/thepos?schema=public"
+# DATABASE_URL="postgresql://postgres:postgres@localhost:5432/NillarPay?schema=public"
 
 # ============================================
 # SETUP LOCAL POSTGRESQL ON WINDOWS
@@ -23,13 +23,13 @@
 # 1. Download PostgreSQL from: https://www.postgresql.org/download/windows/
 # 2. Run the installer and set password to 'postgres' (or your choice)
 # 3. Open pgAdmin or psql and create database:
-#    CREATE DATABASE thepos;
-# 4. Update .env: DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/thepos"
+#    CREATE DATABASE NillarPay;
+# 4. Update .env: DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/NillarPay"
 # 5. Run: npx prisma migrate deploy
 #
 # Method 2: Using Docker Desktop (If installed)
 # --------------------------------------------------
-# docker run --name thepos-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=thepos -p 5432:5432 -d postgres:15
+# docker run --name NillarPay-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=NillarPay -p 5432:5432 -d postgres:15
 #
 # Method 3: Using WSL2 + Docker
 # --------------------------------------------------
@@ -59,4 +59,4 @@
 # pg_dump "postgresql://neondb_owner:npg_N4Gmu3dxMSJl@ep-empty-boat-af8cotts-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require" > neon_backup.sql
 #
 # Import to Local:
-# psql -h localhost -U postgres -d thepos < neon_backup.sql
+# psql -h localhost -U postgres -d NillarPay < neon_backup.sql

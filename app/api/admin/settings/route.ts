@@ -26,8 +26,8 @@ export const GET = apiHandler(async (request: Request) => {
 
   const settings = {
     general: {
-      companyName: process.env.COMPANY_NAME || 'The POS',
-      supportEmail: process.env.SUPPORT_EMAIL || 'support@thepos.com',
+      companyName: process.env.COMPANY_NAME || 'NillarPay',
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@NillarPay.com',
       supportPhone: process.env.SUPPORT_PHONE || '+234 123 456 7890',
       brandColors: {
         primary: process.env.BRAND_PRIMARY || '#3B82F6',
@@ -35,7 +35,7 @@ export const GET = apiHandler(async (request: Request) => {
         accent: process.env.BRAND_ACCENT || '#F59E0B',
       },
       logoUrl: process.env.LOGO_URL || '/logo.png',
-      websiteUrl: process.env.WEBSITE_URL || 'https://thepos.com',
+      websiteUrl: process.env.WEBSITE_URL || 'https://NillarPay.com',
     },
     payment: {
       paystack: {
@@ -71,12 +71,12 @@ export const GET = apiHandler(async (request: Request) => {
         secure: process.env.SMTP_SECURE === 'true',
         username: process.env.SMTP_USERNAME || '',
         password: process.env.SMTP_PASSWORD || '',
-        fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@thepos.com',
-        fromName: process.env.SMTP_FROM_NAME || 'The POS',
+        fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@NillarPay.com',
+        fromName: process.env.SMTP_FROM_NAME || 'NillarPay',
       },
       templates: {
         welcome: {
-          subject: 'Welcome to The POS!',
+          subject: 'Welcome to NillarPay!',
           enabled: true,
         },
         passwordReset: {

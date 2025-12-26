@@ -1,8 +1,8 @@
-# Production Deployment Guide - The POS
+# Production Deployment Guide - NillarPay
 
 ## Overview
 
-Complete guide to deploy The POS VTU platform to production.
+Complete guide to deploy NillarPay VTU platform to production.
 
 ---
 

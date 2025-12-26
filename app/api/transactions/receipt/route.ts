@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
         email: transaction.user.email,
       },
       company: {
-        name: 'ThePOS',
+        name: 'NillarPay',
         phone: '+234 (0) 809 123 4567',
-        email: 'support@thepos.ng',
+        email: 'support@NillarPay.ng',
         address: 'Lagos, Nigeria',
-        website: 'www.thepos.ng',
+        website: 'www.NillarPay.ng',
       },
       timestamp: new Date().toISOString(),
-      shareMessage: `ThePOS Transaction Receipt\n\nReference: ${transaction.reference}\nType: ${transaction.type.replace('_', ' ')}\nAmount: ₦${transaction.amount.toLocaleString()}\nStatus: ${transaction.status}\nDate: ${new Date(transaction.createdAt).toLocaleDateString('en-NG')}\n\nThank you for using ThePOS!\nwww.thepos.ng`,
+      shareMessage: `NillarPay Transaction Receipt\n\nReference: ${transaction.reference}\nType: ${transaction.type.replace('_', ' ')}\nAmount: ₦${transaction.amount.toLocaleString()}\nStatus: ${transaction.status}\nDate: ${new Date(transaction.createdAt).toLocaleDateString('en-NG')}\n\nThank you for using NillarPay!\nwww.NillarPay.ng`,
     };
 
     return NextResponse.json(receiptData);

@@ -1,28 +1,32 @@
-import { apiHandler } from '@/lib/api-handler';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/nextauth';
 import { targetService } from '@/lib/services/TargetService';
-import { successResponse } from '@/lib/api-response';
-import { BadRequestError } from '@/lib/errors';
-import { z } from 'zod';
 
-const claimSchema = z.object({
-  targetId: z.string().min(1, 'Target ID is required'),
-});
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
 
-export const POST = apiHandler(async (req) => {
-  const user = req.user;
-  if (!user) throw new BadRequestError('User not authenticated');
-
-  const body = await req.json();
-  const validation = claimSchema.safeParse(body);
-
-  if (!validation.success) {
-    throw new BadRequestError(validation.error.errors[0].message);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const result = await targetService.claimReward(user.id, validation.data.targetId);
-    return successResponse(result, 'Reward claimed successfully');
+    const body = await req.json();
+    const { targetId, tierId } = body;
+
+    if (!targetId) {
+      return NextResponse.json({ error: 'Target ID is required' }, { status: 400 });
+    }
+
+    const result = await targetService.claimTierReward(session.user.id, targetId, tierId);
+
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
   } catch (error: any) {
-    throw new BadRequestError(error.message || 'Failed to claim reward');
+    console.error('Error claiming reward:', error);
+    return NextResponse.json({ error: error.message || 'Failed to claim reward' }, { status: 400 });
   }
-});
+}

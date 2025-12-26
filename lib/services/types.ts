@@ -147,7 +147,7 @@ export abstract class BaseProvider {
     const url = `${this.baseUrl}${endpoint}`;
     const defaultHeaders = {
       'Content-Type': 'application/json',
-      'User-Agent': 'ThePOS/1.0',
+      'User-Agent': 'NillarPay/1.0',
       ...headers,
     };
 

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         feeDescription: 'Flat ₦50',
         details: {
           account_number: '0123456789',
-          account_name: 'ThePOS Wallet Funding',
+          account_name: 'NillarPay Wallet Funding',
           bank_name: 'Paystack Titan Bank',
           reference_note: 'Use your phone number as reference'
         }

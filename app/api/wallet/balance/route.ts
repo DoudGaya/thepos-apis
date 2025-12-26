@@ -57,19 +57,30 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [Wallet Balance] User found, fetching transactions')
 
-    // Get recent transactions summary
-    const recentTransactions = await prisma.transaction.findMany({
-      where: { userId: authUser.id },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      select: {
-        id: true,
-        type: true,
-        amount: true,
-        status: true,
-        createdAt: true,
-      },
-    })
+    // Get recent transactions summary and pending requests in parallel
+    const [recentTransactions, pendingRequestsCount] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { userId: authUser.id },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+      // @ts-ignore
+      prisma.moneyRequest.count({
+        where: {
+          payerId: authUser.id,
+          status: 'PENDING'
+        }
+      }).catch(() => 0)
+    ])
+
+
 
     console.log('✅ [Wallet Balance] Returning success response')
 
@@ -81,6 +92,7 @@ export async function GET(request: NextRequest) {
         availableBalance: user.credits,
         commissionBalance: 0, // TODO: Calculate from referral earnings
         pending: 0, // TODO: Calculate pending transactions
+        pendingRequests: pendingRequestsCount,
         total: user.credits,
         lastUpdated: user.updatedAt.toISOString(),
         user: {

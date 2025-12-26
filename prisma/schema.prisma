@@ -37,6 +37,7 @@ model User {
   sentRequests             MoneyRequest[]    @relation("SentRequests")
   receivedRequests         MoneyRequest[]    @relation("ReceivedRequests")
   targetProgress           UserTargetProgress[]
+  rewardHistory            RewardHistory[]
   @@map("users")
 }
 
@@ -397,13 +398,43 @@ model SalesTarget {
   title        String
   description  String?
   type         TargetType
-  period       TargetPeriod
+  period       TargetPeriod // DAILY, WEEKLY, MONTHLY, CUSTOM
   targetValue  Float
   rewardAmount Float
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  progress     UserTargetProgress[]
+  
+  // Targeting
+  audience        TargetAudience @default(ALL)
+  specificUserIds Json?          // List of user IDs for SPECIFIC audience
+  
+  // Enhanced fields
+  tierType        TierType     @default(SINGLE) // SINGLE, MULTIPLE
+  tiers           Json?        // Array of tier objects
+  
+  // Time-based campaigns
+  startDate       DateTime?
+  endDate         DateTime?
+  isRecurring     Boolean      @default(true)
+  
+  // Filtering options
+  serviceType     TransactionType?
+  network         String?
+  
+  // Configuration
+  isActive        Boolean      @default(true)
+  isVisible       Boolean      @default(true) // Hide before startDate
+  priority        Int          @default(0)    // Display order
+  
+  // Analytics
+  totalParticipants Int        @default(0)
+  totalCompletions  Int        @default(0)
+  totalRewardsPaid  Float      @default(0)
+  
+  // Meta
+  createdBy       String?      // Admin user ID
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  progress        UserTargetProgress[]
 
   @@map("sales_targets")
 }
@@ -412,24 +443,82 @@ model UserTargetProgress {
   id            String      @id @default(cuid())
   userId        String
   targetId      String
+  
+  // Progress tracking
   currentValue  Float       @default(0)
+  currentTier   Int?        // For multi-tier targets
+  
+  // Claim status
   isClaimed     Boolean     @default(false)
   claimedAt     DateTime?
+  claimedAmount Float       @default(0)
+  
+  // Time tracking
   periodStart   DateTime
   periodEnd     DateTime
+  firstProgressAt DateTime?   // When user first made progress
+  lastProgressAt  DateTime?   // Last transaction counted
+  
+  // Analytics
+  transactionCount Int       @default(0)
+  
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   target        SalesTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([userId, targetId, periodStart])
+  @@index([userId, isClaimed])
+  @@index([targetId, periodStart])
   @@map("user_target_progress")
+}
+
+// New model for detailed reward history
+model RewardHistory {
+  id            String      @id @default(cuid())
+  userId        String
+  targetId      String
+  progressId    String      @unique
+  
+  amount        Float
+  tier          Int?
+  tierName      String?
+  
+  transactionId String?     // Reference to credited transaction
+  
+  createdAt     DateTime    @default(now())
+  
+  user          User        @relation(fields: [userId], references: [id])
+  
+  @@index([userId, createdAt])
+  @@index([targetId, createdAt])
+  @@map("reward_history")
+}
+
+enum TierType {
+  SINGLE
+  MULTIPLE
+}
+
+enum TargetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum TargetAudience {
+  ALL
+  SPECIFIC
 }
 
 enum TransferStatus {
   PENDING
-  COMPLETED
+  SUCCESS
   FAILED
+  CANCELLED
+  COMPLETED
 }
 
 enum MoneyRequestStatus {
@@ -440,13 +529,7 @@ enum MoneyRequestStatus {
 }
 
 enum TargetType {
-  DATA_VOLUME
   AMOUNT_SPENT
   TRANSACTION_COUNT
-}
-
-enum TargetPeriod {
-  DAILY
-  WEEKLY
-  MONTHLY
+  DATA_VOLUME
 }

@@ -8,7 +8,7 @@ const testimonials = [
     role: 'Data Reseller, Lagos',
     image: '👨‍💼',
     rating: 5,
-    text: 'ThePOS has transformed my business! I can now serve my customers instantly without delays. The prices are unbeatable and customer support is excellent.'
+    text: 'NillarPay has transformed my business! I can now serve my customers instantly without delays. The prices are unbeatable and customer support is excellent.'
   },
   {
     name: 'Fatima Ahmed',
@@ -39,7 +39,7 @@ export default function Testimonials() {
             What Our Users Say
           </h3>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            Join thousands of satisfied resellers making money with ThePOS
+            Join thousands of satisfied resellers making money with NillarPay
           </p>
         </div>
 

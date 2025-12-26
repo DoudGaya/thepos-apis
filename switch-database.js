@@ -13,7 +13,7 @@ const path = require('path')
 const envPath = path.join(__dirname, '.env')
 
 const NEON_URL = 'postgresql://neondb_owner:npg_N4Gmu3dxMSJl@ep-empty-boat-af8cotts-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require&connection_limit=20&pool_timeout=10'
-const LOCAL_URL = 'postgresql://postgres:postgres@localhost:5432/thepos?schema=public'
+const LOCAL_URL = 'postgresql://postgres:postgres@localhost:5432/NillarPay?schema=public'
 
 const command = process.argv[2]
 
@@ -64,7 +64,7 @@ function switchDatabase(target) {
 If you haven't set up local PostgreSQL yet:
 1. Download from https://www.postgresql.org/download/windows/
 2. Install with default settings, set password to 'postgres'
-3. Create database: CREATE DATABASE thepos;
+3. Create database: CREATE DATABASE NillarPay;
 4. Run migrations: npx prisma migrate deploy
 
 Or adjust the password in .env if different.

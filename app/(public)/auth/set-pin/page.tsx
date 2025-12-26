@@ -252,7 +252,7 @@ function SetPinContent() {
 
       {/* Help Text */}
       <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>After this, you'll be ready to use ThePOS</p>
+        <p>After this, you'll be ready to use NillarPay</p>
       </div>
     </div>
   )

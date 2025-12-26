@@ -71,7 +71,7 @@ function AuthErrorContent() {
       {/* Logo/Brand */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900">
-          ThePOS
+          NillarPay
         </h1>
       </div>
 
@@ -141,7 +141,7 @@ export default function AuthErrorPage() {
           <div className="space-y-8">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900">
-                ThePOS
+                NillarPay
               </h1>
             </div>
             <div className="bg-white p-8 rounded-xl shadow-lg">

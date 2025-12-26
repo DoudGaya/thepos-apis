@@ -9,7 +9,7 @@
 
 ## 📋 Overview
 
-The Amigo Data Vending API has been successfully integrated into the POS system. Amigo specializes in **DATA ONLY** purchases for MTN and Glo networks (Airtel & 9mobile coming soon).
+The Amigo Data Vending API has been successfully integrated into NillarPay system. Amigo specializes in **DATA ONLY** purchases for MTN and Glo networks (Airtel & 9mobile coming soon).
 
 ### Key Features
 

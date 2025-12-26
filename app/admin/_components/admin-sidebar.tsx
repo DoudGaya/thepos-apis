@@ -17,6 +17,7 @@ import {
   Bell,
   ChevronsUpDown,
   BadgeCheck,
+  Target, // Added
 } from "lucide-react"
 
 import {
@@ -49,19 +50,20 @@ const navigation = [
   { name: 'Vendors', href: '/admin/vendors', icon: Server },
   { name: 'Service Routing', href: '/admin/routing', icon: ArrowLeftRight },
   { name: 'Pricing & Plans', href: '/admin/pricing', icon: Tags },
+  { name: 'Sales Targets', href: '/admin/targets', icon: Target }, // Added
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
 function AdminNavUser() {
   const { isMobile } = useSidebar()
   const { data: session } = useSession()
-  
+
   const user = {
     name: session?.user?.name || 'Admin',
-    email: session?.user?.email || 'admin@thepos.app',
+    email: session?.user?.email || 'admin@NillarPay.app',
     avatar: '',
   }
-  
+
   const initials = user.name
     .split(' ')
     .map(n => n[0])
@@ -159,7 +161,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
                   <LayoutDashboard className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">ThePOS</span>
+                  <span className="truncate font-semibold">NillarPay</span>
                   <span className="truncate text-xs text-muted-foreground">Admin Portal</span>
                 </div>
               </Link>

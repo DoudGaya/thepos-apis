@@ -88,7 +88,7 @@ If the old database is gone or inaccessible:
 1. **Go to**: https://console.neon.tech/
 2. **Sign up/Login**
 3. **Create New Project**:
-   - Name: `thepos-dev`
+   - Name: `NillarPay-dev`
    - Region: `US East (Ohio)` or closest to you
    - Postgres Version: `16` (latest)
 4. **Copy Connection String**:
@@ -113,12 +113,12 @@ If you want to test locally:
 2. **Create Database**:
    ```bash
    psql -U postgres
-   CREATE DATABASE thepos_dev;
+   CREATE DATABASE NillarPay_dev;
    \q
    ```
 3. **Update `.env`**:
    ```env
-   DATABASE_URL="postgresql://postgres:your_password@localhost:5432/thepos_dev"
+   DATABASE_URL="postgresql://postgres:your_password@localhost:5432/NillarPay_dev"
    ```
 4. **Push Schema**:
    ```bash

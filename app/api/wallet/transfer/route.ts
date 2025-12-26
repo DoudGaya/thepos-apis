@@ -20,8 +20,8 @@ const transferSchema = z.object({
   recipientEmail: z.string().email('Invalid email address').optional(),
   recipientPhone: z.string().optional(),
   recipientId: z.string().optional(),
-  amount: z.number().min(100, 'Minimum transfer amount is ₦100').max(500000, 'Maximum transfer amount is ₦500,000'),
-  description: z.string().min(3, 'Description is required').max(200).optional(),
+  amount: z.number().min(1, 'Minimum transfer amount is ₦1').max(500000, 'Maximum transfer amount is ₦500,000'),
+  description: z.string().optional(), // Made optional and removed min length
   pin: z.string().length(4, 'Transaction PIN must be 4 digits'),
 })
 

@@ -132,7 +132,7 @@ class OpayService {
         const payParams = {
             publicKey: this.publicKey,
             merchantId: this.merchantId,
-            merchantName: "ThePOS", // Configurable or hardcoded for now
+            merchantName: "NillarPay", // Configurable or hardcoded for now
             reference: data.reference,
             countryCode: data.country || 'NG',
             currency: data.currency || 'NGN',

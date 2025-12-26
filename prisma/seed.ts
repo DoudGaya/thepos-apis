@@ -8,10 +8,10 @@ async function main() {
   const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 12)
   
   const admin = await prisma.user.upsert({
-    where: { email: process.env.ADMIN_EMAIL || 'admin@thepos.com' },
+    where: { email: process.env.ADMIN_EMAIL || 'admin@NillarPay.com' },
     update: {},
     create: {
-      email: process.env.ADMIN_EMAIL || 'admin@thepos.com',
+      email: process.env.ADMIN_EMAIL || 'admin@NillarPay.com',
       phone: '08000000000',
       firstName: 'Admin',
       lastName: 'User',

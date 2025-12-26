@@ -508,7 +508,7 @@ All documentation is up to date:
 
 **WE DID IT!** 🎉🎉🎉
 
-The POS system is now **95% complete** and **fully functional** for customers!
+NillarPay system is now **95% complete** and **fully functional** for customers!
 
 Users can:
 ✅ Fund wallets  

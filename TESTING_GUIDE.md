@@ -1,8 +1,8 @@
-# Testing Guide - The POS
+# Testing Guide - NillarPay
 
 ## Overview
 
-This guide covers testing strategies for The POS VTU platform.
+This guide covers testing strategies for NillarPay VTU platform.
 
 ---
 
@@ -514,7 +514,7 @@ npm test -- --watch
 
 ```bash
 # .env.test
-DATABASE_URL="postgresql://user:pass@localhost:5432/thepos_test?schema=public"
+DATABASE_URL="postgresql://user:pass@localhost:5432/NillarPay_test?schema=public"
 ```
 
 ### Option 2: SQLite for Tests
@@ -613,7 +613,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: thepos_test
+          POSTGRES_DB: NillarPay_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -632,12 +632,12 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/thepos_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/NillarPay_test
       
       - name: Run tests
         run: npm test -- --coverage
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/thepos_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/NillarPay_test
 ```
 
 ---

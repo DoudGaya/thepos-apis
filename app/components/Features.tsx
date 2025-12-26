@@ -48,7 +48,7 @@ export default function Features() {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-base font-semibold text-gray-900 uppercase tracking-wide mb-2">
-            Why Choose ThePOS
+            Why Choose NillarPay
           </h2>
           <h3 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4">
             Everything You Need to Succeed

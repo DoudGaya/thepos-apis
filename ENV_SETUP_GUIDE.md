@@ -1,4 +1,4 @@
-# Environment Variables Guide - The POS
+# Environment Variables Guide - NillarPay
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ DATABASE_URL="postgresql://username:password@host:port/database?schema=public"
 **Example values:**
 ```bash
 # Local
-DATABASE_URL="postgresql://postgres:mypassword@localhost:5432/thepos?schema=public"
+DATABASE_URL="postgresql://postgres:mypassword@localhost:5432/NillarPay?schema=public"
 
 # Railway
 DATABASE_URL="postgresql://postgres:password123@containers-us-west-xyz.railway.app:5432/railway"
@@ -143,7 +143,7 @@ Choose **ONE** option based on your preference:
 ```bash
 SENDGRID_API_KEY="SG.xxxxx"
 SENDGRID_FROM_EMAIL="noreply@yourdomain.com"
-SENDGRID_FROM_NAME="The POS"
+SENDGRID_FROM_NAME="NillarPay"
 ```
 
 #### Option 2: SMTP (Generic)
@@ -153,7 +153,7 @@ SMTP_PORT="587"
 SMTP_USER="your-email@gmail.com"
 SMTP_PASSWORD="your-app-password"
 SMTP_FROM_EMAIL="noreply@yourdomain.com"
-SMTP_FROM_NAME="The POS"
+SMTP_FROM_NAME="NillarPay"
 ```
 
 ---

@@ -5,7 +5,7 @@
 **Status**: ✅ **FULLY FUNCTIONAL** - All admin features implemented and error-free
 
 **Date**: November 1, 2025  
-**Project**: ThePOS - Admin Dashboard  
+**Project**: NillarPay - Admin Dashboard  
 **Verification**: Complete codebase analysis performed
 
 ---
@@ -618,7 +618,7 @@ npx prisma generate
 ```typescript
 // Run this in Prisma Studio or via script
 await prisma.user.update({
-  where: { email: 'admin@thepos.com' },
+  where: { email: 'admin@NillarPay.com' },
   data: { role: 'ADMIN' }
 })
 ```

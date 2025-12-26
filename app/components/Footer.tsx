@@ -44,7 +44,7 @@ export default function Footer() {
               <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">TP</span>
               </div>
-              <span className="text-2xl font-bold text-white">ThePOS</span>
+              <span className="text-2xl font-bold text-white">NillarPay</span>
             </div>
             <p className="text-gray-400 mb-6 leading-relaxed">
               Nigeria's leading platform for data bundles, airtime, and bill payments. 
@@ -55,8 +55,8 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-gray-400" />
-                <a href="mailto:support@thepos.ng" className="hover:text-white transition-colors">
-                  support@thepos.ng
+                <a href="mailto:support@NillarPay.ng" className="hover:text-white transition-colors">
+                  support@NillarPay.ng
                 </a>
               </div>
               <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* Copyright */}
             <div className="text-gray-400 text-sm">
-              © {currentYear} ThePOS. All rights reserved.
+              © {currentYear} NillarPay. All rights reserved.
             </div>
 
             {/* Social Links */}
