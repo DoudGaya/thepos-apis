@@ -97,25 +97,36 @@ export class PurchaseService {
 
     // 8. Calculate pricing (cost + profit margin)
     let pricing
-    try {
-      pricing = await pricingService.calculatePrice({
-        service: request.service,
-        network,
+
+    // Special case: AIRTIME uses 1:1 pricing (Amount = Cost), no profit added
+    if (request.service === 'AIRTIME') {
+      pricing = {
         costPrice,
-        vendorName: null, // Will be set by vendor service
-      })
-    } catch (err: any) {
-      // If no profit margin configured, fallback to fixed ₦100 margin to ensure purchases can proceed
-      if (err.message && err.message.includes('No profit margin')) {
-        const fallbackProfit = 100
-        pricing = {
+        sellingPrice: costPrice, // 1:1 pricing
+        profit: 0,
+        margin: { type: 'FIXED', value: 0 } as const,
+      }
+    } else {
+      try {
+        pricing = await pricingService.calculatePrice({
+          service: request.service,
+          network,
           costPrice,
-          sellingPrice: costPrice + fallbackProfit,
-          profit: fallbackProfit,
-          margin: { type: 'FIXED', value: fallbackProfit },
+          vendorName: null, // Will be set by vendor service
+        })
+      } catch (err: any) {
+        // If no profit margin configured, fallback to fixed ₦100 margin to ensure purchases can proceed
+        if (err.message && err.message.includes('No profit margin')) {
+          const fallbackProfit = 100
+          pricing = {
+            costPrice,
+            sellingPrice: costPrice + fallbackProfit,
+            profit: fallbackProfit,
+            margin: { type: 'FIXED', value: fallbackProfit },
+          }
+        } else {
+          throw err
         }
-      } else {
-        throw err
       }
     }
 

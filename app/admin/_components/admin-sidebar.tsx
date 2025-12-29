@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
@@ -154,15 +155,19 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
             <SidebarMenuButton
               asChild
               size="lg"
-              className="data-[slot=sidebar-menu-button]:!p-2"
+              className="data-[slot=sidebar-menu-button]:!p-2 hover:bg-transparent"
             >
-              <Link href="/admin">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 text-white">
-                  <LayoutDashboard className="size-4" />
+              <Link href="/admin" className="flex items-center gap-2">
+                <div className="relative h-8 w-8 rounded-lg overflow-hidden">
+                  <Image
+                    src="/assets/images/icon.png"
+                    alt="NillarPay"
+                    fill
+                    className="object-cover"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">NillarPay</span>
-                  <span className="truncate text-xs text-muted-foreground">Admin Portal</span>
+                  <span className="truncate font-bold text-lg">NillarPay</span>
                 </div>
               </Link>
             </SidebarMenuButton>

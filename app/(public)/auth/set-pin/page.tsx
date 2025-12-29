@@ -6,7 +6,7 @@ import { AlertCircle, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { Suspense } from 'react'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 
-// Toast Component
+// Toast Component (Vercel Style)
 function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' | 'error' | 'info' | 'warning'; message: string; onClose: () => void; autoClose?: number }) {
   useEffect(() => {
     if (autoClose > 0) {
@@ -15,37 +15,23 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
     }
   }, [autoClose, onClose])
 
-  const bgColorClass: Record<string, string> = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
-    warning: 'bg-yellow-50 border-yellow-200',
-  }
-
-  const textColorClass: Record<string, string> = {
-    success: 'text-green-700',
-    error: 'text-red-700',
-    info: 'text-blue-700',
-    warning: 'text-yellow-700',
-  }
-
-  const iconColorClass: Record<string, string> = {
-    success: 'text-green-600',
-    error: 'text-red-600',
-    info: 'text-blue-600',
-    warning: 'text-yellow-600',
+  const colors = {
+    success: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
+    error: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+    info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    warning: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
   }
 
   const Icon = type === 'success' ? CheckCircle2 : AlertCircle
 
   return (
-    <div className={`fixed top-4 right-4 max-w-md rounded-lg border ${bgColorClass[type]} p-4 shadow-lg z-50`}>
+    <div className={`fixed top-4 right-4 max-w-md rounded-lg border p-4 shadow-lg z-50 ${colors[type]}`}>
       <div className="flex items-start gap-3">
-        <Icon className={`h-5 w-5 ${iconColorClass[type]} flex-shrink-0 mt-0.5`} />
-        <p className={`text-sm ${textColorClass[type]} flex-1`}>{message}</p>
+        <Icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+        <p className="text-sm flex-1 font-medium">{message}</p>
         <button
           onClick={onClose}
-          className={`${textColorClass[type]} hover:opacity-70 transition-opacity`}
+          className="hover:opacity-70 transition-opacity"
           aria-label="Close"
         >
           <AlertCircle className="h-4 w-4" />
@@ -58,7 +44,7 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
 function SetPinContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   const [userId, setUserId] = useState('')
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
@@ -154,7 +140,7 @@ function SetPinContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm p-8">
       {/* Toast Notification */}
       {toast && (
         <Toast
@@ -166,64 +152,63 @@ function SetPinContent() {
 
       {/* Error Alert */}
       {errors.form && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+        <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div className="ml-3">
-              <p className="text-sm text-red-700">{errors.form}</p>
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{errors.form}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* PIN Setup Form */}
-      <form onSubmit={handleSetPin} className="space-y-6 bg-black p-8 rounded-xl shadow-lg">
+      <form onSubmit={handleSetPin} className="space-y-6">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-emerald-100 dark:bg-emerald-900 p-4 rounded-full">
-              <Lock className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+            <div className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-full">
+              <Lock className="h-8 w-8 text-zinc-900 dark:text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-white">Set Your Transaction PIN</h2>
-          <p className="text-gray-400 mt-2">Create a 4-digit PIN for transaction confirmations</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Set Your Transaction PIN</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Create a 4-digit PIN for transaction confirmations</p>
         </div>
-
-       
 
         {/* PIN Input - 4 Digit Boxes */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4 text-center">
             Enter Your 4-Digit PIN
           </label>
           <div className="flex justify-center mb-2">
             <InputOTP maxLength={4} value={pin} onChange={setPin}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={1} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={2} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={3} className="h-12 w-12 text-lg" />
+              <InputOTPGroup className="gap-2">
+                <InputOTPSlot index={0} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={1} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={2} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={3} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
               </InputOTPGroup>
             </InputOTP>
           </div>
-          {errors.pin && <p className="mt-2 text-sm text-red-600 text-center">{errors.pin}</p>}
+          {errors.pin && <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-center">{errors.pin}</p>}
         </div>
 
         {/* Confirm PIN Input - 4 Digit Boxes */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-4 text-center">
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4 text-center">
             Confirm Your PIN
           </label>
           <div className="flex justify-center mb-2">
             <InputOTP maxLength={4} value={confirmPin} onChange={setConfirmPin}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={1} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={2} className="h-12 w-12 text-lg" />
-                <InputOTPSlot index={3} className="h-12 w-12 text-lg" />
+              <InputOTPGroup className="gap-2">
+                <InputOTPSlot index={0} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={1} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={2} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
+                <InputOTPSlot index={3} className="h-12 w-12 text-lg border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-md" />
               </InputOTPGroup>
             </InputOTP>
           </div>
-          {errors.confirmPin && <p className="mt-2 text-sm text-red-600 text-center">{errors.confirmPin}</p>}
+          {errors.confirmPin && <p className="mt-2 text-sm text-red-600 dark:text-red-400 text-center">{errors.confirmPin}</p>}
         </div>
 
         {/* PIN Match Indicator */}
@@ -243,16 +228,22 @@ function SetPinContent() {
         <button
           type="submit"
           disabled={isLoading || pin.length !== 4 || confirmPin.length !== 4 || pin !== confirmPin}
-          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-6"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 dark:bg-white px-5 py-3 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
-          {isLoading ? 'Setting PIN...' : 'Complete Setup'}
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Setting PIN...
+            </>
+          ) : (
+            'Complete Setup'
+          )}
         </button>
       </form>
 
       {/* Help Text */}
-      <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>After this, you'll be ready to use NillarPay</p>
+      <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800 text-center">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">After this, you'll be ready to use NillarPay</p>
       </div>
     </div>
   )
@@ -260,25 +251,13 @@ function SetPinContent() {
 
 export default function SetPinPage() {
   return (
-    <div className=" ">
-      <div className="max-w-md w-full">
-        <Suspense fallback={
-          <div className="space-y-8">
-           
-            <div className="bg-black p-8 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
-              </div>
-            </div>
-          </div>
-        }>
-          <div className="space-y-8">
-         
-            <SetPinContent />
-          </div>
-        </Suspense>
+    <Suspense fallback={
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm p-8 text-center min-h-[400px] flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-900 dark:text-white" />
+        <p className="mt-4 text-zinc-500 dark:text-zinc-400">Loading...</p>
       </div>
-    </div>
+    }>
+      <SetPinContent />
+    </Suspense>
   )
 }

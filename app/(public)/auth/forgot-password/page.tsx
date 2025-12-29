@@ -221,221 +221,219 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="antialiased duration-300 flex items-center justify-center py-12">
-      <main className="mx-auto max-w-md w-full px-4 sm:px-6">
-        <div className="border-y-2 border-gray-800 p-6 sm:p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <Link
-              href="/auth/login"
-              className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors mb-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Login
-            </Link>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reset Password</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">
-              {step === 'email' && 'Enter your email to receive an OTP'}
-              {step === 'otp' && 'Enter the OTP sent to your email'}
-              {step === 'reset' && 'Create a new password'}
-            </p>
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm p-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <Link
+          href="/auth/login"
+          className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Login
+        </Link>
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Reset Password</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+          {step === 'email' && 'Enter your email to receive an OTP'}
+          {step === 'otp' && 'Enter the OTP sent to your email'}
+          {step === 'reset' && 'Create a new password'}
+        </p>
+      </div>
+
+      {/* Error Toast */}
+      {error && (
+        <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Error Toast */}
-          {error && (
-            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+      {/* Success Toast */}
+      {success && (
+        <div className="mb-6 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">Success</p>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-1">{success}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Card */}
+      <div className="space-y-5">
+        {/* Step 1: Email */}
+        {step === 'email' && (
+          <form onSubmit={handleRequestOTP} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                  <Mail className="h-5 w-5" />
                 </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
+                  disabled={isLoading}
+                />
               </div>
             </div>
-          )}
 
-          {/* Success Toast */}
-          {success && (
-            <div className="mb-6 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-green-800 dark:text-green-300">Success</p>
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">{success}</p>
-                </div>
-              </div>
+            <button
+              type="submit"
+              disabled={isLoading || !email.trim()}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 dark:bg-white px-5 py-3 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Sending OTP...
+                </>
+              ) : (
+                'Request OTP'
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* Step 2: OTP */}
+        {step === 'otp' && (
+          <form onSubmit={handleVerifyOTP} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Verification Code
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={handleOTPChange}
+                placeholder="000000"
+                maxLength={6}
+                className="w-full px-4 py-3 text-center text-2xl font-bold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white tracking-widest"
+                disabled={isLoading}
+              />
             </div>
-          )}
 
-          {/* Form Card */}
-          <div className="space-y-5">
-            {/* Step 1: Email */}
-            {step === 'email' && (
-              <form onSubmit={handleRequestOTP} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative mt-1">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                      <Mail className="h-5 w-5" />
-                    </div>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                      disabled={isLoading}
-                    />
-                  </div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
+              Check your email for the 6-digit code
+            </p>
+
+            <button
+              type="submit"
+              disabled={isLoading || otp.length !== 6}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 dark:bg-white px-5 py-3 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                'Verify Code'
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResendOTP}
+              disabled={resendCountdown > 0 || isLoading}
+              className="w-full text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium py-2 transition-colors text-sm underline"
+            >
+              {resendCountdown > 0
+                ? `Resend OTP in ${resendCountdown}s`
+                : 'Resend OTP'}
+            </button>
+          </form>
+        )}
+
+        {/* Step 3: Reset Password */}
+        {step === 'reset' && (
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                New Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                  <Lock className="h-5 w-5" />
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !email.trim()}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Sending OTP...
-                    </>
-                  ) : (
-                    'Request OTP'
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* Step 2: OTP */}
-            {step === 'otp' && (
-              <form onSubmit={handleVerifyOTP} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={handleOTPChange}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="w-full px-4 py-3 text-center text-2xl font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 tracking-widest"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <p className="text-sm text-slate-600 dark:text-slate-400 text-center">
-                  Check your email for the 6-digit code
-                </p>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || otp.length !== 6}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    'Verify Code'
-                  )}
-                </button>
-
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
+                  disabled={isLoading}
+                />
                 <button
                   type="button"
-                  onClick={handleResendOTP}
-                  disabled={resendCountdown > 0 || isLoading}
-                  className="w-full text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium py-2 transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                 >
-                  {resendCountdown > 0
-                    ? `Resend OTP in ${resendCountdown}s`
-                    : 'Resend OTP'}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
-              </form>
-            )}
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                At least 8 characters
+              </p>
+            </div>
 
-            {/* Step 3: Reset Password */}
-            {step === 'reset' && (
-              <form onSubmit={handleResetPassword} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    New Password
-                  </label>
-                  <div className="relative mt-1">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                      <Lock className="h-5 w-5" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-11 pr-11 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    At least 8 characters
-                  </p>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                  <Lock className="h-5 w-5" />
                 </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Confirm Password
-                  </label>
-                  <div className="relative mt-1">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none">
-                      <Lock className="h-5 w-5" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full pl-11 pr-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
+            <button
+              type="submit"
+              disabled={isLoading || !newPassword.trim() || !confirmPassword.trim()}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 dark:bg-white px-5 py-3 text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset Password'
+              )}
+            </button>
+          </form>
+        )}
+      </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading || !newPassword.trim() || !confirmPassword.trim()}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-gradient-to-r from-emerald-600 to-green-600 px-5 py-3 text-white font-medium shadow-lg hover:from-emerald-700 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Resetting...
-                    </>
-                  ) : (
-                    'Reset Password'
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* Footer */}
-          <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-6">
-            Remember your password?{' '}
-            <Link href="/auth/login" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-medium">
-              Sign In
-            </Link>
-          </p>
-        </div>
-      </main>
+      {/* Footer */}
+      <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800 text-center">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Remember your password?{' '}
+          <Link href="/auth/login" className="font-medium text-zinc-900 dark:text-white hover:underline">
+            Sign In
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }
