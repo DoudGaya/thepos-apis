@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/nextauth';
 import { targetService } from '@/lib/services/TargetService';
 import { Role } from '@prisma/client';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== Role.ADMIN) {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     try {
-        const { id } = params;
+        const { id } = await params;
         const { target, stats } = await targetService.getAdminTargetStats(id);
         const progress = await targetService.getTargetProgress(id);
 

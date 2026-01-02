@@ -173,7 +173,7 @@ export class TargetService {
           ...tier,
           achieved: currentVal >= tier.value,
           tierNumber: index,
-          claimed: progress?.currentTier !== null && progress.currentTier !== undefined && index <= progress.currentTier
+          claimed: (progress?.currentTier ?? -1) >= index
         }));
 
         const nextTier = achievedTiers.find(t => !t.achieved);
@@ -316,7 +316,7 @@ export class TargetService {
         success: true,
         amount: rewardAmount,
         tierName,
-        transactionId: transaction.id
+        transactionId: walletResult.transaction.id
       };
     });
   }

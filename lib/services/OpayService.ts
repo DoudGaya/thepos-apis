@@ -116,6 +116,59 @@ class OpayService {
     }
 
     /**
+     * Initialize OPay Web Payment (Cashier)
+     */
+    async initializeWebPayment(data: OpayPaymentData): Promise<OpayPaymentResponse> {
+        console.log('🔵 [OPay] Initializing Web Payment:', data.reference);
+
+        const payload = {
+            reference: data.reference,
+            amount: {
+                total: data.amount,
+                currency: data.currency || 'NGN',
+            },
+            returnUrl: data.callbackUrl,
+            userInfo: {
+                userEmail: data.userInfo.userEmail,
+                userId: data.userInfo.userId,
+                userMobile: data.userInfo.userMobile,
+                userName: data.userInfo.userName
+            },
+            product: {
+                description: `Wallet Funding - ${data.reference}`,
+                name: 'Wallet Funding'
+            },
+            country: 'NG'
+        };
+
+        try {
+            const authHeader = this.generateAuthHeader(payload);
+
+            const response = await this.client.post<OpayPaymentResponse>(
+                '/api/v1/international/cashier/create',
+                payload,
+                {
+                    headers: {
+                        'Authorization': authHeader,
+                        'MerchantId': this.merchantId,
+                    },
+                }
+            );
+
+            if (response.data.code === '00000') {
+                console.log('✅ [OPay] Web Payment initialized:', response.data.data.reference);
+                return response.data;
+            } else {
+                console.error('❌ [OPay] Web Payment initialization failed:', response.data.message);
+                throw new Error(response.data.message || 'OPay payment initialization failed');
+            }
+        } catch (error: any) {
+            console.error('❌ [OPay] Web Payment error:', error.response?.data || error.message);
+            throw new Error(`OPay payment initialization failed: ${error.response?.data?.message || error.message}`);
+        }
+    }
+
+    /**
      * Initialize OPay payment - Cashier API
      * Based on OPay React Native SDK documentation
      */

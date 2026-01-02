@@ -482,10 +482,10 @@ export class VTUNGAdapter implements VendorAdapter {
     }
 
     // If we are using a simulated token, suppress errors for plan fetching
-    if (this.token === 'simulated-token') {
-      console.warn('[VTU.NG] Suppressing error due to simulated token:', error.message)
-      return
-    }
+    // if (this.token === 'simulated-token') {
+    //   console.warn('[VTU.NG] Suppressing error due to simulated token:', error.message)
+    //   return
+    // }
 
     throw new VendorError(
       error.message || 'Unknown VTU.NG error',

@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
         teamId: process.env.APPLE_TEAM_ID || "",
         privateKey: process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, '\n') || "",
         keyId: process.env.APPLE_KEY_ID || "",
-      },
+      } as any,
     }),
     CredentialsProvider({
       name: 'Credentials',
