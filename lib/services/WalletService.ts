@@ -6,6 +6,7 @@
 import { PrismaClient, TransactionStatus, TransactionType } from '@prisma/client';
 import { prisma } from '../prisma';
 import bcrypt from 'bcryptjs';
+import { notificationService } from './NotificationService';
 
 export interface WalletTransactionData {
   userId: string;
@@ -14,6 +15,7 @@ export interface WalletTransactionData {
   description: string;
   reference: string;
   serviceType?: string;
+  network?: string;
   metadata?: Record<string, any>;
 }
 
@@ -63,6 +65,7 @@ export class WalletService {
           type: data.type,
           status: TransactionStatus.SUCCESS,
           reference: data.reference,
+          network: data.network,
           details: {
             description: data.description,
             serviceType: data.serviceType,
@@ -103,6 +106,7 @@ export class WalletService {
           type: data.type,
           status: TransactionStatus.SUCCESS,
           reference: data.reference,
+          network: data.network,
           details: {
             description: data.description,
             serviceType: data.serviceType,
@@ -218,7 +222,7 @@ export class WalletService {
   async transferFunds(senderId: string, receiverId: string, amount: number, pin: string, note?: string) {
     const sender = await this.prisma.user.findUnique({
       where: { id: senderId },
-      select: { pinHash: true, credits: true }
+      select: { pinHash: true, credits: true, firstName: true }
     });
 
     if (!sender) throw new Error('Sender not found');
@@ -287,6 +291,27 @@ export class WalletService {
         }
       });
 
+      // Notification for receiver
+      const senderName = sender.firstName || 'A user';
+      await notificationService.notifyUser(
+        receiverId,
+        'Money Received',
+        `You received ₦${amount} from ${senderName}`,
+        'TRANSACTION',
+        { transferId: transfer.id, type: 'TRANSFER_RECEIVED' },
+        tx
+      );
+
+      // Notification for sender
+      await notificationService.notifyUser(
+        senderId,
+        'Money Sent',
+        `You successfully sent ₦${amount} to ${updatedReceiver.firstName || 'user'}`,
+        'TRANSACTION',
+        { transferId: transfer.id, type: 'TRANSFER_SENT' },
+        tx
+      );
+
       return transfer;
     });
   }
@@ -312,20 +337,19 @@ export class WalletService {
       });
 
       // Create notification for payer
-      await tx.notification.create({
-        data: {
-          userId: payerId,
-          title: 'Money Request',
-          message: `${moneyRequest.requester.firstName || 'User'} requested ₦${amount}`,
-          type: 'TRANSACTION',
-          data: {
-            type: 'MONEY_REQUEST',
-            requestId: moneyRequest.id,
-            amount: amount,
-            requesterName: `${moneyRequest.requester.firstName} ${moneyRequest.requester.lastName}`,
-          }
-        }
-      });
+      await notificationService.notifyUser(
+        payerId,
+        'Money Request',
+        `${moneyRequest.requester.firstName || 'User'} requested ₦${amount}`,
+        'TRANSACTION',
+        {
+          type: 'MONEY_REQUEST',
+          requestId: moneyRequest.id,
+          amount: amount,
+          requesterName: `${moneyRequest.requester.firstName} ${moneyRequest.requester.lastName}`,
+        },
+        tx
+      );
 
       return moneyRequest;
     });
@@ -352,15 +376,13 @@ export class WalletService {
         data: { status: 'DECLINED' }
       });
 
-      await this.prisma.notification.create({
-        data: {
-          userId: request.requesterId,
-          title: 'Request Declined',
-          message: `${request.payer.firstName || 'User'} declined your request for ₦${request.amount}`,
-          type: 'TRANSACTION',
-          data: { requestId }
-        }
-      });
+      await notificationService.notifyUser(
+        request.requesterId,
+        'Request Declined',
+        `${request.payer.firstName || 'User'} declined your request for ₦${request.amount}`,
+        'TRANSACTION',
+        { requestId }
+      );
 
       return updatedRequest;
     }
@@ -458,20 +480,19 @@ export class WalletService {
         });
 
         // Notification for Requester
-        await tx.notification.create({
-          data: {
-            userId: request.requesterId,
-            title: 'Request Paid',
-            message: `${request.payer.firstName || 'User'} paid your request for ₦${request.amount}`,
-            type: 'TRANSACTION',
-            data: {
-              type: 'PAYMENT_RECEIVED',
-              requestId,
-              amount: request.amount,
-              payerName: `${request.payer.firstName} ${request.payer.lastName}`
-            }
-          }
-        });
+        await notificationService.notifyUser(
+          request.requesterId,
+          'Request Paid',
+          `${request.payer.firstName || 'User'} paid your request for ₦${request.amount}`,
+          'TRANSACTION',
+          {
+            type: 'PAYMENT_RECEIVED',
+            requestId,
+            amount: request.amount,
+            payerName: `${request.payer.firstName} ${request.payer.lastName}`
+          },
+          tx
+        );
 
         return updatedRequest;
       }, {

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { ADAPTER_REGISTRY } from '@/lib/vendors/registry'
+import { vendorService } from '@/lib/vendors'
 import { NetworkType } from '@/lib/vendors/adapter.interface'
 
 const NETWORKS: NetworkType[] = ['MTN', 'GLO', 'AIRTEL', '9MOBILE']
@@ -18,15 +18,10 @@ export async function syncDataPlans() {
   let totalSynced = 0
 
   for (const vendor of vendors) {
-    const AdapterClass = ADAPTER_REGISTRY[vendor.adapterId]
-    if (!AdapterClass) continue
-
-    // @ts-ignore
-    const adapter = new AdapterClass(vendor.credentials)
-
     for (const network of NETWORKS) {
       try {
-        const plans = await adapter.getPlans('DATA', network)
+        // Use vendorService.getPlans which properly handles vendor initialization with env variables
+        const plans = await vendorService.getPlans('DATA', network)
         
         for (const plan of plans) {
           // Infer plan type from name

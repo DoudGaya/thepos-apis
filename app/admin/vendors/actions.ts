@@ -3,21 +3,20 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { ADAPTER_REGISTRY } from '@/lib/vendors/registry'
+import { vendorService } from '@/lib/vendors'
 
 export async function syncBalances() {
+  // Clear adapter cache to force reload with latest environment variables
+  vendorService.clearCache()
+  
   const vendors = await prisma.vendorConfig.findMany({
     where: { isEnabled: true }
   })
 
   for (const vendor of vendors) {
     try {
-      const AdapterClass = ADAPTER_REGISTRY[vendor.adapterId]
-      if (!AdapterClass) continue
-
-      // @ts-ignore - Dynamic instantiation
-      const adapter = new AdapterClass(vendor.credentials)
-      const balanceData = await adapter.getBalance()
+      // Use vendorService which properly loads environment variables for credentials
+      const balanceData = await vendorService.getBalance(vendor.adapterId)
       
       await prisma.vendorConfig.update({
         where: { id: vendor.id },
@@ -27,6 +26,8 @@ export async function syncBalances() {
           isHealthy: true
         }
       })
+      
+      console.log(`[Admin] Synced balance for ${vendor.vendorName}: ₦${balanceData.balance} from ${vendor.adapterId}`)
     } catch (error) {
       console.error(`Failed to sync balance for ${vendor.vendorName}:`, error)
       await prisma.vendorConfig.update({

@@ -69,16 +69,32 @@ function transformTransaction(transaction: any) {
       total: (transaction.amount || 0) + (details.fee || details.fees || 0),
     },
     timeline: buildTimeline(transaction),
+    // Populate customerInfo for frontend compatibility
+    customerInfo: {
+      phone: details.phoneNumber || details.recipient || (details.metadata && (details.metadata.phoneNumber || details.metadata.recipient)),
+      meterNumber: details.meterNumber || (details.metadata && details.metadata.meterNumber),
+      name: details.customerName || details.accountName || (details.metadata && (details.metadata.customerName || details.metadata.accountName)),
+      address: details.customerAddress || (details.metadata && details.metadata.customerAddress),
+      token: details.token || (details.metadata && details.metadata.token),
+      packageName: details.plan || details.planName || details.planCode || (details.metadata && (details.metadata.planCode || details.metadata.planName)),
+      smartCardNumber: details.smartCardNumber || (details.metadata && details.metadata.smartCardNumber),
+    },
   };
 }
 
 function mapTransactionType(type: string): 'data' | 'bill' | 'topup' | 'referral' | 'cashback' | 'bonus' {
   switch (type) {
+    case 'DATA':
     case 'DATA_PURCHASE':
       return 'data';
+    case 'AIRTIME':
     case 'BILL_PAYMENT':
+    case 'ELECTRICITY':
+    case 'CABLE_TV':
+    case 'CABLE':
       return 'bill';
     case 'WALLET_FUNDING':
+    case 'CREDIT_PURCHASE': // Refunds etc
       return 'topup';
     case 'REFERRAL_BONUS':
       return 'referral';
@@ -109,14 +125,25 @@ function mapTransactionStatus(status: string): 'pending' | 'completed' | 'failed
 
 function getTransactionDescription(transaction: any): string {
   const details = transaction.details || {};
+  const metadata = details.metadata || {};
+  // Check transaction.network first (top-level field from API), then fallback to details
+  const network = transaction.network || details.network || metadata.network || 'Unknown network';
+  const biller = transaction.vendorName || details.biller || details.disco || details.provider || metadata.disco || metadata.provider || 'Unknown biller';
+  const paymentMethod = details.paymentMethod || metadata.paymentMethod || 'Paystack';
 
   switch (transaction.type) {
     case 'WALLET_FUNDING':
-      return `Wallet funding - ${details.paymentMethod || 'Paystack'}`;
+      return `Wallet funding - ${paymentMethod}`;
+    case 'DATA':
     case 'DATA_PURCHASE':
-      return `Data purchase - ${details.network || 'Unknown network'}`;
+      return `Data purchase - ${network}`;
+    case 'AIRTIME':
+      return `Airtime purchase - ${network}`;
+    case 'ELECTRICITY':
+    case 'CABLE_TV':
+    case 'CABLE':
     case 'BILL_PAYMENT':
-      return `Bill payment - ${details.biller || 'Unknown biller'}`;
+      return `Bill payment - ${biller}`;
     case 'REFERRAL_BONUS':
       return 'Referral bonus credit';
     case 'CASHBACK':
@@ -130,17 +157,20 @@ function getTransactionDescription(transaction: any): string {
 
 function getRecipient(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.recipient || details.phoneNumber || details.accountNumber;
+  const metadata = details.metadata || {};
+  return details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
 }
 
 function getNetwork(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.network;
+  const metadata = details.metadata || {};
+  return transaction.network || details.network || metadata.network;
 }
 
 function getBiller(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.biller;
+  const metadata = details.metadata || {};
+  return details.biller || details.disco || details.provider || metadata.disco || metadata.provider;
 }
 
 function buildTimeline(transaction: any) {

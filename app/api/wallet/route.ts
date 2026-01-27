@@ -56,6 +56,9 @@ export const GET = apiHandler(async (request: Request) => {
         status: true,
         reference: true,
         createdAt: true,
+        network: true,
+        recipient: true,
+        vendorName: true,
       },
     }),
     prisma.transaction.count({

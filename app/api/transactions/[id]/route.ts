@@ -33,6 +33,14 @@ export const GET = apiHandler(async (request: Request, context: any) => {
       createdAt: true,
       updatedAt: true,
       userId: true,
+      network: true,
+      recipient: true,
+      vendorName: true,
+      vendorReference: true,
+      vendorStatus: true,
+      costPrice: true,
+      sellingPrice: true,
+      profit: true,
       user: {
         select: {
           id: true,

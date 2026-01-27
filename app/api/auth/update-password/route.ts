@@ -36,7 +36,7 @@ export const POST = apiHandler(async (request: Request) => {
     // Get user with current password
     const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { id: true, password: true },
+        select: { id: true, passwordHash: true },
     })
 
     if (!dbUser) {
@@ -44,7 +44,10 @@ export const POST = apiHandler(async (request: Request) => {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await comparePassword(data.currentPassword, dbUser.password)
+    if (!dbUser.passwordHash) {
+        throw new BadRequestError('Password not set. Please set a password first.')
+    }
+    const isCurrentPasswordValid = await comparePassword(data.currentPassword, dbUser.passwordHash)
     if (!isCurrentPasswordValid) {
         throw new BadRequestError('Current password is incorrect')
     }
@@ -59,7 +62,7 @@ export const POST = apiHandler(async (request: Request) => {
 
     await prisma.user.update({
         where: { id: user.id },
-        data: { password: newPasswordHash },
+        data: { passwordHash: newPasswordHash },
     })
 
     return successResponse(

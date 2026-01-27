@@ -1,0 +1,38 @@
+[dotenv@17.2.3] injecting env (41) from .env -- tip: ⚙️  override existing env vars with { override: true }
+--- VTPass Debug Script ---
+Credentials Status:
+API Key: Present (Starts with da7a...)
+Public Key: Present (Starts with PK_8...)
+Secret Key: Present (Starts with SK_3...)
+Is detected as placeholder (simulated mode)? false
+[VTPass] Initialized with SANDBOX environment
+
+Attempting Airtime Purchase (08011111111)...
+[VTPass] Purchase request: {
+  serviceID: 'mtn',
+  requestId: '202601121550z3ztzhmg',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '028',
+  response_description: 'PRODUCT IS NOT WHITELISTED ON YOUR ACCOUNT',
+  content: { errors: '' }
+}
+[VTPass] Error 028: Product not whitelisted. You might be using a LIVE account in SANDBOX mode, or vice versa. Please check your VTPASS_USE_SANDBOX setting.
+Purchase Result: {
+  "success": false,
+  "status": "FAILED",
+  "orderId": "debug_1768229439191",
+  "vendorReference": "202601121550z3ztzhmg",
+  "vendorName": "VTPASS",
+  "costPrice": 50,
+  "message": "PRODUCT IS NOT WHITELISTED ON YOUR ACCOUNT",
+  "metadata": {
+    "requestId": "202601121550z3ztzhmg",
+    "errors": ""
+  }
+}
+Transaction appeared to go to VTPass.
+Request ID (Vendor Reference): 202601121550z3ztzhmg
+Transaction Failed.

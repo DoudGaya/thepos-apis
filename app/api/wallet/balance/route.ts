@@ -69,6 +69,9 @@ export async function GET(request: NextRequest) {
           amount: true,
           status: true,
           createdAt: true,
+          network: true,
+          recipient: true,
+          vendorName: true,
         },
       }),
       // @ts-ignore

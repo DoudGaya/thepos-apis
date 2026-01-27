@@ -154,6 +154,12 @@ export default function Pricing() {
           <p className="text-gray-600 mb-4">
             All plans include instant delivery, secure transactions, and access to our API.
           </p>
+          <Link 
+            href="/pricing"
+            className="inline-flex items-center gap-2 text-gray-900 font-semibold hover:text-gray-700 transition-colors mb-4"
+          >
+            View All Service Prices →
+          </Link>
           <p className="text-sm text-gray-500">
             Need a custom plan? <a href="#contact" className="text-indigo-600 hover:text-indigo-800 font-semibold">Contact our sales team</a>
           </p>

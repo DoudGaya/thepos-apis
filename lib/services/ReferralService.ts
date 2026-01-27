@@ -1,6 +1,7 @@
 import { prisma } from '../prisma';
 import { walletService } from './WalletService';
 import { TransactionType } from '@prisma/client';
+import { notificationService } from './NotificationService';
 
 export class ReferralService {
   private config = {
@@ -76,6 +77,15 @@ export class ReferralService {
         paidAt: new Date()
       }
     });
+
+    // Notify referrer
+    await notificationService.notifyUser(
+      user.referredBy,
+      'Referral Commission Earned',
+      `You earned ₦${commission.toFixed(2)} commission from a referral's transaction.`,
+      'GENERAL',
+      { sourceUserId: userId, amount: commission }
+    );
   }
 
   /**

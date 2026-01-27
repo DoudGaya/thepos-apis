@@ -3,15 +3,15 @@
 import { useSession, signOut } from 'next-auth/react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  LayoutDashboard, 
-  Wallet, 
-  Smartphone, 
-  Wifi, 
-  Receipt, 
-  Users, 
-  Bell, 
-  User, 
+import {
+  LayoutDashboard,
+  Wallet,
+  Smartphone,
+  Wifi,
+  Receipt,
+  Users,
+  Bell,
+  User,
   LogOut,
   Menu,
   X,
@@ -21,18 +21,21 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { name: 'Buy Airtime', href: '/dashboard/airtime', icon: Smartphone },
   { name: 'Buy Data', href: '/dashboard/data', icon: Wifi },
-  { name: 'Utility Bills', href: '/dashboard/bills', icon: Receipt, submenu: [
-    { name: 'Electricity', href: '/dashboard/electricity' },
-    { name: 'Cable TV', href: '/dashboard/cable-tv' },
-    { name: 'Betting Wallet', href: '/dashboard/betting' },
-    { name: 'ePins', href: '/dashboard/epins' },
-  ]},
+  {
+    name: 'Utility Bills', href: '/dashboard/bills', icon: Receipt, submenu: [
+      { name: 'Electricity', href: '/dashboard/electricity' },
+      { name: 'Cable TV', href: '/dashboard/cable-tv' },
+      { name: 'Betting Wallet', href: '/dashboard/betting' },
+      { name: 'ePins', href: '/dashboard/epins' },
+    ]
+  },
   { name: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
   { name: 'Referrals', href: '/dashboard/referrals', icon: Users },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
@@ -82,20 +85,22 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+              <div className="relative w-32 h-10">
+                <Image
+                  src="/assets/nillarpay-black.png"
+                  alt="NillarPay"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
-              <span className="text-xl font-bold text-gray-900">
-                NillarPay
-              </span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -134,30 +139,27 @@ export default function DashboardLayout({
                   {hasSubmenu ? (
                     <button
                       onClick={() => toggleSubmenu(item.name)}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-gray-100 text-gray-900'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       <div className="flex items-center space-x-3">
                         <item.icon className={`w-5 h-5 ${isActive ? 'text-gray-900' : 'text-gray-500'}`} />
                         <span>{item.name}</span>
                       </div>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
-                          isExpanded ? 'transform rotate-180' : ''
-                        }`}
+                        className={`w-4 h-4 transition-transform ${isExpanded ? 'transform rotate-180' : ''
+                          }`}
                       />
                     </button>
                   ) : (
                     <Link
                       href={item.href}
-                      className={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-gray-100 text-gray-900'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                     >
                       <item.icon className={`w-5 h-5 ${isActive ? 'text-gray-900' : 'text-gray-500'}`} />
                       <span>{item.name}</span>
@@ -173,11 +175,10 @@ export default function DashboardLayout({
                           <Link
                             key={subitem.name}
                             href={subitem.href}
-                            className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
-                              isSubActive
-                                ? 'bg-gray-100 text-gray-900'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
+                            className={`block px-3 py-2 text-sm rounded-lg transition-colors ${isSubActive
+                              ? 'bg-gray-100 text-gray-900'
+                              : 'text-gray-600 hover:bg-gray-100'
+                              }`}
                           >
                             {subitem.name}
                           </Link>

@@ -6,6 +6,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import crypto from 'crypto';
+import { logger } from '@/lib/logger';
 
 interface OpayPaymentData {
     reference: string;
@@ -74,19 +75,16 @@ class OpayService {
         this.publicKey = process.env.OPAY_PUBLIC_KEY || '';
         this.secretKey = process.env.OPAY_SECRET_KEY || '';
         this.merchantId = process.env.OPAY_MERCHANT_ID || '';
-        this.baseUrl = process.env.OPAY_BASE_URL || 'https://sandboxapi.opaycheckout.com';
+        this.baseUrl = process.env.OPAY_BASE_URL || 'https://api.opaycheckout.com';
 
-        // Debug logging
-        console.log('🔧 [OPay] Configuration loaded:', {
-            publicKeyPresent: !!this.publicKey,
-            secretKeyPresent: !!this.secretKey,
-            merchantIdPresent: !!this.merchantId,
-            merchantId: this.merchantId,
+        // Production-safe logging - only log configuration status
+        logger.info('[OPay] Service initialized', {
+            configured: !!(this.publicKey && this.secretKey && this.merchantId),
             baseUrl: this.baseUrl,
         });
 
         if (!this.publicKey || !this.secretKey || !this.merchantId) {
-            console.warn('⚠️ [OPay] credentials not fully configured');
+            logger.warn('[OPay] credentials not fully configured');
         }
 
         this.client = axios.create({
@@ -117,7 +115,7 @@ class OpayService {
 
     /**
      * Initialize OPay payment - Cashier API
-     * Based on OPay React Native SDK documentation
+     * Calls the Server-to-Server Create Payment API
      */
     async initializePayment(data: OpayPaymentData): Promise<any> {
         // Validate configuration
@@ -125,40 +123,75 @@ class OpayService {
             throw new Error('OPay service not fully configured (missing MerchantID or PublicKey)');
         }
 
-        console.log('🔵 [OPay] Generating SDK parameters for reference:', data.reference);
+        logger.debug('[OPay] Initializing Cashier Payment for reference:', data.reference);
 
-        // Prepare parameters for React Native SDK
-        // The SDK requires these specific field names
-        const payParams = {
-            publicKey: this.publicKey,
-            merchantId: this.merchantId,
-            merchantName: "NillarPay", // Configurable or hardcoded for now
+        // Construct Payload for Cashier API
+        // https://doc.opaycheckout.com/view/content/20000/21000/21010
+        const payload = {
+            country: data.country || 'NG',
             reference: data.reference,
-            countryCode: data.country || 'NG',
-            currency: data.currency || 'NGN',
-            payAmount: data.amount, // Amount in kobo/minor units
-            productName: 'Wallet Funding',
-            productDescription: `Fund wallet with ${((data.amount || 0) / 100).toFixed(2)} ${data.currency || 'NGN'}`,
-            callbackUrl: data.callbackUrl || 'https://the-pos.com/callback',
-            paymentType: '', // Empty string usually means all methods, but verifying against docs
+            amount: {
+                total: data.amount, // in kobo/minor units
+                currency: data.currency || 'NGN',
+            },
+            returnUrl: data.returnUrl,
+            callbackUrl: data.callbackUrl,
+            cancelUrl: data.returnUrl, // Redirect back to wallet on cancel too
+            userClientIP: '127.0.0.1', // Should be real user IP in production
             expireAt: 30, // Minutes
-            userClientIP: '1.1.1.1', // OPay requires a valid public IP format, not localhost
+            evokeOpay: true, // Enable OPay App Express Checkout
             userInfo: {
-                userId: data.userInfo.userId,
-                userName: data.userInfo.userName || data.userInfo.userEmail.split('@')[0],
                 userEmail: data.userInfo.userEmail,
-                userMobile: data.userInfo.userMobile || '09000000000'
-            }
+                userId: data.userInfo.userId,
+                userMobile: data.userInfo.userMobile || '09000000000',
+                userName: data.userInfo.userName || data.userInfo.userEmail.split('@')[0],
+            },
+            product: {
+                name: 'Wallet Funding',
+                description: `Fund wallet with ${((data.amount || 0) / 100).toFixed(2)} ${data.currency || 'NGN'}`,
+            },
+            // payMethod: 'BalancePayment', // Removed: Causing 02003 error. Omittting allows all methods.
+            // If "payMethod" is omitted, user sees all options. For Express, "evokeOpay:true" is key.
         };
 
-        // Return successfully with the params
-        return {
-            status: 'success',
-            message: 'OPay parameters generated',
-            data: {
-                payParams
+        try {
+            // For cashier/create, the documentation and PHP example specify using "Bearer {PublicKey}"
+            // NOT the HMAC signature (which is for status/query).
+            const authHeader = `Bearer ${this.publicKey}`;
+            const endpoint = '/api/v1/international/cashier/create';
+
+            logger.debug('[OPay] Sending request to:', this.baseUrl + endpoint);
+
+            const response = await this.client.post(endpoint, payload, {
+                headers: {
+                    'Authorization': authHeader,
+                    'MerchantId': this.merchantId,
+                },
+            });
+
+            if (response.data.code === '00000') {
+                logger.transaction('OPay payment initialized', data.reference, {
+                    orderNo: response.data.data.orderNo,
+                    status: 'initialized'
+                });
+
+                return {
+                    status: 'success',
+                    message: 'OPay payment initialized',
+                    data: {
+                        ...response.data.data,
+                        // Ensure we pass cashierUrl explicitly if it's there
+                        cashierUrl: response.data.data.cashierUrl
+                    }
+                };
+            } else {
+                logger.error('[OPay] API returned error code:', response.data.code);
+                throw new Error(response.data.message || 'OPay initialization failed');
             }
-        };
+        } catch (error: any) {
+            logger.error('[OPay] HTTP Request failed', error);
+            throw new Error(`OPay initialization failed: ${error.message}`);
+        }
     }
 
 
@@ -167,7 +200,7 @@ class OpayService {
      * Query cashier status endpoint
      */
     async verifyPayment(reference: string, orderNo?: string): Promise<OpayVerificationResponse> {
-        console.log('🔍 [OPay] Verifying payment:', { reference, orderNo });
+        logger.debug('[OPay] Verifying payment:', reference);
 
         const payload = {
             publicKey: this.publicKey,
@@ -191,18 +224,17 @@ class OpayService {
             );
 
             if (response.data.code === '00000') {
-                console.log('✅ [OPay] Payment verification successful:', {
-                    reference: response.data.data.reference,
+                logger.transaction('OPay payment verified', reference, {
                     status: response.data.data.status,
                     amount: response.data.data.amount.total / 100,
                 });
                 return response.data;
             } else {
-                console.error('❌ [OPay] Payment verification failed:', response.data.message);
+                logger.error('[OPay] Payment verification failed', response.data.message);
                 throw new Error(response.data.message || 'OPay payment verification failed');
             }
         } catch (error: any) {
-            console.error('❌ [OPay] Payment verification error:', error.response?.data || error.message);
+            logger.error('[OPay] Payment verification error', error);
             throw new Error(`OPay payment verification failed: ${error.response?.data?.message || error.message}`);
         }
     }
@@ -219,7 +251,7 @@ class OpayService {
 
             return signature === expectedSignature;
         } catch (error) {
-            console.error('❌ [OPay] Webhook signature validation error:', error);
+            logger.error('[OPay] Webhook signature validation error', error);
             return false;
         }
     }

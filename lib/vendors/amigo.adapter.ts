@@ -63,8 +63,9 @@ interface AmigoPurchaseResponse {
 /**
  * Amigo Network Mapping
  * Maps our NetworkType to Amigo's network_id
+ * Only mobile networks are supported by Amigo
  */
-const AMIGO_NETWORK_MAP: Record<NetworkType, number> = {
+const AMIGO_NETWORK_MAP: Partial<Record<NetworkType, number>> = {
   MTN: 1,
   GLO: 2,
   AIRTEL: 4,

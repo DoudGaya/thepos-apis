@@ -1,0 +1,198 @@
+[dotenv@17.2.3] injecting env (41) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+--- Listing VTpass Available Services ---
+[VTPass] Initialized with SANDBOX environment
+
+--- 1. Service Categories ---
+Categories: [
+  {
+    "identifier": "airtime",
+    "name": "Airtime Recharge"
+  },
+  {
+    "identifier": "data",
+    "name": "Data Services"
+  },
+  {
+    "identifier": "tv-subscription",
+    "name": "TV Subscription"
+  },
+  {
+    "identifier": "electricity-bill",
+    "name": "Electricity Bill"
+  },
+  {
+    "identifier": "education",
+    "name": "Education"
+  },
+  {
+    "identifier": "other-services",
+    "name": "Other Merchants/Services"
+  },
+  {
+    "identifier": "insurance",
+    "name": "Insurance"
+  }
+]
+
+--- 2. Services for First Category ---
+Services: [
+  {
+    "serviceID": "airtel",
+    "name": "Airtel Airtime VTU",
+    "minimium_amount": "50",
+    "maximum_amount": "50000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Airtel-Airtime-VTU.jpg"
+  },
+  {
+    "serviceID": "mtn",
+    "name": "MTN Airtime VTU",
+    "minimium_amount": "5",
+    "maximum_amount": "200000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/MTN-Airtime-VTU.jpg"
+  },
+  {
+    "serviceID": "glo",
+    "name": "GLO Airtime VTU",
+    "minimium_amount": "10",
+    "maximum_amount": "100000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Airtime.jpg"
+  },
+  {
+    "serviceID": "etisalat",
+    "name": "9mobile Airtime VTU",
+    "minimium_amount": "5",
+    "maximum_amount": "50000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/9mobile-Airtime.jpg"
+  },
+  {
+    "serviceID": "foreign-airtime",
+    "name": "International Airtime",
+    "minimium_amount": "1",
+    "maximum_amount": "200000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Foreign-Airtime.jpg"
+  }
+]
+
+--- 3. Checking Airtime/Data Specifically ---
+Airtime Services: [
+  {
+    "serviceID": "airtel",
+    "name": "Airtel Airtime VTU",
+    "minimium_amount": "50",
+    "maximum_amount": "50000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Airtel-Airtime-VTU.jpg"
+  },
+  {
+    "serviceID": "mtn",
+    "name": "MTN Airtime VTU",
+    "minimium_amount": "5",
+    "maximum_amount": "200000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/MTN-Airtime-VTU.jpg"
+  },
+  {
+    "serviceID": "glo",
+    "name": "GLO Airtime VTU",
+    "minimium_amount": "10",
+    "maximum_amount": "100000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Airtime.jpg"
+  },
+  {
+    "serviceID": "etisalat",
+    "name": "9mobile Airtime VTU",
+    "minimium_amount": "5",
+    "maximum_amount": "50000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/9mobile-Airtime.jpg"
+  },
+  {
+    "serviceID": "foreign-airtime",
+    "name": "International Airtime",
+    "minimium_amount": "1",
+    "maximum_amount": "200000",
+    "convinience_fee": "0 %",
+    "product_type": "flexible",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Foreign-Airtime.jpg"
+  }
+]
+Data Services: [
+  {
+    "serviceID": "airtel-data",
+    "name": "Airtel Data",
+    "minimium_amount": "1",
+    "maximum_amount": "1000000",
+    "convinience_fee": "0 %",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Airtel-Data.jpg"
+  },
+  {
+    "serviceID": "mtn-data",
+    "name": "MTN Data",
+    "minimium_amount": "1",
+    "maximum_amount": "1000000",
+    "convinience_fee": "0 %",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/MTN-Data.jpg"
+  },
+  {
+    "serviceID": "glo-data",
+    "name": "GLO Data",
+    "minimium_amount": "1",
+    "maximum_amount": "200000",
+    "convinience_fee": "0 %",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Data.jpg"
+  },
+  {
+    "serviceID": "etisalat-data",
+    "name": "9mobile Data",
+    "minimium_amount": "1",
+    "maximum_amount": "1000000",
+    "convinience_fee": "0 %",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/9mobile-Data.jpg"
+  },
+  {
+    "serviceID": "smile-direct",
+    "name": "Smile Payment",
+    "minimium_amount": "100",
+    "maximum_amount": "150000",
+    "convinience_fee": "N0",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Smile-Payment.jpg"
+  },
+  {
+    "serviceID": "spectranet",
+    "name": "Spectranet Internet Data",
+    "minimium_amount": "1",
+    "maximum_amount": "100000",
+    "convinience_fee": "N0",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/Spectranet.jpg"
+  },
+  {
+    "serviceID": "glo-sme-data",
+    "name": "GLO Data (SME)",
+    "minimium_amount": "1",
+    "maximum_amount": "1000000",
+    "convinience_fee": "0 %",
+    "product_type": "fix",
+    "image": "https://sandbox.vtpass.com/resources/products/200X200/GLO-Data-(SME).jpg"
+  }
+]

@@ -19,6 +19,19 @@ export class VendorService {
   private adapterCache: Map<string, VendorAdapter> = new Map()
 
   /**
+   * Clear the adapter cache (useful when credentials change)
+   */
+  clearCache(adapterId?: string) {
+    if (adapterId) {
+      this.adapterCache.delete(adapterId)
+      console.log(`[VendorService] Cleared cache for ${adapterId}`)
+    } else {
+      this.adapterCache.clear()
+      console.log('[VendorService] Cleared all adapter cache')
+    }
+  }
+
+  /**
    * Get or instantiate an adapter by ID
    */
   private async getAdapter(adapterId: string): Promise<VendorAdapter> {
@@ -39,10 +52,77 @@ export class VendorService {
       throw new Error(`Adapter class for ${adapterId} not found in registry`)
     }
 
-    // Instantiate with credentials from DB
-    const adapter = new AdapterClass(config.credentials)
+    // Build credentials - merge database config with environment overrides
+    const credentials = this.buildCredentials(adapterId, config.credentials)
+
+    // Instantiate with merged credentials
+    const adapter = new AdapterClass(credentials)
     this.adapterCache.set(adapterId, adapter)
     return adapter
+  }
+
+  /**
+   * Build credentials from database and environment variables
+   * Environment variables take precedence for sensitive data
+   */
+  private buildCredentials(adapterId: string, dbCredentials: any): any {
+    console.log(`[VendorService] Building credentials for ${adapterId}`)
+    
+    // For VTPASS, load from environment variables and ensure production mode
+    if (adapterId === 'VTPASS') {
+      const useSandbox = process.env.VTPASS_USE_SANDBOX === 'true'
+      const credentials = {
+        apiKey: process.env.VTPASS_API_KEY || dbCredentials?.apiKey,
+        publicKey: process.env.VTPASS_PUBLIC_KEY || dbCredentials?.publicKey,
+        secretKey: process.env.VTPASS_SECRET_KEY || dbCredentials?.secretKey,
+        useSandbox, // Default to false (production) if not set
+      }
+      console.log(`[VendorService] VTPASS - useSandbox: ${useSandbox}, env: "${process.env.VTPASS_USE_SANDBOX}"`)
+      return credentials
+    }
+
+    // For AMIGO
+    if (adapterId === 'AMIGO') {
+      return {
+        apiToken: process.env.AMIGO_API_TOKEN || dbCredentials?.apiToken,
+        baseUrl: process.env.AMIGO_BASE_URL || dbCredentials?.baseUrl || 'https://amigo.ng/api',
+      }
+    }
+
+    // For SUBANDGAIN
+    if (adapterId === 'SUBANDGAIN') {
+      return {
+        username: process.env.SUBANDGAIN_USERNAME || dbCredentials?.username,
+        apiKey: process.env.SUBANDGAIN_API_KEY || dbCredentials?.apiKey,
+      }
+    }
+
+    // For VTU_NG
+    if (adapterId === 'VTU_NG') {
+      return {
+        username: process.env.VTU_NG_USERNAME || dbCredentials?.username,
+        password: process.env.VTU_NG_PASSWORD || dbCredentials?.password,
+      }
+    }
+
+    // For EBILLS
+    if (adapterId === 'EBILLS') {
+      return {
+        username: process.env.EBILLS_USERNAME || dbCredentials?.username,
+        password: process.env.EBILLS_PASSWORD || dbCredentials?.password,
+      }
+    }
+
+    // For CLUBKONNECT
+    if (adapterId === 'CLUBKONNECT') {
+      return {
+        userId: process.env.CLUBKONNECT_USER_ID || dbCredentials?.userId,
+        apiKey: process.env.CLUBKONNECT_API_KEY || dbCredentials?.apiKey,
+      }
+    }
+
+    // For other vendors, use database credentials as-is
+    return dbCredentials || {}
   }
 
   /**

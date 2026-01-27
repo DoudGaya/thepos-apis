@@ -1,0 +1,6 @@
+[dotenv@17.2.3] injecting env (41) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+--- Testing Secret Key Header ---
+Secret Key Result: 028 PRODUCT IS NOT WHITELISTED ON YOUR ACCOUNT
+
+--- Testing Public Key Header ---
+Public Key Error: { code: '087', message: 'INVALID CREDENTIALS' }

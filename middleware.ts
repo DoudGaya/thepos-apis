@@ -132,7 +132,8 @@ export async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/api/debug/') ||
       request.nextUrl.pathname.startsWith('/api/test/') ||
       request.nextUrl.pathname === '/api/data/networks' ||
-      request.nextUrl.pathname === '/api/health'
+      request.nextUrl.pathname === '/api/health' ||
+      request.nextUrl.pathname === '/api/pricing'
     ) {
       return response
     }

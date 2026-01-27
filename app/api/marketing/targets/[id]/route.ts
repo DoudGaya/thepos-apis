@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/nextauth';
 import { targetService } from '@/lib/services/TargetService';
 import { Role } from '@prisma/client';
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== Role.ADMIN) {
@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     try {
-        const { id } = params;
+        const { id } = await params;
         const data = await req.json();
 
         const updated = await targetService.updateTarget(id, data);
@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== Role.ADMIN) {
@@ -31,7 +31,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     try {
-        const { id } = params;
+        const { id } = await params;
         // Soft delete by setting isActive to false, or actual delete?
         // For now, let's just toggle active status via PUT, but if DELETE is called, maybe hard delete?
         // Let's implement soft delete / archive.

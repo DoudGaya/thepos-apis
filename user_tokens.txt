@@ -1,0 +1,19 @@
+Total users in DB: 3
+
+User List:
+----------------------------------------------------
+ID: cmjhjunr10000my04cavfn8fd
+Email: doudgaya@gmail.com
+Token: MISSING
+Created: Mon Dec 22 2025 20:29:02 GMT+0100 (West Africa Standard Time)
+----------------------------------------------------
+ID: cmingcpae0000myisqb1mdh5b
+Email: adaag.ad@gmail.com
+Token: MISSING
+Created: Mon Dec 01 2025 18:58:00 GMT+0100 (West Africa Standard Time)
+----------------------------------------------------
+ID: cmip4z2mi0000myiswesc1bf3
+Email: md@stablebricks.com
+Token: MISSING
+Created: Tue Dec 02 2025 23:15:01 GMT+0100 (West Africa Standard Time)
+----------------------------------------------------

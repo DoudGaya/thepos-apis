@@ -58,9 +58,7 @@ export const POST = apiHandler(async (request: Request) => {
         throw new BadRequestError('OPay payment is not configured');
       }
 
-      console.log('💰 [Fund] Original amount:', amount, 'Type:', typeof amount);
       const amountInKobo = Math.round(amount * 100);
-      console.log('💰 [Fund] Amount in kobo:', amountInKobo);
 
       // Fetch full user details from database to get phone number
       const dbUser = await prisma.user.findUnique({
@@ -84,23 +82,15 @@ export const POST = apiHandler(async (request: Request) => {
           userName: `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || dbUser.email.split('@')[0],
           userMobile: dbUser.phone || '',
         },
-        // Fix: Use NEXTAUTH_URL which is reliable in this setup, or fallback to localhost
-        callbackUrl: `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000'}/api/webhooks/opay`,
-        returnUrl: `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000'}/wallet`,
+        // Production URL for OPay callback
+        callbackUrl: `${process.env.NEXTAUTH_URL || 'https://pay.nillar.com'}/api/webhooks/opay`,
+        returnUrl: `${process.env.NEXTAUTH_URL || 'https://pay.nillar.com'}/wallet`,
       };
-
-      console.log('💳 [Fund] OPay init params:', {
-        merchantId: process.env.OPAY_MERCHANT_ID, // Log this to verify environment variable
-        amount: opayPaymentData.amount,
-        callbackUrl: opayPaymentData.callbackUrl
-      });
-      console.log('💳 [Fund] OPay payment data:', JSON.stringify(opayPaymentData, null, 2));
 
       const paymentResponse = await opayService.initializePayment(opayPaymentData);
 
       // Check for SDK params (Native Flow)
       if (paymentResponse.data?.payParams) {
-        console.log('✅ [Fund] OPay SDK params generated');
 
         await prisma.transaction.update({
           where: { id: transaction.id },

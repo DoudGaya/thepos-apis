@@ -148,28 +148,33 @@ function mapTransactionStatus(status: string): 'pending' | 'completed' | 'failed
 
 function getTransactionDescription(transaction: any): string {
   const details = transaction.details || {};
+  const metadata = details.metadata || {};
 
   // Use the stored description if available and robust
   if (details.description) {
     return details.description;
   }
 
+  // Try to get network from transaction top-level first, then details, then metadata
+  const network = transaction.network || details.network || metadata.network || 'Unknown network';
+  const biller = transaction.vendorName || details.biller || metadata.biller || details.disco || metadata.disco || details.provider || metadata.provider || 'Bill';
+
   // Fallback generation
   switch (transaction.type) {
     case 'WALLET_FUNDING':
-      return `Wallet funding - ${details.paymentMethod || 'Card'}`;
+      return `Wallet funding - ${details.paymentMethod || metadata.paymentMethod || 'Card'}`;
     case 'DATA_PURCHASE':
     case 'DATA':
-      return `Data purchase - ${details.network || 'Unknown network'}`;
+      return `Data purchase - ${network}`;
     case 'AIRTIME_PURCHASE':
     case 'AIRTIME':
-      return `Airtime purchase - ${details.network || 'Unknown network'}`;
+      return `Airtime purchase - ${network}`;
     case 'BILL_PAYMENT':
     case 'ELECTRICITY':
-      return `Electricity - ${details.biller || 'Bill'}`;
+      return `Electricity - ${biller}`;
     case 'CABLE':
     case 'CABLE_TV':
-      return `Cable TV - ${details.biller || 'Subscription'}`;
+      return `Cable TV - ${biller}`;
     case 'REFERRAL_BONUS':
       return 'Referral bonus';
     case 'CASHBACK':
@@ -187,15 +192,18 @@ function getTransactionDescription(transaction: any): string {
 
 function getRecipient(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.recipient || details.phoneNumber || details.accountNumber;
+  const metadata = details.metadata || {};
+  return details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
 }
 
 function getNetwork(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.network;
+  const metadata = details.metadata || {};
+  return transaction.network || details.network || metadata.network;
 }
 
 function getBiller(transaction: any): string | undefined {
   const details = transaction.details || {};
-  return details.biller;
+  const metadata = details.metadata || {};
+  return details.biller || metadata.biller || details.disco || metadata.disco || details.provider || metadata.provider;
 }

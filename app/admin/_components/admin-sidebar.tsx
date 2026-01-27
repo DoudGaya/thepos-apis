@@ -51,7 +51,8 @@ const navigation = [
   { name: 'Vendors', href: '/admin/vendors', icon: Server },
   { name: 'Service Routing', href: '/admin/routing', icon: ArrowLeftRight },
   { name: 'Pricing & Plans', href: '/admin/pricing', icon: Tags },
-  { name: 'Sales Targets', href: '/admin/targets', icon: Target }, // Added
+  { name: 'Sales Targets', href: '/admin/targets', icon: Target },
+  { name: 'Push Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
@@ -158,16 +159,21 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
               className="data-[slot=sidebar-menu-button]:!p-2 hover:bg-transparent"
             >
               <Link href="/admin" className="flex items-center gap-2">
-                <div className="relative h-8 w-8 rounded-lg overflow-hidden">
+                <div className="relative h-10 w-32">
                   <Image
-                    src="/assets/images/icon.png"
+                    src="/assets/nillarpay-black.png"
                     alt="NillarPay"
                     fill
-                    className="object-cover"
+                    className="object-contain dark:hidden"
+                    priority
                   />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-bold text-lg">NillarPay</span>
+                  <Image
+                    src="/assets/nillarpay-white.png"
+                    alt="NillarPay"
+                    fill
+                    className="object-contain hidden dark:block"
+                    priority
+                  />
                 </div>
               </Link>
             </SidebarMenuButton>

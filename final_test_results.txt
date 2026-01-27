@@ -1,0 +1,533 @@
+[dotenv@17.2.3] injecting env (41) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+--- VTPass Sandbox Comprehensive Testing ---
+[VTPass] Initialized with SANDBOX environment
+Adapter initialized for SANDBOX.
+
+SCENARIO 1a: Successful Airtime (MTN - 08011111111)
+[VTPass] Purchase request: {
+  serviceID: 'mtn',
+  requestId: '202601121701a9bx2y1x',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '000',
+  content: {
+    transactions: {
+      status: 'delivered',
+      product_name: 'MTN Airtime VTU',
+      unique_element: '08011111111',
+      unit_price: '50',
+      quantity: 1,
+      service_verification: null,
+      channel: 'api',
+      commission: 1.7500000000000002,
+      total_amount: 48.25,
+      discount: null,
+      type: 'Airtime Recharge',
+      email: 'adaag.ad@gmail.com',
+      phone: '08062249834',
+      name: null,
+      convinience_fee: 0,
+      amount: '50',
+      platform: 'api',
+      method: 'api',
+      transactionId: '17682337158582741482536197',
+      commission_details: [Object]
+    }
+  },
+  response_description: 'TRANSACTION SUCCESSFUL',
+  requestId: '202601121701a9bx2y1x',
+  amount: 50,
+  transaction_date: '2026-01-12T16:01:55.000000Z',
+  purchased_code: ''
+}
+Result: {
+  "success": true,
+  "status": "COMPLETED",
+  "orderId": "test_mtn_1768233714935",
+  "vendorReference": "202601121701a9bx2y1x",
+  "vendorName": "VTPASS",
+  "costPrice": 48.25,
+  "message": "TRANSACTION SUCCESSFUL",
+  "metadata": {
+    "requestId": "202601121701a9bx2y1x",
+    "transactionId": "17682337158582741482536197",
+    "productName": "MTN Airtime VTU",
+    "token": "",
+    "transactions": {
+      "status": "delivered",
+      "product_name": "MTN Airtime VTU",
+      "unique_element": "08011111111",
+      "unit_price": "50",
+      "quantity": 1,
+      "service_verification": null,
+      "channel": "api",
+      "commission": 1.7500000000000002,
+      "total_amount": 48.25,
+      "discount": null,
+      "type": "Airtime Recharge",
+      "email": "adaag.ad@gmail.com",
+      "phone": "08062249834",
+      "name": null,
+      "convinience_fee": 0,
+      "amount": "50",
+      "platform": "api",
+      "method": "api",
+      "transactionId": "17682337158582741482536197",
+      "commission_details": {
+        "amount": 1.7500000000000002,
+        "rate": "3.50",
+        "rate_type": "percent",
+        "computation_type": "default"
+      }
+    }
+  }
+}
+
+SCENARIO 1b: Successful Airtime (GLO - 08011111111)
+[VTPass] Purchase request: {
+  serviceID: 'glo',
+  requestId: '202601121702pugughnx',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '019',
+  response_description: 'LIKELY DUPLICATE TRANSACTION',
+  content: {
+    errors: 'Seems like duplicate transacton. allow a space of 15 seconds before using the same recepient'
+  }
+}
+Result: {
+  "success": false,
+  "status": "FAILED",
+  "orderId": "test_glo_1768233727485",
+  "vendorReference": "202601121702pugughnx",
+  "vendorName": "VTPASS",
+  "costPrice": 50,
+  "message": "LIKELY DUPLICATE TRANSACTION",
+  "metadata": {
+    "requestId": "202601121702pugughnx",
+    "errors": "Seems like duplicate transacton. allow a space of 15 seconds before using the same recepient"
+  }
+}
+
+SCENARIO 1c: Successful Airtime (AIRTEL - 08011111111)
+[VTPass] Purchase request: {
+  serviceID: 'airtel',
+  requestId: '2026011217022h8etl1s',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '019',
+  response_description: 'LIKELY DUPLICATE TRANSACTION',
+  content: {
+    errors: 'Seems like duplicate transacton. allow a space of 15 seconds before using the same recepient'
+  }
+}
+Result: {
+  "success": false,
+  "status": "FAILED",
+  "orderId": "test_airtel_1768233727941",
+  "vendorReference": "2026011217022h8etl1s",
+  "vendorName": "VTPASS",
+  "costPrice": 50,
+  "message": "LIKELY DUPLICATE TRANSACTION",
+  "metadata": {
+    "requestId": "2026011217022h8etl1s",
+    "errors": "Seems like duplicate transacton. allow a space of 15 seconds before using the same recepient"
+  }
+}
+
+SCENARIO 2: Pending Airtime (201000000000)
+[VTPass] Purchase request: {
+  serviceID: 'mtn',
+  requestId: '202601121702krddhv2x',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '000',
+  content: {
+    transactions: {
+      status: 'pending',
+      product_name: 'MTN Airtime VTU',
+      unique_element: '201000000000',
+      unit_price: '50',
+      quantity: 1,
+      service_verification: null,
+      channel: 'api',
+      commission: 1.7500000000000002,
+      total_amount: 48.25,
+      discount: null,
+      type: 'Airtime Recharge',
+      email: 'adaag.ad@gmail.com',
+      phone: '08062249834',
+      name: null,
+      convinience_fee: 0,
+      amount: '50',
+      platform: 'api',
+      method: 'api',
+      transactionId: '17682337283948806935459134',
+      commission_details: [Object]
+    }
+  },
+  response_description: 'TRANSACTION PROCESSING - PENDING',
+  requestId: '202601121702krddhv2x',
+  amount: 50,
+  transaction_date: '2026-01-12T16:02:08.000000Z',
+  purchased_code: ''
+}
+Result: {
+  "success": false,
+  "status": "PENDING",
+  "orderId": "test_pending_1768233728282",
+  "vendorReference": "202601121702krddhv2x",
+  "vendorName": "VTPASS",
+  "costPrice": 48.25,
+  "message": "TRANSACTION PROCESSING - PENDING",
+  "metadata": {
+    "requestId": "202601121702krddhv2x",
+    "transactionId": "17682337283948806935459134",
+    "productName": "MTN Airtime VTU",
+    "token": "",
+    "transactions": {
+      "status": "pending",
+      "product_name": "MTN Airtime VTU",
+      "unique_element": "201000000000",
+      "unit_price": "50",
+      "quantity": 1,
+      "service_verification": null,
+      "channel": "api",
+      "commission": 1.7500000000000002,
+      "total_amount": 48.25,
+      "discount": null,
+      "type": "Airtime Recharge",
+      "email": "adaag.ad@gmail.com",
+      "phone": "08062249834",
+      "name": null,
+      "convinience_fee": 0,
+      "amount": "50",
+      "platform": "api",
+      "method": "api",
+      "transactionId": "17682337283948806935459134",
+      "commission_details": {
+        "amount": 1.7500000000000002,
+        "rate": "3.50",
+        "rate_type": "percent",
+        "computation_type": "default"
+      }
+    }
+  }
+}
+
+SCENARIO 3: Failed Airtime (99999999999)
+[VTPass] Purchase request: {
+  serviceID: 'mtn',
+  requestId: '202601121702um53pbs4',
+  service: 'AIRTIME'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '016',
+  content: {
+    transactions: {
+      status: 'failed',
+      product_name: 'MTN Airtime VTU',
+      unique_element: '99999999999',
+      unit_price: '50',
+      quantity: 1,
+      service_verification: null,
+      channel: 'api',
+      commission: 1.7500000000000002,
+      total_amount: 48.25,
+      discount: null,
+      type: 'Airtime Recharge',
+      email: 'adaag.ad@gmail.com',
+      phone: '08062249834',
+      name: null,
+      convinience_fee: 0,
+      amount: '50',
+      platform: 'api',
+      method: 'api',
+      transactionId: '17682337448621357396495408',
+      commission_details: [Object]
+    }
+  },
+  response_description: 'TRANSACTION FAILED',
+  requestId: '202601121702um53pbs4',
+  amount: 50,
+  transaction_date: '2026-01-12T16:02:24.000000Z',
+  purchased_code: ''
+}
+Result: {
+  "success": false,
+  "status": "FAILED",
+  "orderId": "test_failed_1768233744757",
+  "vendorReference": "202601121702um53pbs4",
+  "vendorName": "VTPASS",
+  "costPrice": 48.25,
+  "message": "TRANSACTION FAILED",
+  "metadata": {
+    "requestId": "202601121702um53pbs4",
+    "transactionId": "17682337448621357396495408",
+    "productName": "MTN Airtime VTU",
+    "token": "",
+    "transactions": {
+      "status": "failed",
+      "product_name": "MTN Airtime VTU",
+      "unique_element": "99999999999",
+      "unit_price": "50",
+      "quantity": 1,
+      "service_verification": null,
+      "channel": "api",
+      "commission": 1.7500000000000002,
+      "total_amount": 48.25,
+      "discount": null,
+      "type": "Airtime Recharge",
+      "email": "adaag.ad@gmail.com",
+      "phone": "08062249834",
+      "name": null,
+      "convinience_fee": 0,
+      "amount": "50",
+      "platform": "api",
+      "method": "api",
+      "transactionId": "17682337448621357396495408",
+      "commission_details": {
+        "amount": 1.7500000000000002,
+        "rate": "3.50",
+        "rate_type": "percent",
+        "computation_type": "default"
+      }
+    }
+  }
+}
+
+SCENARIO 4: Data Purchase
+Fetched 37 plans.
+Sample Plan: {
+  id: 'mtn-10mb-100',
+  name: 'N100 100MB - 24 hrs',
+  network: 'MTN',
+  price: 100,
+  faceValue: 100,
+  validity: '',
+  isAvailable: true,
+  metadata: { fixedPrice: 'Yes', variationCode: 'mtn-10mb-100' }
+}
+[VTPass] Purchase request: {
+  serviceID: 'mtn-data',
+  requestId: '202601121702urdhldve',
+  service: 'DATA'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '000',
+  content: {
+    transactions: {
+      status: 'delivered',
+      product_name: 'MTN Data',
+      unique_element: '08011111111',
+      unit_price: '100',
+      quantity: 1,
+      service_verification: null,
+      channel: 'api',
+      commission: 4,
+      total_amount: 96,
+      discount: null,
+      type: 'Data Services',
+      email: 'adaag.ad@gmail.com',
+      phone: '08062249834',
+      name: null,
+      convinience_fee: 0,
+      amount: '100',
+      platform: 'api',
+      method: 'api',
+      transactionId: '17682337620301833822451453',
+      commission_details: [Object]
+    }
+  },
+  response_description: 'TRANSACTION SUCCESSFUL',
+  requestId: '202601121702urdhldve',
+  amount: 100,
+  transaction_date: '2026-01-12T16:02:42.000000Z',
+  purchased_code: ''
+}
+Result: {
+  "success": true,
+  "status": "COMPLETED",
+  "orderId": "test_data_1768233761841",
+  "vendorReference": "202601121702urdhldve",
+  "vendorName": "VTPASS",
+  "costPrice": 96,
+  "message": "TRANSACTION SUCCESSFUL",
+  "metadata": {
+    "requestId": "202601121702urdhldve",
+    "transactionId": "17682337620301833822451453",
+    "productName": "MTN Data",
+    "token": "",
+    "transactions": {
+      "status": "delivered",
+      "product_name": "MTN Data",
+      "unique_element": "08011111111",
+      "unit_price": "100",
+      "quantity": 1,
+      "service_verification": null,
+      "channel": "api",
+      "commission": 4,
+      "total_amount": 96,
+      "discount": null,
+      "type": "Data Services",
+      "email": "adaag.ad@gmail.com",
+      "phone": "08062249834",
+      "name": null,
+      "convinience_fee": 0,
+      "amount": "100",
+      "platform": "api",
+      "method": "api",
+      "transactionId": "17682337620301833822451453",
+      "commission_details": {
+        "amount": 4,
+        "rate": "4.00",
+        "rate_type": "percent",
+        "computation_type": "default"
+      }
+    }
+  }
+}
+
+SCENARIO 5: Electricity
+Verifying Meter...
+Verify Result: {
+  "isValid": true,
+  "customerName": "TESTMETER1",
+  "address": "ABULE  EGBA BU ABULE",
+  "metadata": {
+    "Customer_Name": "TESTMETER1",
+    "Address": "ABULE  EGBA BU ABULE",
+    "Meter_Number": "68100017372",
+    "Customer_Arrears": "",
+    "Minimum_Amount": "",
+    "Min_Purchase_Amount": "",
+    "Can_Vend": "yes",
+    "Business_Unit": "",
+    "Customer_Account_Type": "PRIME",
+    "Meter_Type": "PREPAID",
+    "WrongBillersCode": false,
+    "commission_details": {
+      "amount": null,
+      "rate": "1.50",
+      "rate_type": "percent",
+      "computation_type": "default"
+    }
+  }
+}
+Purchasing Electricity...
+[VTPass] Purchase request: {
+  serviceID: 'ikeja-electric',
+  requestId: '2026011217027l0o4e1e',
+  service: 'ELECTRICITY'
+}
+[VTPass] Using API Key: da7a...
+[VTPass] Purchase response: {
+  code: '000',
+  content: {
+    transactions: {
+      status: 'delivered',
+      product_name: 'Ikeja Electric Payment - IKEDC',
+      unique_element: '1111111111111',
+      unit_price: '1000',
+      quantity: 1,
+      service_verification: null,
+      channel: 'api',
+      commission: 15,
+      total_amount: 985,
+      discount: null,
+      type: 'Electricity Bill',
+      email: 'adaag.ad@gmail.com',
+      phone: '08062249834',
+      name: null,
+      convinience_fee: 0,
+      amount: '1000',
+      platform: 'api',
+      method: 'api',
+      transactionId: '17682337740260548321150621',
+      commission_details: [Object]
+    }
+  },
+  response_description: 'TRANSACTION SUCCESSFUL',
+  requestId: '2026011217027l0o4e1e',
+  amount: 1000,
+  transaction_date: '2026-01-12T16:02:54.000000Z',
+  purchased_code: 'Token : 26362054405982757802',
+  customerName: 'N/A',
+  customerAddress: 'N/A',
+  meterNumber: 'N/A',
+  token: 'Token : 26362054405982757802',
+  tokenAmount: 1860.47,
+  exchangeReference: '40532461',
+  resetToken: 'N/A',
+  configureToken: 'N/A',
+  units: '79.9 kWh',
+  fixChargeAmount: 0,
+  tariff: 'R2 SINGLE PHASE RESIDENTIAL',
+  taxAmount: 0,
+  debtAmount: 0,
+  kct1: 'N/A',
+  kct2: 'N/A',
+  penalty: 0,
+  costOfUnit: 0,
+  announcement: 'N/A',
+  meterCost: 0,
+  currentCharge: 0,
+  lossOfRevenue: 0,
+  tariffBaseRate: 0,
+  installationFee: 0,
+  reconnectionFee: 0,
+  meterServiceCharge: 0,
+  administrativeCharge: 0
+}
+Purchase Result: {
+  "success": true,
+  "status": "COMPLETED",
+  "orderId": "test_electric_1768233773881",
+  "vendorReference": "2026011217027l0o4e1e",
+  "vendorName": "VTPASS",
+  "costPrice": 985,
+  "message": "TRANSACTION SUCCESSFUL",
+  "metadata": {
+    "requestId": "2026011217027l0o4e1e",
+    "transactionId": "17682337740260548321150621",
+    "productName": "Ikeja Electric Payment - IKEDC",
+    "token": "Token : 26362054405982757802",
+    "transactions": {
+      "status": "delivered",
+      "product_name": "Ikeja Electric Payment - IKEDC",
+      "unique_element": "1111111111111",
+      "unit_price": "1000",
+      "quantity": 1,
+      "service_verification": null,
+      "channel": "api",
+      "commission": 15,
+      "total_amount": 985,
+      "discount": null,
+      "type": "Electricity Bill",
+      "email": "adaag.ad@gmail.com",
+      "phone": "08062249834",
+      "name": null,
+      "convinience_fee": 0,
+      "amount": "1000",
+      "platform": "api",
+      "method": "api",
+      "transactionId": "17682337740260548321150621",
+      "commission_details": {
+        "amount": 15,
+        "rate": "1.50",
+        "rate_type": "percent",
+        "computation_type": "default"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+[dotenv@17.2.3] injecting env (41) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[VTPass] Initialized with SANDBOX environment
+
+CATEGORY: Airtime Recharge (airtime)
+- Airtel Airtime VTU: airtel
+- MTN Airtime VTU: mtn
+- GLO Airtime VTU: glo
+- 9mobile Airtime VTU: etisalat
+- International Airtime: foreign-airtime
+
+CATEGORY: Data Services (data)
+- Airtel Data: airtel-data
+- MTN Data: mtn-data
+- GLO Data: glo-data
+- 9mobile Data: etisalat-data
+- Smile Payment: smile-direct
+- Spectranet Internet Data: spectranet
+- GLO Data (SME): glo-sme-data
+
+CATEGORY: TV Subscription (tv-subscription)
+- DSTV Subscription: dstv
+- Gotv Payment: gotv
+- Startimes Subscription: startimes
+- ShowMax: showmax
+
+CATEGORY: Electricity Bill (electricity-bill)
+- Ikeja Electric Payment - IKEDC: ikeja-electric
+- Eko Electric Payment - EKEDC: eko-electric
+- Abuja Electricity Distribution Company- AEDC: abuja-electric
+- KEDCO - Kano Electric: kano-electric
+- PHED - Port Harcourt Electric: portharcourt-electric
+- Jos Electric - JED: jos-electric
+- Kaduna Electric - KAEDCO: kaduna-electric
+- Enugu Electric - EEDC: enugu-electric
+- IBEDC - Ibadan Electricity Distribution Company: ibadan-electric
+- Benin Electricity - BEDC: benin-electric
+- Aba Electric Payment - ABEDC: aba-electric
+- Yola Electric Disco Payment - YEDC: yola-electric
+
+CATEGORY: Education (education)
+- WAEC Result Checker PIN: waec
+- WAEC Registration PIN: waec-registration
+- JAMB PIN VENDING (UTME & Direct Entry): jamb
+
+CATEGORY: Other Merchants/Services (other-services)
+- SMSclone.com: smsclone
+
+CATEGORY: Insurance (insurance)
+- Third Party Motor Insurance - Universal Insurance: ui-insure

@@ -17,6 +17,7 @@ import { vtuNGAdapter } from './VTUNGAdapter';
 import { prisma } from '../prisma';
 import { targetService } from './TargetService';
 import { referralService } from './ReferralService';
+import { notificationService } from './NotificationService';
 
 export interface DataPurchaseRequest {
   userId: string;
@@ -84,6 +85,7 @@ class PurchaseService {
         type: TransactionType.DATA,
         reference,
         description: `${network} ${planCode} data purchase for ${phoneNumber}`,
+        network,
         metadata: {
           network,
           phoneNumber,
@@ -198,6 +200,7 @@ class PurchaseService {
         type: TransactionType.AIRTIME,
         reference,
         description: `${network} ₦${amount} airtime for ${phoneNumber}`,
+        network,
         metadata: {
           network,
           phoneNumber,
@@ -298,6 +301,15 @@ class PurchaseService {
             },
           },
         });
+
+        // Send Failure Notification
+        await notificationService.notifyUser(
+          userId,
+          'Purchase Failed',
+          `Your purchase failed: ${reason}. A refund has been issued to your wallet.`,
+          'TRANSACTION',
+          { transactionId, type: 'PURCHASE_FAILED', reason }
+        );
       }
     } catch (error) {
       console.error('Error handling purchase failure:', error);
@@ -597,13 +609,27 @@ class PurchaseService {
    * Handle post-purchase actions (Targets, Referrals)
    */
   private async handlePostPurchase(
-    userId: string, 
-    amount: number, 
-    transactionId: string, 
+    userId: string,
+    amount: number,
+    transactionId: string,
     type: TransactionType,
     metadata?: any
   ) {
     try {
+      // Send Push Notification
+      const typeLabel = type === TransactionType.DATA ? 'Data' :
+        type === TransactionType.AIRTIME ? 'Airtime' :
+          type === TransactionType.ELECTRICITY ? 'Electricity' :
+            type === TransactionType.CABLE_TV ? 'Cable TV' : 'Purchase';
+
+      await notificationService.notifyUser(
+        userId,
+        `${typeLabel} Successful`,
+        `Your ${typeLabel.toLowerCase()} purchase of ₦${amount} was successful.`,
+        'TRANSACTION',
+        { transactionId, type: 'PURCHASE_SUCCESS', ...metadata }
+      );
+
       // Update sales targets
       await targetService.updateProgress(userId, type, amount, metadata);
 

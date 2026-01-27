@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
                     nonce: 'nonce', // Optional: validate nonce if used
                 });
                 email = payload.email || '';
-                emailVerified = payload.email_verified === 'true' || payload.email_verified === true;
+                emailVerified = Boolean(payload.email_verified);
                 // Apple only sends name on first sign in, so might be passed in body
                 name = `${firstName || ''} ${lastName || ''}`.trim();
             } catch (error) {

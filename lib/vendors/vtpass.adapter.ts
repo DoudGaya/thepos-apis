@@ -34,6 +34,8 @@ const VTPASS_SERVICE_IDS = {
     GLO: 'glo',
     AIRTEL: 'airtel',
     '9MOBILE': 'etisalat',
+    SMILE: 'smile-direct',
+    FOREIGN: 'foreign-airtime',
   },
   // Data
   DATA: {
@@ -42,12 +44,16 @@ const VTPASS_SERVICE_IDS = {
     AIRTEL: 'airtel-data',
     '9MOBILE': 'etisalat-data',
     SMILE: 'smile-direct',
+    SPECTRANET: 'spectranet',
+    GLO_SME: 'glo-sme-data',
+    '9MOBILE_SME': 'etisalat-sme-data',
   },
   // Cable TV
   CABLE_TV: {
     DSTV: 'dstv',
     GOTV: 'gotv',
     STARTIMES: 'startimes',
+    SHOWMAX: 'showmax',
   },
   // Electricity
   ELECTRICITY: {
@@ -55,13 +61,26 @@ const VTPASS_SERVICE_IDS = {
     'EKO': 'eko-electric',
     'ABUJA': 'abuja-electric',
     'KANO': 'kano-electric',
-    'PORTHARCOURT': 'phed',
+    'PORTHARCOURT': 'portharcourt-electric',
     'JOS': 'jos-electric',
     'IBADAN': 'ibadan-electric',
     'KADUNA': 'kaduna-electric',
     'ENUGU': 'enugu-electric',
     'BENIN': 'benin-electric',
+    'ABA': 'aba-electric',
+    'YOLA': 'yola-electric',
   },
+  // Education
+  EDUCATION: {
+    WAEC_RESULT: 'waec',
+    WAEC_REG: 'waec-registration',
+    JAMB: 'jamb',
+  },
+  // Other Services
+  OTHER: {
+    SMSCLONE: 'smsclone',
+    TERMINAL: 'vtpass-terminal',
+  }
 } as const
 
 // Response codes
@@ -81,20 +100,38 @@ interface VTPassConfig {
  * Timezone: Africa/Lagos (GMT+1)
  */
 function generateRequestId(): string {
-  // Get current time in Africa/Lagos timezone
-  const now = new Date()
-  const lagosTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Lagos' }))
-  
-  const year = lagosTime.getFullYear()
-  const month = String(lagosTime.getMonth() + 1).padStart(2, '0')
-  const day = String(lagosTime.getDate()).padStart(2, '0')
-  const hour = String(lagosTime.getHours()).padStart(2, '0')
-  const minute = String(lagosTime.getMinutes()).padStart(2, '0')
-  
-  const datePrefix = `${year}${month}${day}${hour}${minute}`
-  const randomSuffix = Math.random().toString(36).substring(2, 10)
-  
-  return `${datePrefix}${randomSuffix}`
+  // Use Intl.DateTimeFormat to get components in Africa/Lagos
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  };
+
+  const formatter = new Intl.DateTimeFormat('en-GB', options);
+  const parts = formatter.formatToParts(new Date());
+
+  const partMap: Record<string, string> = {};
+  parts.forEach(part => {
+    if (part.type !== 'literal') {
+      partMap[part.type] = part.value;
+    }
+  });
+
+  // Ensure year is 4 digits and others are 2 digits
+  const year = partMap.year;
+  const month = partMap.month.padStart(2, '0');
+  const day = partMap.day.padStart(2, '0');
+  const hour = partMap.hour.padStart(2, '0');
+  const minute = partMap.minute.padStart(2, '0');
+
+  const datePrefix = `${year}${month}${day}${hour}${minute}`;
+  const randomSuffix = Math.random().toString(36).substring(2, 10);
+
+  return `${datePrefix}${randomSuffix}`;
 }
 
 export class VTPassAdapter implements VendorAdapter {
@@ -108,7 +145,7 @@ export class VTPassAdapter implements VendorAdapter {
     this.apiKey = config.apiKey
     this.publicKey = config.publicKey
     this.secretKey = config.secretKey
-    this.baseURL = config.useSandbox 
+    this.baseURL = config.useSandbox
       ? 'https://sandbox.vtpass.com/api'
       : 'https://vtpass.com/api'
 
@@ -121,6 +158,8 @@ export class VTPassAdapter implements VendorAdapter {
     })
 
     console.log(`[VTPass] Initialized with ${config.useSandbox ? 'SANDBOX' : 'LIVE'} environment`)
+    console.log(`[VTPass] Base URL: ${this.baseURL}`)
+    console.log(`[VTPass] API Key: ${this.apiKey.substring(0, 10)}...`)
   }
 
   getName(): VendorName {
@@ -128,7 +167,7 @@ export class VTPassAdapter implements VendorAdapter {
   }
 
   getSupportedServices(): ServiceType[] {
-    return ['AIRTIME', 'DATA', 'ELECTRICITY', 'CABLE_TV', 'CABLE']
+    return ['AIRTIME', 'DATA', 'ELECTRICITY', 'CABLE_TV', 'CABLE', 'EPINS', 'EDUCATION']
   }
 
   // VTpass uses API keys, no session-based auth needed
@@ -181,6 +220,7 @@ export class VTPassAdapter implements VendorAdapter {
     }
 
     try {
+      console.log(`[VTPass] Fetching balance from: ${this.baseURL}/balance`)
       const response = await retry(
         () => this.client.get('/balance', {
           headers: this.getGetHeaders(),
@@ -189,9 +229,13 @@ export class VTPassAdapter implements VendorAdapter {
       )
 
       const data = response.data
+      console.log(`[VTPass] Balance response:`, JSON.stringify(data, null, 2))
+      
       if (data.code === 1 || data.code === '1') {
+        const balance = parseFloat(data.contents.balance)
+        console.log(`[VTPass] Parsed balance: ₦${balance}`)
         return {
-          balance: parseFloat(data.contents.balance),
+          balance,
           currency: 'NGN',
         }
       }
@@ -204,6 +248,7 @@ export class VTPassAdapter implements VendorAdapter {
       )
     } catch (error: any) {
       if (error instanceof VendorError) throw error
+      console.error(`[VTPass] Balance check error:`, error.message)
       throw new VendorError(
         `VTPass balance check failed: ${error.message}`,
         'VTPASS',
@@ -251,7 +296,7 @@ export class VTPassAdapter implements VendorAdapter {
       }
 
       const variations = data.content?.varations || data.content?.variations || []
-      
+
       return variations.map((v: any) => ({
         id: v.variation_code,
         name: v.name,
@@ -310,7 +355,7 @@ export class VTPassAdapter implements VendorAdapter {
       )
 
       const data = response.data
-      
+
       if (data.code === '000') {
         return {
           isValid: true,
@@ -403,13 +448,35 @@ export class VTPassAdapter implements VendorAdapter {
       requestBody.billersCode = payload.customerId
       requestBody.variation_code = payload.meterType?.toLowerCase() || 'prepaid'
       requestBody.amount = payload.amount
+    } else if (payload.service === 'EDUCATION' || payload.service === 'EPINS') {
+      const examName = (payload.metadata?.examName || 'WAEC').toUpperCase()
+      serviceID = VTPASS_SERVICE_IDS.EDUCATION[examName as keyof typeof VTPASS_SERVICE_IDS.EDUCATION] || 'waec'
+      requestBody.serviceID = serviceID
+      requestBody.variation_code = payload.planId
+      requestBody.amount = payload.amount
+      // Some education services need specific phone or details
+      if (examName === 'JAMB') {
+        requestBody.billersCode = payload.customerId // Profile Code
+      } else {
+        requestBody.billersCode = payload.phone
+      }
     } else {
-      throw new VendorError(
-        `Unsupported service type: ${payload.service}`,
-        'VTPASS',
-        400,
-        null
-      )
+      // Check if it's one of the "OTHER" services
+      const otherKey = (payload.metadata?.otherProvider || '').toUpperCase()
+      serviceID = VTPASS_SERVICE_IDS.OTHER[otherKey as keyof typeof VTPASS_SERVICE_IDS.OTHER]
+
+      if (serviceID) {
+        requestBody.serviceID = serviceID
+        requestBody.amount = payload.amount
+        requestBody.billersCode = payload.customerId || payload.phone
+      } else {
+        throw new VendorError(
+          `Unsupported service type or provider: ${payload.service}`,
+          'VTPASS',
+          400,
+          null
+        )
+      }
     }
 
     console.log(`[VTPass] Purchase request:`, { serviceID, requestId, service: payload.service })
@@ -458,7 +525,7 @@ export class VTPassAdapter implements VendorAdapter {
       }
     } catch (error: any) {
       console.error(`[VTPass] Purchase error:`, error.message)
-      
+
       // For purchase errors, we should return a failed response, not throw
       return {
         success: false,
@@ -494,7 +561,7 @@ export class VTPassAdapter implements VendorAdapter {
 
       let status: VendorTransactionStatus
       const txStatus = data.content?.transactions?.status?.toLowerCase()
-      
+
       if (txStatus === 'delivered' || data.response_description === 'TRANSACTION SUCCESSFUL') {
         status = 'COMPLETED'
       } else if (txStatus === 'pending') {
