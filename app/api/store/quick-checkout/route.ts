@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import paystackService from '@/lib/paystack';
+import opayService from '@/lib/services/OpayService';
 import { purchaseService } from '@/lib/services/PurchaseService';
 import { walletService } from '@/lib/services/WalletService';
 import { TransactionType, TransactionStatus } from '@prisma/client';
@@ -17,6 +18,7 @@ const quickCheckoutSchema = z.object({
     network: z.string().optional(),
     phoneNumber: z.string().min(11), // Recipient phone
     serviceType: z.enum(['DATA', 'AIRTIME']),
+    provider: z.enum(['paystack', 'opay']).optional().default('paystack'),
 });
 
 export const runtime = 'nodejs';
@@ -28,14 +30,26 @@ export async function POST(req: NextRequest) {
 
         console.log('🚀 Quick Checkout Initiated:', data);
 
-        // 1. Verify Paystack Transaction
-        const verification = await paystackService.verifyTransaction(data.reference);
+        // 1. Verify Transaction
+        let verifiedAmount = 0;
+        let verificationData: any;
 
-        if (!verification.status) {
-            return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
+        if (data.provider === 'opay') {
+            const verification = await opayService.verifyPayment(data.reference);
+            if (verification.code !== '00000' || verification.data.status !== 'SUCCESS') {
+                return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
+            }
+            verifiedAmount = verification.data.amount.total / 100;
+            verificationData = verification.data;
+        } else {
+            const verification = await paystackService.verifyTransaction(data.reference);
+            if (!verification.status) {
+                return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
+            }
+            verifiedAmount = verification.data.amount / 100;
+            verificationData = verification.data;
         }
 
-        const verifiedAmount = verification.data.amount / 100; // Convert kobo to Naira
         if (verifiedAmount < data.amount) {
             return NextResponse.json({ error: 'Payment amount mismatch' }, { status: 400 });
         }
@@ -54,7 +68,7 @@ export async function POST(req: NextRequest) {
             user = await prisma.user.create({
                 data: {
                     email: data.email,
-                    phone: body.phone || '', // Ideally passed in body
+                    phone: data.phoneNumber,
                     isVerified: true, // They paid, so we trust them? Or risky? 
                     // Better to fail if no user, but let's assume valid flow for now.
                     referralCode: Math.random().toString(36).substring(7),
@@ -64,7 +78,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Fund Wallet (Credit)
-        // We treat this Paystack payment as a wallet funding
+        // We treat this Paystack/OPay payment as a wallet funding
         const fundRef = `FUND-${Date.now()}-${Math.random().toString(36).substring(7)}`;
         const fundTxPromise = prisma.transaction.create({
             data: {
@@ -74,10 +88,10 @@ export async function POST(req: NextRequest) {
                 status: 'SUCCESS',
                 reference: fundRef,
                 details: {
-                    paymentMethod: 'paystack',
-                    paystackReference: data.reference,
+                    paymentMethod: data.provider,
+                    paymentReference: data.reference,
                     description: 'Quick Checkout Funding',
-                    gatewayResponse: verification.data
+                    gatewayResponse: verificationData
                 }
             }
         });

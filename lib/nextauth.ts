@@ -13,14 +13,15 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
-    // Apple provider requires proper secret generation
-    // See: https://next-auth.js.org/providers/apple
-    ...(process.env.APPLE_ID && process.env.APPLE_SECRET ? [
-      AppleProvider({
-        clientId: process.env.APPLE_ID,
-        clientSecret: process.env.APPLE_SECRET,
-      })
-    ] : []),
+    AppleProvider({
+      clientId: process.env.APPLE_ID || "",
+      clientSecret: {
+        appleId: process.env.APPLE_ID || "",
+        teamId: process.env.APPLE_TEAM_ID || "",
+        privateKey: process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, '\n') || "",
+        keyId: process.env.APPLE_KEY_ID || "",
+      } as any,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {

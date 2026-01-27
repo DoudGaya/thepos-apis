@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import Script from 'next/script'
 import {
   ArrowRight, Check, Loader2, Smartphone, CheckCircle2,
@@ -19,18 +20,6 @@ type ServiceType = 'DATA' | 'AIRTIME'
 
 // Constants
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE']
-const DATA_PLANS = [
-  { id: '1GB', network: 'MTN', name: '1GB SME', price: 250, validity: '30 Days' },
-  { id: '2GB', network: 'MTN', name: '2GB SME', price: 500, validity: '30 Days' },
-  { id: '5GB', network: 'MTN', name: '5GB SME', price: 1250, validity: '30 Days' },
-  { id: '10GB', network: 'MTN', name: '10GB SME', price: 2500, validity: '30 Days' },
-  { id: '1GB', network: 'AIRTEL', name: '1GB Corporate', price: 260, validity: '30 Days' },
-  { id: '2GB', network: 'AIRTEL', name: '5GB Corporate', price: 1300, validity: '30 Days' },
-  { id: '1GB', network: 'GLO', name: '1GB Corporate', price: 240, validity: '30 Days' },
-  { id: '2GB', network: 'GLO', name: '2GB Corporate', price: 480, validity: '30 Days' },
-  { id: '1GB', network: '9MOBILE', name: '1GB SME', price: 230, validity: '30 Days' },
-]
-
 const STATS = [
   { value: '₦2B+', label: 'Transaction Volume' },
   { value: '50K+', label: 'Active Users' },
@@ -139,6 +128,7 @@ export default function LandingPage() {
   }, [])
 
   // Quick Purchase State
+  const [isScrolled, setIsScrolled] = useState(false)
   const [step, setStep] = useState<PurchaseStep>('PHONE')
   const [loading, setLoading] = useState(false)
   const [phone, setPhone] = useState('')
@@ -150,7 +140,69 @@ export default function LandingPage() {
   const [plan, setPlan] = useState('')
   const [amount, setAmount] = useState<number>(0)
   const [customAmount, setCustomAmount] = useState('')
+  const [dataPlans, setDataPlans] = useState<any[]>([])
 
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', handleScroll)
+    
+    // Check for payment success
+    const verifyPayment = async () => {
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('payment_status') === 'verifying') {
+            const reference = params.get('reference') || params.get('orderNo')
+            if (!reference) return
+
+            setLoading(true)
+            setStep('PAYMENT') // Show loading state
+            
+            try {
+                await axios.post('/api/store/quick-checkout', {
+                    reference,
+                    email: params.get('email'),
+                    amount: Number(params.get('amount')),
+                    serviceType: params.get('serviceType'),
+                    network: params.get('network'),
+                    phoneNumber: params.get('phone'),
+                    planCode: params.get('plan'),
+                    provider: 'opay'
+                })
+                setStep('SUCCESS')
+                toast.success('Order Completed!')
+            } catch (error) {
+                toast.error('Order processing failed. Contact support.')
+            } finally {
+                setLoading(false)
+                // Clean URL
+                window.history.replaceState({}, '', window.location.pathname)
+            }
+        }
+    }
+    verifyPayment()
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Fetch plans when network changes
+  useEffect(() => {
+    if (serviceType === 'DATA') {
+        const fetchPlans = async () => {
+            try {
+                const res = await axios.get(`/api/data/plans?network=${network}`)
+                const margin = res.data.profitMargin || 0
+                const mappedPlans = res.data.plans.map((p: any) => ({
+                    ...p,
+                    price: (p.costPrice || 0) + margin
+                }))
+                setDataPlans(mappedPlans)
+            } catch (error) {
+                console.error('Failed to fetch plans', error)
+                setDataPlans([])
+            }
+        }
+        fetchPlans()
+    }
+  }, [network, serviceType])
   // Quick Purchase Actions
   const handleSendOtp = async () => {
     if (phone.length < 10) {
@@ -206,7 +258,7 @@ export default function LandingPage() {
     }
   }
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!amount || amount < 50) {
       toast.error('Invalid amount')
       return
@@ -215,63 +267,42 @@ export default function LandingPage() {
       toast.error('Please select a plan')
       return
     }
-    const paystack = (window as unknown as { PaystackPop?: { setup: (config: unknown) => { openIframe: () => void } } }).PaystackPop
-    if (!paystack) {
-      toast.error('Payment gateway loading...')
-      return
-    }
-    const ref = `QP-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-    const handler = paystack.setup({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-      email: userEmail,
-      amount: amount * 100,
-      ref,
-      currency: 'NGN',
-      callback: async (response: { reference: string }) => {
-        setLoading(true)
-        try {
-          await axios.post('/api/store/quick-checkout', {
-            reference: response.reference,
-            email: userEmail,
+
+    setLoading(true)
+    try {
+        const callbackUrl = new URL(window.location.href)
+        callbackUrl.searchParams.set('payment_status', 'verifying')
+        callbackUrl.searchParams.set('plan', plan)
+        callbackUrl.searchParams.set('network', network)
+        callbackUrl.searchParams.set('phone', phone)
+        callbackUrl.searchParams.set('amount', amount.toString())
+        callbackUrl.searchParams.set('serviceType', serviceType)
+        callbackUrl.searchParams.set('email', userEmail)
+
+        const res = await axios.post('/api/store/init-payment', {
             amount,
-            serviceType,
-            network,
+            email: userEmail,
             phoneNumber: phone,
-            planCode: plan
-          })
-          setStep('SUCCESS')
-          toast.success('Order Completed!')
-        } catch {
-          toast.error('Order processing failed. Contact support.')
-        } finally {
-          setLoading(false)
+            callbackUrl: callbackUrl.toString()
+        })
+        
+        if (res.data.authorization_url) {
+            window.location.href = res.data.authorization_url
+        } else {
+            toast.error('Failed to initialize payment')
+            setLoading(false)
         }
-      },
-      onClose: () => toast.info('Payment cancelled'),
-    })
-    handler.openIframe()
+    } catch (error: any) {
+        toast.error(error.response?.data?.error || 'Payment initialization failed')
+        setLoading(false)
+    }
   }
 
   // Suppress unused variable warnings
   void userToken
 
   return (
-    <div className="relative overflow-hidden">
-      <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
-      
-      {/* Crystal Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        {/* Light Mode Crystal Effect */}
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-white via-zinc-100 to-transparent rounded-full blur-3xl opacity-60 dark:opacity-0 transition-opacity duration-500" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-zinc-100 via-white to-transparent rounded-full blur-3xl opacity-40 dark:opacity-0 transition-opacity duration-500" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-zinc-50 to-transparent rounded-full blur-3xl opacity-50 dark:opacity-0 transition-opacity duration-500" />
-        
-        {/* Dark Mode Crystal Effect */}
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-bl from-zinc-800 via-zinc-900 to-transparent rounded-full blur-3xl opacity-0 dark:opacity-40 transition-opacity duration-500" />
-        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-gradient-to-r from-zinc-900 via-zinc-800 to-transparent rounded-full blur-3xl opacity-0 dark:opacity-30 transition-opacity duration-500" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-tl from-zinc-800 to-transparent rounded-full blur-3xl opacity-0 dark:opacity-40 transition-opacity duration-500" />
-      </div>
-
+    <div className="animate-in fade-in duration-500">
       {/* Hero Section */}
       <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -431,8 +462,8 @@ export default function LandingPage() {
                     </div>
 
                     {serviceType === 'DATA' ? (
-                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
-                        {DATA_PLANS.filter(p => p.network === network).map(p => (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {dataPlans.map(p => (
                           <button
                             key={`${p.network}-${p.id}`}
                             onClick={() => { setPlan(p.id); setAmount(p.price); }}
@@ -445,8 +476,10 @@ export default function LandingPage() {
                             <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100">₦{p.price}</div>
                           </button>
                         ))}
-                        {DATA_PLANS.filter(p => p.network === network).length === 0 && (
-                          <div className="text-center py-8 text-zinc-500">No plans available</div>
+                        {dataPlans.length === 0 && (
+                          <div className="text-center py-4 text-sm text-zinc-500">
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'No plans available'}
+                          </div>
                         )}
                       </div>
                     ) : (

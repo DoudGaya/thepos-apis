@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateToken, formatPhoneNumber } from '@/lib/auth'
+import { generateToken, formatPhoneNumber, generateReferralCode } from '@/lib/auth'
 import { z } from 'zod'
 // import { consumeToken } from '@/lib/rateLimiter'
 import { consumeToken } from '@/lib/rateLimiter'
@@ -26,33 +26,42 @@ export async function POST(request: NextRequest) {
     console.log('🔥 Original phone:', phone, '→ Formatted phone:', formattedPhone)
 
     // Find user by formatted phone or email
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: formattedPhone ? { phone: formattedPhone } : { email },
     })
 
     console.log('🔥 User lookup result:', user ? `Found user: ${user.email}` : 'User not found')
 
-    if (!user) {
+    // If user not found and NOT registering, return error
+    if (!user && type !== 'REGISTER') {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    // Always use the user's phone number for OTP lookup (since OTP table only stores phone)
-    const userPhone = user.phone
-    console.log('🔥 Using user phone for OTP lookup:', userPhone)
+    // Determine phone to use for OTP lookup
+    const phoneToUse = user ? user.phone : formattedPhone;
+    
+    if (!phoneToUse) {
+         return NextResponse.json(
+        { error: 'Phone number required for verification' },
+        { status: 400 }
+      )
+    }
 
-    // Find valid OTP using the user's phone number
+    console.log('🔥 Using phone for OTP lookup:', phoneToUse)
+
+    // Find valid OTP using the phone number
     // Rate limit OTP verification attempts per phone: max 5 per 15 minutes
-    const rl = consumeToken(`verifyotp:${userPhone}`, 5, 15 * 60 * 1000)
+    const rl = consumeToken(`verifyotp:${phoneToUse}`, 5, 15 * 60 * 1000)
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many verification attempts. Please try again later.' }, { status: 429 })
     }
 
     const otpRecord = await prisma.oTP.findFirst({
       where: {
-        phone: userPhone,
+        phone: phoneToUse,
         code,
         type,
         expiresAt: { gt: new Date() },
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (!otpRecord) {
       // Let's debug what OTP records exist for this user's phone
       const allOtpsForUser = await prisma.oTP.findMany({
-        where: { phone: userPhone },
+        where: { phone: phoneToUse },
         orderBy: { createdAt: 'desc' },
         take: 5,
       })
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
       })))
       
       console.log('🔍 Debug - Looking for:', { 
-        userPhone, 
+        phoneToUse, 
         code, 
         type, 
         currentTime: new Date() 
@@ -99,12 +108,36 @@ export async function POST(request: NextRequest) {
       where: { id: otpRecord.id },
     })
 
-    // If this is registration verification, mark user as verified
-    if (type === 'REGISTER') {
+    // If user doesn't exist (REGISTER flow), create them now
+    if (!user && type === 'REGISTER') {
+        const referralCode = generateReferralCode()
+        // Use provided email or generate a placeholder
+        const userEmail = email || `${phoneToUse}@nillarpay.app`
+        
+        user = await prisma.user.create({
+            data: {
+                phone: phoneToUse,
+                email: userEmail,
+                referralCode,
+                isVerified: true,
+                role: 'USER'
+            }
+        })
+    } else if (user && type === 'REGISTER') {
+      // If this is registration verification, mark user as verified
       await prisma.user.update({
         where: { id: user.id },
         data: { isVerified: true },
       })
+      // Refresh user object
+      user = await prisma.user.findUnique({ where: { id: user.id } })
+    }
+    
+    if (!user) {
+         return NextResponse.json(
+            { error: 'Failed to create user' },
+            { status: 500 }
+          )
     }
 
     // Check if user needs to set password (passwordHash is null)
