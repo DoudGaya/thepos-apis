@@ -82,11 +82,20 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async redirect({ url, baseUrl }) {
-      // If the user is trying to access dashboard or admin, allow it
+      // Support relative URLs
+      if (url.startsWith('/')) {
+        // Default to dashboard instead of home
+        if (url === '/') return `${baseUrl}/dashboard`;
+        return `${baseUrl}${url}`;
+      }
+      
+      // Support absolute URLs on same origin
       if (url.startsWith(baseUrl)) {
+        // Default to dashboard instead of home
+        if (url === baseUrl || url === `${baseUrl}/`) return `${baseUrl}/dashboard`;
         return url;
       }
-      // For now, redirect to dashboard - we'll handle admin redirection in middleware
+
       return `${baseUrl}/dashboard`;
     },
     async jwt({ token, user, trigger, session }) {
@@ -109,6 +118,7 @@ export const authOptions: NextAuthOptions = {
               lastName: true,
               role: true,
               isVerified: true,
+              phone: true,
             },
           });
 
@@ -117,6 +127,7 @@ export const authOptions: NextAuthOptions = {
             token.lastName = dbUser.lastName;
             token.role = dbUser.role;
             token.isVerified = dbUser.isVerified;
+            token.phone = dbUser.phone;
             token.name = `${dbUser.firstName} ${dbUser.lastName}`;
           }
         } catch (error) {

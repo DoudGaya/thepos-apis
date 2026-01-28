@@ -18,6 +18,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Check for auth token on login/register pages
+  if (request.nextUrl.pathname === '/auth/login' || request.nextUrl.pathname === '/auth/register') {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    })
+    
+    // If authenticated, redirect to dashboard
+    if (token) {
+       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
   // Handle profile-completion - allow access without other checks
   if (request.nextUrl.pathname === '/profile-completion') {
     const token = await getToken({
@@ -32,8 +45,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // If user already has firstName and lastName, redirect to dashboard
-    if ((token as any).firstName && (token as any).lastName) {
+    // If user already has firstName, lastName, and phone, redirect to dashboard
+    if ((token as any).firstName && (token as any).lastName && (token as any).phone) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
@@ -57,14 +70,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    // Check if user has completed profile (firstName, lastName, and phone)
+    if (!(token as any).firstName || !(token as any).lastName || !(token as any).phone) {
+      return NextResponse.redirect(new URL('/profile-completion', request.url))
+    }
+
     // Check if user is verified
     if (!(token as any).isVerified) {
       return NextResponse.redirect(new URL(`/auth/verify-otp?phone=${encodeURIComponent((token as any).phone)}`, request.url))
-    }
-
-    // Check if user has completed profile (firstName and lastName)
-    if (!(token as any).firstName || !(token as any).lastName) {
-      return NextResponse.redirect(new URL('/profile-completion', request.url))
     }
 
     // Role-based access control for admin routes

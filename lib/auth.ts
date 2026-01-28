@@ -22,10 +22,13 @@ export function generateToken(payload: { userId: string; role: string }, expires
 
 export function verifyToken(token: string) {
   try {
-    console.log('🔑 Verifying token with secret:', JWT_SECRET.substring(0, 10) + '...');
+    // console.log('🔑 Verifying token with secret:', JWT_SECRET.substring(0, 10) + '...');
     return jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
-  } catch (error) {
-    console.log('❌ Token verification failed:', error);
+  } catch (error: any) {
+    console.log('❌ Token verification failed:', error.message);
+    if (error.name === 'TokenExpiredError') {
+      throw new Error('Token expired')
+    }
     throw new Error('Invalid token')
   }
 }

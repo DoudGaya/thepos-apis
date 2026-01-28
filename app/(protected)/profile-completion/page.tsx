@@ -12,6 +12,7 @@ export default function ProfileCompletionPage() {
   
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -28,12 +29,17 @@ export default function ProfileCompletionPage() {
       return
     }
 
-    // If user already has firstName and lastName, redirect to dashboard
-    const userWithNames = session.user as any
-    if (userWithNames.firstName && userWithNames.lastName) {
+    // If user already has firstName, lastName and phone, redirect to dashboard
+    const userWithData = session.user as any
+    if (userWithData.firstName && userWithData.lastName && userWithData.phone) {
       router.push('/dashboard')
       return
     }
+    
+    // Pre-fill existing data
+    if (userWithData.firstName) setFirstName(userWithData.firstName)
+    if (userWithData.lastName) setLastName(userWithData.lastName)
+    if (userWithData.phone) setPhone(userWithData.phone)
 
     setIsCheckingProfile(false)
   }, [session, status, router])
@@ -44,8 +50,8 @@ export default function ProfileCompletionPage() {
     setLoading(true)
 
     try {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError('Both first name and last name are required')
+      if (!firstName.trim() || !lastName.trim() || !phone.trim()) {
+        setError('First name, last name, and phone number are required')
         setLoading(false)
         return
       }
@@ -70,6 +76,7 @@ export default function ProfileCompletionPage() {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          phone: phone.trim(),
         }),
         credentials: 'include',
       })
@@ -93,6 +100,7 @@ export default function ProfileCompletionPage() {
           name: `${firstName.trim()} ${lastName.trim()}`,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          phone: phone.trim(),
         },
       })
 
@@ -140,7 +148,7 @@ export default function ProfileCompletionPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Complete Your Profile</h1>
           <p className="mt-2 text-gray-600">
-            We need your name to get you started
+            We need a few details to get you started
           </p>
         </div>
 
@@ -195,6 +203,23 @@ export default function ProfileCompletionPage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Enter your last name"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-900 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 08012345678"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                   disabled={loading}
                   required

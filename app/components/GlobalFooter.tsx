@@ -32,22 +32,24 @@ export default function GlobalFooter() {
                     <div className="flex flex-col gap-4">
                         <h4 className="font-semibold text-zinc-900 dark:text-white">Product</h4>
                         <Link href="/#features" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Features</Link>
-                        <Link href="/#pricing" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Pricing</Link>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">API Documentation</Link>
+                        <Link href="/pricing" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Pricing</Link>
+                        <Link href="/api-docs" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">API Documentation</Link>
                     </div>
 
                     <div className="flex flex-col gap-4">
                         <h4 className="font-semibold text-zinc-900 dark:text-white">Company</h4>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">About</Link>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Blog</Link>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Careers</Link>
+                        <Link href="/about" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">About</Link>
+                        <Link href="/blog" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Blog</Link>
+                        <Link href="/careers" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Careers</Link>
+                        <Link href="/help" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Help Center</Link>
+                        <Link href="/faq" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">FAQ</Link>
                     </div>
 
                     <div className="flex flex-col gap-4">
                         <h4 className="font-semibold text-zinc-900 dark:text-white">Legal</h4>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Terms of Service</Link>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Privacy Policy</Link>
-                        <Link href="#" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Cookie Policy</Link>
+                        <Link href="/terms" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Terms of Service</Link>
+                        <Link href="/privacy" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Privacy Policy</Link>
+                        <Link href="/cookies" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300">Cookie Policy</Link>
                     </div>
                 </div>
 

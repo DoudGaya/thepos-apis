@@ -17,17 +17,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { firstName, lastName } = await request.json()
+    const { firstName, lastName, phone } = await request.json()
 
     // Validate input
-    if (!firstName || !lastName) {
+    if (!firstName || !lastName || !phone) {
       return NextResponse.json(
-        { error: 'First name and last name are required' },
+        { error: 'First name, last name, and phone are required' },
         { status: 400 }
       )
     }
 
-    if (typeof firstName !== 'string' || typeof lastName !== 'string') {
+    if (typeof firstName !== 'string' || typeof lastName !== 'string' || typeof phone !== 'string') {
       return NextResponse.json(
         { error: 'Invalid input types' },
         { status: 400 }
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     const firstNameTrimmed = firstName.trim()
     const lastNameTrimmed = lastName.trim()
+    const phoneTrimmed = phone.trim()
 
     if (firstNameTrimmed.length < 2) {
       return NextResponse.json(
@@ -51,18 +52,35 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if phone is already taken by another user
+    const existingPhone = await prisma.user.findFirst({
+        where: { 
+            phone: phoneTrimmed,
+            NOT: { id: token.sub }
+        }
+    })
+
+    if (existingPhone) {
+        return NextResponse.json(
+            { error: 'Phone number already linked to another account' },
+            { status: 400 }
+        )
+    }
+
     // Update user in database
     const user = await prisma.user.update({
       where: { id: token.sub },
       data: {
         firstName: firstNameTrimmed,
         lastName: lastNameTrimmed,
+        phone: phoneTrimmed,
       },
       select: {
         id: true,
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
       },
     })
 

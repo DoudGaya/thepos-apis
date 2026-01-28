@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { OAuth2Client } from 'google-auth-library';
 import verifyAppleToken from 'verify-apple-id-token';
-import jwt from 'jsonwebtoken';
+import { generateToken } from '@/lib/auth';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -83,17 +83,17 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // Generate a session token/JWT for the mobile app
-        // We can use the same JWT secret as NextAuth
-        const sessionToken = jwt.sign(
-            {
-                sub: user.id,
-                email: user.email,
-                role: user.role,
-                isVerified: user.isVerified
-            },
-            process.env.NEXTAUTH_SECRET || 'secret',
-            { expiresIn: '30d' }
+        // Generate tokens using the unified auth helper (uses JWT_SECRET)
+        // Access token: 1 hour
+        const accessToken = generateToken(
+            { userId: user.id, role: user.role }, 
+            '1h'
+        );
+        
+        // Refresh token: 30 days
+        const refreshToken = generateToken(
+            { userId: user.id, role: user.role }, 
+            '30d'
         );
 
         return NextResponse.json({
@@ -106,7 +106,9 @@ export async function POST(req: NextRequest) {
                 isVerified: user.isVerified,
                 phone: user.phone
             },
-            token: sessionToken
+            accessToken,
+            token: accessToken, // For backward compatibility
+            refreshToken
         });
 
     } catch (error) {
