@@ -316,11 +316,7 @@ export class TargetService {
         success: true,
         amount: rewardAmount,
         tierName,
-<<<<<<< HEAD
         transactionId: walletResult.transaction?.id || `reward-${Date.now()}`
-=======
-        transactionId: walletResult.transaction.id
->>>>>>> f7692e617b89eb68bc1a4dba288cc035dbdcc7c6
       };
     });
   }
