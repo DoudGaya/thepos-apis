@@ -35,14 +35,14 @@ export async function sendNotificationAction(prevState: any, formData: FormData)
         console.log('[AdminNotificationsAction] Validation successful');
         const { title, message, target, userId } = validatedData.data
 
-        let targetUsers;
+        let targetUsers: any[] = [];
 
         if (target === "ALL") {
             targetUsers = await db.user.findMany({
                 select: {
                     id: true,
                     pushToken: true,
-                }
+                } as any
             })
         } else if (target === "SPECIFIC" && userId) {
             const user = await db.user.findUnique({
@@ -50,7 +50,7 @@ export async function sendNotificationAction(prevState: any, formData: FormData)
                 select: {
                     id: true,
                     pushToken: true,
-                }
+                } as any
             })
             targetUsers = user ? [user] : []
         } else {
