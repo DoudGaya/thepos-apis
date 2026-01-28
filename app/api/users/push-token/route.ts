@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
         const updatedUser = await prisma.user.update({
             where: { id: decoded.userId },
-            data: { pushToken },
+            data: { pushToken } as any,
         });
 
         console.log(`[PushTokenAPI] Successfully updated DB for user: ${updatedUser.email}`);
