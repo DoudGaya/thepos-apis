@@ -9,7 +9,7 @@ async function main() {
             email: true,
             pushToken: true,
             createdAt: true
-        }
+        } as any
     })
 
     console.log(`Total users in DB: ${users.length}\n`)
