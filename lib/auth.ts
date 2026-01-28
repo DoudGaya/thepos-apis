@@ -8,22 +8,36 @@ try {
   console.log('Dotenv load error in auth.ts:', error);
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key'
 
-console.log('🔑 Auth module JWT_SECRET status:', JWT_SECRET ? 'Present' : 'Missing');
+const getJwtSecret = () => {
+    // Try to load dotenv if not present (for middleware safety)
+    if (!process.env.JWT_SECRET) {
+        try {
+             require('dotenv').config();
+        } catch (e) {}
+    }
+    return process.env.JWT_SECRET || 'fallback-secret-key';
+};
+
+// Remove top-level constant to prevent early binding issues
+// const JWT_SECRET = ... 
+
+// console.log('🔑 Auth module JWT_SECRET status:', JWT_SECRET ? 'Present' : 'Missing');
 
 export function generateToken(payload: { userId: string; role: string }, expiresIn: string = '1h'): string {
-  if (!JWT_SECRET) {
+  const secret = getJwtSecret();
+  if (!secret) {
     throw new Error('JWT_SECRET is not defined')
   }
-  console.log('🔑 Generating token with secret:', JWT_SECRET.substring(0, 10) + '...');
-  return jwt.sign(payload, JWT_SECRET, { expiresIn } as SignOptions)
+  console.log('🔑 Generating token with secret:', secret.substring(0, 10) + '...');
+  return jwt.sign(payload, secret, { expiresIn } as SignOptions)
 }
 
 export function verifyToken(token: string) {
+  const secret = getJwtSecret();
   try {
-    // console.log('🔑 Verifying token with secret:', JWT_SECRET.substring(0, 10) + '...');
-    return jwt.verify(token, JWT_SECRET) as { userId: string; role: string }
+    console.log('🔑 Verifying token with secret:', secret ? secret.substring(0, 10) + '...' : 'UNDEFINED');
+    return jwt.verify(token, secret) as { userId: string; role: string }
   } catch (error: any) {
     console.log('❌ Token verification failed:', error.message);
     if (error.name === 'TokenExpiredError') {
