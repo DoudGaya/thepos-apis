@@ -57,9 +57,9 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: `${user.firstName} ${user.lastName}`,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
           role: user.role,
-          phone: user.phone,
+          phone: user.phone || '',
           isVerified: user.isVerified,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -127,8 +127,8 @@ export const authOptions: NextAuthOptions = {
             token.lastName = dbUser.lastName;
             token.role = dbUser.role;
             token.isVerified = dbUser.isVerified;
-            token.phone = dbUser.phone;
-            token.name = `${dbUser.firstName} ${dbUser.lastName}`;
+            token.phone = dbUser.phone || '';
+            token.name = `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim();
           }
         } catch (error) {
           console.error('Error refreshing user data from database:', error);

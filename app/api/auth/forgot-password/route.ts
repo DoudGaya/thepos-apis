@@ -29,6 +29,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Ensure user has a phone number (required for OTP table constraint)
+    if (!user.phone) {
+      console.error(`User ${user.id} has no phone number, cannot generate OTP`)
+      return NextResponse.json({
+        message: 'Account configuration error. Please contact support.',
+        success: false,
+      }, { status: 400 })
+    }
+
     // Generate and store OTP
     const otpCode = generateOTP()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes

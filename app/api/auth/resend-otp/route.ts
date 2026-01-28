@@ -41,6 +41,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Ensure user has a phone number (required for OTP table constraint)
+    if (!user.phone) {
+      console.error(`User ${user.id} has no phone number, cannot resend OTP`)
+      return NextResponse.json(
+        { error: 'Account configuration error. Please contact support.' },
+        { status: 400 }
+      )
+    }
+
   // Rate limit resend per phone: max 3 per 15 minutes
   const rl = consumeToken(`resendotp:${user.phone}`, 3, 15 * 60 * 1000)
     if (!rl.allowed) {
