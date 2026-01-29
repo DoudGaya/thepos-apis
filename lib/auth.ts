@@ -36,19 +36,30 @@ const getJwtSecret = () => {
 
 export function generateToken(payload: { userId: string; role: string }, expiresIn: string = '1h'): string {
   const secret = getJwtSecret();
+  
+  if (process.env.NODE_ENV === 'production') {
+      const debugSecret = secret ? `${secret.substring(0, 3)}...${secret.substring(secret.length - 3)}` : 'UNDEFINED';
+      console.log(`[Auth] Generating token. Secret: ${debugSecret}, User: ${payload.userId}`);
+  }
+
   if (secret === 'fallback-secret-key' && process.env.NODE_ENV === 'production') {
      console.warn('⚠️ WARNING: Using fallback secret in production for token generation');
   }
-  // console.log('🔑 Generating token with secret:', secret.substring(0, 5) + '...');
   return jwt.sign(payload, secret, { expiresIn } as SignOptions)
 }
 
 export function verifyToken(token: string) {
   const secret = getJwtSecret();
   try {
-    // console.log('🔑 Verifying token with secret:', secret ? secret.substring(0, 5) + '...' : 'UNDEFINED');
+    if (process.env.NODE_ENV === 'production') {
+        const debugSecret = secret ? `${secret.substring(0, 3)}...${secret.substring(secret.length - 3)}` : 'UNDEFINED';
+        console.log(`[Auth] Verifying token. Secret: ${debugSecret}, Token start: ${token.substring(0, 10)}...`);
+    }
     return jwt.verify(token, secret) as { userId: string; role: string }
   } catch (error: any) {
+    if (process.env.NODE_ENV === 'production') {
+        console.error(`[Auth] Verification failed: ${error.message}. Token: ${token.substring(0, 20)}...`);
+    }
     console.log('❌ Token verification failed:', error.message);
     if (error.name === 'TokenExpiredError') {
       throw new Error('Token expired')
