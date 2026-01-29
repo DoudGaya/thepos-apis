@@ -4,18 +4,26 @@ import bcrypt from 'bcryptjs'
 // Note: dotenv is loaded at application startup, not here
 // In Vercel, env vars are injected directly by the platform
 
+// HARDCODED SECRET FOR TESTING - REMOVE AFTER DEBUGGING
+const HARDCODED_SECRET = '63c755db67f6547ae57064428adb5ef4a43ee8a6bcd05912e3c6b5edbfd26fc0';
+
 const getJwtSecret = () => {
     // On Vercel, env vars are always available via process.env
     // No dotenv loading needed - it can break in Edge runtime
-    const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+    const envSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
     
-    if (!secret) {
-        // In production, this should ideally throw, but for now we log error
-        if (process.env.NODE_ENV === 'production') {
-             console.error('❌ CRITICAL: JWT_SECRET and NEXTAUTH_SECRET are missing in production!');
-        }
-        return 'fallback-secret-key';
+    // Log which secret source is being used
+    if (process.env.NODE_ENV === 'production') {
+        console.log(`[Auth] Secret source: ${envSecret ? 'ENV' : 'HARDCODED'}, ENV present: ${!!envSecret}`);
     }
+    
+    // Use environment variable if available, otherwise use hardcoded
+    const secret = envSecret || HARDCODED_SECRET;
+    
+    if (!envSecret && process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ WARNING: Using hardcoded secret - env vars not available');
+    }
+    
     return secret;
 };
 
