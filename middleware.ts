@@ -164,15 +164,11 @@ export async function middleware(request: NextRequest) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim()
       
-      // AGGRESSIVE DEBUG - log everything
       const jwtSecret = process.env.JWT_SECRET;
-      const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-      console.log(`🔍 [MW] Secrets: JWT=${!!jwtSecret}(${jwtSecret?.length || 0}), NEXTAUTH=${!!nextAuthSecret}(${nextAuthSecret?.length || 0})`);
-      console.log(`🔍 [MW] Token received: ${token.substring(0, 50)}... (len=${token.length})`);
       
       try {
         const decoded = verifyToken(token)
-        console.log('✅ [Middleware] Bearer token valid for:', decoded.userId)
+        console.log(`✅ [MW] OK user=${decoded.userId} secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} token=${token.substring(0,20)}...`)
         const requestHeaders = new Headers(request.headers)
         requestHeaders.set('x-user-id', decoded.userId)
         requestHeaders.set('x-user-role', decoded.role)
@@ -183,10 +179,8 @@ export async function middleware(request: NextRequest) {
           },
         })
       } catch (error: any) {
-        // Log the FULL error details for debugging
-        console.error(`❌ [MW] Token verify FAILED. Error: ${error?.message}`);
-        console.error(`❌ [MW] Token (first 80): ${token.substring(0, 80)}`);
-        console.error(`❌ [MW] Secret used: ${jwtSecret ? jwtSecret.substring(0, 5) + '...' + jwtSecret.substring(jwtSecret.length - 5) : 'NONE'}`);
+        // ALL debug info in ONE line so Vercel shows it
+        console.error(`❌ [MW] FAIL err="${error?.message}" secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} token=${token.substring(0,50)}... tokenLen=${token.length}`)
         
         return NextResponse.json(
           { error: 'Invalid token' },
