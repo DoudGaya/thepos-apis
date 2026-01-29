@@ -61,7 +61,10 @@ export async function POST(request: NextRequest) {
     const accessToken = generateToken({ userId: user.id, role: user.role }, '1h')
     const newRefreshToken = generateToken({ userId: user.id, role: user.role }, '7d')
 
-    console.log('✅ Token refreshed successfully for user:', user.email)
+    // Log the new token signature for debugging
+    const newTokenSig = accessToken.split('.')[2]?.substring(0, 20) || 'N/A';
+    console.log(`✅ Token refreshed for user: ${user.email} newTokenSig=${newTokenSig}... tokenLen=${accessToken.length}`)
+    
     return NextResponse.json({
       message: 'Token refreshed successfully',
       token: accessToken,

@@ -166,6 +166,19 @@ export async function middleware(request: NextRequest) {
       
       const jwtSecret = process.env.JWT_SECRET;
       
+      // Decode token WITHOUT verification to see payload
+      let decodedPayload: any = null;
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          decodedPayload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+        }
+      } catch (e) {
+        console.error(`[MW] Failed to decode token payload: ${(e as any).message}`);
+      }
+      
+      console.log(`[MW] Token payload: userId=${decodedPayload?.userId} exp=${decodedPayload?.exp} iat=${decodedPayload?.iat} expDate=${decodedPayload?.exp ? new Date(decodedPayload.exp * 1000).toISOString() : 'N/A'}`);
+      
       try {
         const decoded = verifyToken(token)
         console.log(`✅ [MW] OK user=${decoded.userId} secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} token=${token.substring(0,20)}...`)
@@ -179,8 +192,12 @@ export async function middleware(request: NextRequest) {
           },
         })
       } catch (error: any) {
+        // Get token signature (last part) to compare tokens
+        const tokenParts = token.split('.');
+        const signature = tokenParts.length === 3 ? tokenParts[2].substring(0, 20) : 'INVALID';
+        
         // ALL debug info in ONE line so Vercel shows it
-        console.error(`❌ [MW] FAIL err="${error?.message}" secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} token=${token.substring(0,50)}... tokenLen=${token.length}`)
+        console.error(`❌ [MW] FAIL err="${error?.message}" secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} sig=${signature}... tokenLen=${token.length}`)
         
         return NextResponse.json(
           { error: 'Invalid token' },
