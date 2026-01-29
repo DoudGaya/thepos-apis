@@ -108,7 +108,13 @@ export async function POST(req: NextRequest) {
             },
             accessToken,
             token: accessToken, // For backward compatibility
-            refreshToken
+            refreshToken,
+            // Onboarding status for social auth users
+            onboarding: {
+                needsPhone: !user.phone || user.phone.startsWith('social_'),
+                needsPin: !user.pinHash,
+                needsNames: !user.firstName || user.firstName === 'User' || !user.lastName,
+            }
         });
 
     } catch (error) {
