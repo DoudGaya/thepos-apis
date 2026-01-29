@@ -166,7 +166,11 @@ export async function middleware(request: NextRequest) {
     // If no NextAuth token, check for Bearer token
     const authHeader = request.headers.get('authorization')
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
+      const token = authHeader.substring(7).trim() // Added trim() to handle potential extra spaces
+      
+      // Debug log for token verification
+      // console.log(`[Middleware] Verifying Bearer token: ${token.substring(0, 10)}...`);
+      
       try {
         const decoded = verifyToken(token)
         console.log('✅ [Middleware] Bearer token valid for:', decoded.userId)
@@ -180,8 +184,13 @@ export async function middleware(request: NextRequest) {
             headers: requestHeaders,
           },
         })
-      } catch (error) {
-        console.error('❌ [Middleware] Bearer token invalid:', error)
+      } catch (error: any) {
+        console.error('❌ [Middleware] Bearer token invalid:', error?.message || error)
+        
+        // Debug info for debugging production issues
+        // const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+        // console.error(`[Middleware Debug] Secret available: ${!!secret}, Token length: ${token.length}`);
+        
         return NextResponse.json(
           { error: 'Invalid token' },
           {

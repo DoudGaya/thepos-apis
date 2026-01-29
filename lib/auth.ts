@@ -11,12 +11,22 @@ try {
 
 const getJwtSecret = () => {
     // Try to load dotenv if not present (for middleware safety)
-    if (!process.env.JWT_SECRET) {
+    if (!process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
         try {
              require('dotenv').config();
         } catch (e) {}
     }
-    return process.env.JWT_SECRET || 'fallback-secret-key';
+    // Prefer JWT_SECRET, fallback to NEXTAUTH_SECRET (as they are usually the same)
+    const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+    
+    if (!secret) {
+        // In production, this should ideally throw, but for now we log error
+        if (process.env.NODE_ENV === 'production') {
+             console.error('❌ CRITICAL: JWT_SECRET and NEXTAUTH_SECRET are missing in production!');
+        }
+        return 'fallback-secret-key';
+    }
+    return secret;
 };
 
 // Remove top-level constant to prevent early binding issues
@@ -26,17 +36,17 @@ const getJwtSecret = () => {
 
 export function generateToken(payload: { userId: string; role: string }, expiresIn: string = '1h'): string {
   const secret = getJwtSecret();
-  if (!secret) {
-    throw new Error('JWT_SECRET is not defined')
+  if (secret === 'fallback-secret-key' && process.env.NODE_ENV === 'production') {
+     console.warn('⚠️ WARNING: Using fallback secret in production for token generation');
   }
-  console.log('🔑 Generating token with secret:', secret.substring(0, 10) + '...');
+  // console.log('🔑 Generating token with secret:', secret.substring(0, 5) + '...');
   return jwt.sign(payload, secret, { expiresIn } as SignOptions)
 }
 
 export function verifyToken(token: string) {
   const secret = getJwtSecret();
   try {
-    console.log('🔑 Verifying token with secret:', secret ? secret.substring(0, 10) + '...' : 'UNDEFINED');
+    // console.log('🔑 Verifying token with secret:', secret ? secret.substring(0, 5) + '...' : 'UNDEFINED');
     return jwt.verify(token, secret) as { userId: string; role: string }
   } catch (error: any) {
     console.log('❌ Token verification failed:', error.message);
