@@ -162,20 +162,17 @@ export async function middleware(request: NextRequest) {
     // If no NextAuth token, check for Bearer token
     const authHeader = request.headers.get('authorization')
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7).trim() // Added trim() to handle potential extra spaces
+      const token = authHeader.substring(7).trim()
       
-      // Debug log for token verification in production
+      // AGGRESSIVE DEBUG - log everything
       const jwtSecret = process.env.JWT_SECRET;
       const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-      console.log(`[Middleware Debug] JWT_SECRET present: ${!!jwtSecret}, NEXTAUTH_SECRET present: ${!!nextAuthSecret}`);
-      if (jwtSecret) {
-        console.log(`[Middleware Debug] JWT_SECRET: ${jwtSecret.substring(0, 5)}...${jwtSecret.substring(jwtSecret.length - 5)}`);
-      }
+      console.log(`🔍 [MW] Secrets: JWT=${!!jwtSecret}(${jwtSecret?.length || 0}), NEXTAUTH=${!!nextAuthSecret}(${nextAuthSecret?.length || 0})`);
+      console.log(`🔍 [MW] Token received: ${token.substring(0, 50)}... (len=${token.length})`);
       
       try {
         const decoded = verifyToken(token)
         console.log('✅ [Middleware] Bearer token valid for:', decoded.userId)
-        // Add user info to headers for API routes
         const requestHeaders = new Headers(request.headers)
         requestHeaders.set('x-user-id', decoded.userId)
         requestHeaders.set('x-user-role', decoded.role)
@@ -186,11 +183,10 @@ export async function middleware(request: NextRequest) {
           },
         })
       } catch (error: any) {
-        console.error('❌ [Middleware] Bearer token invalid:', error?.message || error)
-        
-        // Debug info for debugging production issues
-        // const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-        // console.error(`[Middleware Debug] Secret available: ${!!secret}, Token length: ${token.length}`);
+        // Log the FULL error details for debugging
+        console.error(`❌ [MW] Token verify FAILED. Error: ${error?.message}`);
+        console.error(`❌ [MW] Token (first 80): ${token.substring(0, 80)}`);
+        console.error(`❌ [MW] Secret used: ${jwtSecret ? jwtSecret.substring(0, 5) + '...' + jwtSecret.substring(jwtSecret.length - 5) : 'NONE'}`);
         
         return NextResponse.json(
           { error: 'Invalid token' },
