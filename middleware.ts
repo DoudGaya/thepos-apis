@@ -5,12 +5,8 @@ import { getToken } from 'next-auth/jwt'
 // Force Node.js runtime for JWT crypto support
 export const runtime = 'nodejs'
 
-// Explicitly load environment variables
-try {
-  require('dotenv').config();
-} catch (error) {
-  console.log('Dotenv load error in middleware.ts:', error);
-}
+// Note: dotenv is NOT used here - Vercel provides env vars directly
+// and require() breaks in Edge/middleware contexts
 
 export async function middleware(request: NextRequest) {
   // Allow access to verify-otp page for all users

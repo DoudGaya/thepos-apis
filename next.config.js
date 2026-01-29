@@ -8,6 +8,7 @@ const nextConfig = {
     PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY,
     TERMII_API_KEY: process.env.TERMII_API_KEY,
     JWT_SECRET: process.env.JWT_SECRET,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
   },
   typescript: {

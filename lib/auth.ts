@@ -1,22 +1,12 @@
 import jwt, { SignOptions } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
-// Explicitly load environment variables
-try {
-  require('dotenv').config();
-} catch (error) {
-  console.log('Dotenv load error in auth.ts:', error);
-}
-
+// Note: dotenv is loaded at application startup, not here
+// In Vercel, env vars are injected directly by the platform
 
 const getJwtSecret = () => {
-    // Try to load dotenv if not present (for middleware safety)
-    if (!process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
-        try {
-             require('dotenv').config();
-        } catch (e) {}
-    }
-    // Prefer JWT_SECRET, fallback to NEXTAUTH_SECRET (as they are usually the same)
+    // On Vercel, env vars are always available via process.env
+    // No dotenv loading needed - it can break in Edge runtime
     const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
     
     if (!secret) {
