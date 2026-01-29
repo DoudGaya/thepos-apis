@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 const sendOtpSchema = z.object({
   phone: z.string().min(10, 'Valid phone number is required'),
-  type: z.enum(['REGISTER', 'LOGIN', 'FORGOT_PASSWORD']),
+  type: z.enum(['REGISTER', 'LOGIN', 'FORGOT_PASSWORD', 'SOCIAL_ONBOARDING']),
   email: z.string().email('Valid email is required').optional(),
 })
 
@@ -105,6 +105,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // For SOCIAL_ONBOARDING type, check if phone is already in use by another verified user
+    if (parsed.type === 'SOCIAL_ONBOARDING') {
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          phone: formattedPhone,
+          isVerified: true,
+          // Exclude social-prefixed phones (placeholders)
+          NOT: {
+            phone: { startsWith: 'social_' }
+          }
+        },
+      })
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: `Phone number ${formattedPhone} is already linked to another account. Please use a different phone number.` },
+          { status: 400 }
+        )
+      }
+    }
+
     // Generate OTP code
     const otpCode = generateOTP()
     console.log(`✅ Generated OTP for ${formattedPhone}: ${otpCode}`)
@@ -142,7 +163,10 @@ export async function POST(request: NextRequest) {
     // Send OTP via SMS
     try {
       const smsPhone = smsService.formatPhoneForSMS(formattedPhone)
-      const message = `Your ${parsed.type === 'REGISTER' ? 'registration' : parsed.type === 'LOGIN' ? 'login' : 'password reset'} OTP is: ${otpCode}. Valid for 10 minutes. Do not share this code.`
+      const typeLabel = parsed.type === 'REGISTER' ? 'registration' : 
+                        parsed.type === 'LOGIN' ? 'login' : 
+                        parsed.type === 'SOCIAL_ONBOARDING' ? 'account verification' : 'password reset'
+      const message = `Your ${typeLabel} OTP is: ${otpCode}. Valid for 10 minutes. Do not share this code.`
       await smsService.sendOTP(smsPhone, otpCode)
       console.log(`📱 SMS sent successfully to ${formattedPhone}`)
     } catch (smsError) {
