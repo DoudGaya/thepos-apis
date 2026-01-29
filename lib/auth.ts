@@ -10,19 +10,17 @@ const HARDCODED_SECRET = '63c755db67f6547ae57064428adb5ef4a43ee8a6bcd05912e3c6b5
 const getJwtSecret = () => {
     // On Vercel, env vars are always available via process.env
     // No dotenv loading needed - it can break in Edge runtime
-    const envSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-    
-    // Log which secret source is being used
-    if (process.env.NODE_ENV === 'production') {
-        console.log(`[Auth] Secret source: ${envSecret ? 'ENV' : 'HARDCODED'}, ENV present: ${!!envSecret}`);
-    }
+    const jwtEnv = process.env.JWT_SECRET;
+    const nextAuthEnv = process.env.NEXTAUTH_SECRET;
+    const envSecret = jwtEnv || nextAuthEnv;
     
     // Use environment variable if available, otherwise use hardcoded
     const secret = envSecret || HARDCODED_SECRET;
     
-    if (!envSecret && process.env.NODE_ENV === 'production') {
-        console.warn('⚠️ WARNING: Using hardcoded secret - env vars not available');
-    }
+    // ALWAYS log which source is used - critical for debugging
+    const source = jwtEnv ? 'JWT_SECRET' : (nextAuthEnv ? 'NEXTAUTH_SECRET' : 'HARDCODED');
+    const preview = secret ? `${secret.substring(0,5)}...${secret.substring(secret.length-5)}` : 'NONE';
+    console.log(`[getJwtSecret] source=${source} preview=${preview} len=${secret?.length || 0}`);
     
     return secret;
 };
@@ -34,31 +32,25 @@ const getJwtSecret = () => {
 
 export function generateToken(payload: { userId: string; role: string }, expiresIn: string = '1h'): string {
   const secret = getJwtSecret();
-  
-  if (process.env.NODE_ENV === 'production') {
-      const debugSecret = secret ? `${secret.substring(0, 3)}...${secret.substring(secret.length - 3)}` : 'UNDEFINED';
-      console.log(`[Auth] Generating token. Secret: ${debugSecret}, User: ${payload.userId}`);
-  }
+  const preview = secret ? `${secret.substring(0,5)}...${secret.substring(secret.length-5)}` : 'NONE';
+  console.log(`[generateToken] user=${payload.userId} secret=${preview} expiresIn=${expiresIn}`);
 
-  if (secret === 'fallback-secret-key' && process.env.NODE_ENV === 'production') {
-     console.warn('⚠️ WARNING: Using fallback secret in production for token generation');
-  }
-  return jwt.sign(payload, secret, { expiresIn } as SignOptions)
+  const token = jwt.sign(payload, secret, { expiresIn } as SignOptions);
+  console.log(`[generateToken] tokenLen=${token.length} tokenStart=${token.substring(0,30)}...`);
+  return token;
 }
 
 export function verifyToken(token: string) {
   const secret = getJwtSecret();
+  const preview = secret ? `${secret.substring(0,5)}...${secret.substring(secret.length-5)}` : 'NONE';
+  console.log(`[verifyToken] secret=${preview} tokenLen=${token.length} tokenStart=${token.substring(0,30)}...`);
+  
   try {
-    if (process.env.NODE_ENV === 'production') {
-        const debugSecret = secret ? `${secret.substring(0, 3)}...${secret.substring(secret.length - 3)}` : 'UNDEFINED';
-        console.log(`[Auth] Verifying token. Secret: ${debugSecret}, Token start: ${token.substring(0, 10)}...`);
-    }
-    return jwt.verify(token, secret) as { userId: string; role: string }
+    const decoded = jwt.verify(token, secret) as { userId: string; role: string };
+    console.log(`[verifyToken] ✅ SUCCESS user=${decoded.userId}`);
+    return decoded;
   } catch (error: any) {
-    if (process.env.NODE_ENV === 'production') {
-        console.error(`[Auth] Verification failed: ${error.message}. Token: ${token.substring(0, 20)}...`);
-    }
-    console.log('❌ Token verification failed:', error.message);
+    console.error(`[verifyToken] ❌ FAILED: ${error.name} - ${error.message}`);
     if (error.name === 'TokenExpiredError') {
       throw new Error('Token expired')
     }
