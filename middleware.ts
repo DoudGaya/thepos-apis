@@ -164,8 +164,13 @@ export async function middleware(request: NextRequest) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim() // Added trim() to handle potential extra spaces
       
-      // Debug log for token verification
-      // console.log(`[Middleware] Verifying Bearer token: ${token.substring(0, 10)}...`);
+      // Debug log for token verification in production
+      const jwtSecret = process.env.JWT_SECRET;
+      const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+      console.log(`[Middleware Debug] JWT_SECRET present: ${!!jwtSecret}, NEXTAUTH_SECRET present: ${!!nextAuthSecret}`);
+      if (jwtSecret) {
+        console.log(`[Middleware Debug] JWT_SECRET: ${jwtSecret.substring(0, 5)}...${jwtSecret.substring(jwtSecret.length - 5)}`);
+      }
       
       try {
         const decoded = verifyToken(token)
