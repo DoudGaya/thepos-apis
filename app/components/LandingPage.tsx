@@ -28,7 +28,7 @@ const STATS = [
 ]
 
 const PARTNERS = [
-  'MTN Nigeria', 'Airtel', 'Glo', '9mobile', 'Paystack', 'Flutterwave', 
+  'MTN Nigeria', 'Airtel', 'Glo', '9mobile', 'Paystack', 'Flutterwave',
   'DSTV', 'GOtv', 'EKEDC', 'IKEDC', 'BET9JA', 'SportyBet'
 ]
 
@@ -145,38 +145,38 @@ export default function LandingPage() {
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll)
-    
+
     // Check for payment success
     const verifyPayment = async () => {
-        const params = new URLSearchParams(window.location.search)
-        if (params.get('payment_status') === 'verifying') {
-            const reference = params.get('reference') || params.get('orderNo')
-            if (!reference) return
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('payment_status') === 'verifying') {
+        const reference = params.get('reference') || params.get('orderNo')
+        if (!reference) return
 
-            setLoading(true)
-            setStep('PAYMENT') // Show loading state
-            
-            try {
-                await axios.post('/api/store/quick-checkout', {
-                    reference,
-                    email: params.get('email'),
-                    amount: Number(params.get('amount')),
-                    serviceType: params.get('serviceType'),
-                    network: params.get('network'),
-                    phoneNumber: params.get('phone'),
-                    planCode: params.get('plan'),
-                    provider: 'opay'
-                })
-                setStep('SUCCESS')
-                toast.success('Order Completed!')
-            } catch (error) {
-                toast.error('Order processing failed. Contact support.')
-            } finally {
-                setLoading(false)
-                // Clean URL
-                window.history.replaceState({}, '', window.location.pathname)
-            }
+        setLoading(true)
+        setStep('PAYMENT') // Show loading state
+
+        try {
+          await axios.post('/api/store/quick-checkout', {
+            reference,
+            email: params.get('email'),
+            amount: Number(params.get('amount')),
+            serviceType: params.get('serviceType'),
+            network: params.get('network'),
+            phoneNumber: params.get('phone'),
+            planCode: params.get('plan'),
+            provider: 'opay'
+          })
+          setStep('SUCCESS')
+          toast.success('Order Completed!')
+        } catch (error) {
+          toast.error('Order processing failed. Contact support.')
+        } finally {
+          setLoading(false)
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname)
         }
+      }
     }
     verifyPayment()
 
@@ -186,21 +186,23 @@ export default function LandingPage() {
   // Fetch plans when network changes
   useEffect(() => {
     if (serviceType === 'DATA') {
-        const fetchPlans = async () => {
-            try {
-                const res = await axios.get(`/api/data/plans?network=${network}`)
-                const margin = res.data.profitMargin || 0
-                const mappedPlans = res.data.plans.map((p: any) => ({
-                    ...p,
-                    price: (p.costPrice || 0) + margin
-                }))
-                setDataPlans(mappedPlans)
-            } catch (error) {
-                console.error('Failed to fetch plans', error)
-                setDataPlans([])
-            }
+      const fetchPlans = async () => {
+        try {
+          const res = await axios.get(`/api/data/plans?network=${network}`)
+          // API uses successResponse wrapper, so real data is in res.data.data
+          const data = res.data.data || {}
+          const margin = data.profitMargin || 0
+          const mappedPlans = (data.plans || []).map((p: any) => ({
+            ...p,
+            price: (p.costPrice || 0) + margin
+          }))
+          setDataPlans(mappedPlans)
+        } catch (error) {
+          console.error('Failed to fetch plans', error)
+          setDataPlans([])
         }
-        fetchPlans()
+      }
+      fetchPlans()
     }
   }, [network, serviceType])
   // Quick Purchase Actions
@@ -270,31 +272,31 @@ export default function LandingPage() {
 
     setLoading(true)
     try {
-        const callbackUrl = new URL(window.location.href)
-        callbackUrl.searchParams.set('payment_status', 'verifying')
-        callbackUrl.searchParams.set('plan', plan)
-        callbackUrl.searchParams.set('network', network)
-        callbackUrl.searchParams.set('phone', phone)
-        callbackUrl.searchParams.set('amount', amount.toString())
-        callbackUrl.searchParams.set('serviceType', serviceType)
-        callbackUrl.searchParams.set('email', userEmail)
+      const callbackUrl = new URL(window.location.href)
+      callbackUrl.searchParams.set('payment_status', 'verifying')
+      callbackUrl.searchParams.set('plan', plan)
+      callbackUrl.searchParams.set('network', network)
+      callbackUrl.searchParams.set('phone', phone)
+      callbackUrl.searchParams.set('amount', amount.toString())
+      callbackUrl.searchParams.set('serviceType', serviceType)
+      callbackUrl.searchParams.set('email', userEmail)
 
-        const res = await axios.post('/api/store/init-payment', {
-            amount,
-            email: userEmail,
-            phoneNumber: phone,
-            callbackUrl: callbackUrl.toString()
-        })
-        
-        if (res.data.authorization_url) {
-            window.location.href = res.data.authorization_url
-        } else {
-            toast.error('Failed to initialize payment')
-            setLoading(false)
-        }
-    } catch (error: any) {
-        toast.error(error.response?.data?.error || 'Payment initialization failed')
+      const res = await axios.post('/api/store/init-payment', {
+        amount,
+        email: userEmail,
+        phoneNumber: phone,
+        callbackUrl: callbackUrl.toString()
+      })
+
+      if (res.data.authorization_url) {
+        window.location.href = res.data.authorization_url
+      } else {
+        toast.error('Failed to initialize payment')
         setLoading(false)
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Payment initialization failed')
+      setLoading(false)
     }
   }
 
@@ -313,7 +315,7 @@ export default function LandingPage() {
               <span>Trusted by 50,000+ Nigerians</span>
               <ChevronRight className="h-4 w-4" />
             </div>
-            
+
             {/* Headline */}
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
               <span className="text-zinc-900 dark:text-white">The Future of</span>
@@ -323,7 +325,7 @@ export default function LandingPage() {
                   Bill Payments
                 </span>
                 <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
-                  <path d="M2 10C50 4 100 2 150 6C200 10 250 4 298 8" stroke="url(#gradient)" strokeWidth="3" strokeLinecap="round"/>
+                  <path d="M2 10C50 4 100 2 150 6C200 10 250 4 298 8" stroke="url(#gradient)" strokeWidth="3" strokeLinecap="round" />
                   <defs>
                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#f59e0b" />
@@ -333,24 +335,24 @@ export default function LandingPage() {
                 </svg>
               </span>
             </h1>
-            
+
             {/* Subheadline */}
             <p className="text-xl text-zinc-600 dark:text-zinc-400 max-w-lg leading-relaxed">
-              Experience lightning-fast airtime, data, electricity, and bill payments. 
+              Experience lightning-fast airtime, data, electricity, and bill payments.
               Built for speed. Designed for Nigeria.
             </p>
-            
+
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link 
-                href="/auth/register" 
+              <Link
+                href="/auth/register"
                 className="group inline-flex items-center justify-center px-8 py-4 text-base font-semibold rounded-xl text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 transition-all shadow-lg shadow-zinc-900/20 dark:shadow-white/20"
               >
                 Get Started Free
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link 
-                href="#quick-buy" 
+              <Link
+                href="#quick-buy"
                 className="inline-flex items-center justify-center px-8 py-4 text-base font-semibold rounded-xl text-zinc-900 dark:text-white bg-white/80 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 backdrop-blur-sm transition-all"
               >
                 Try Quick Top-up
@@ -378,7 +380,7 @@ export default function LandingPage() {
           <div id="quick-buy" className="relative z-10">
             {/* Glow Effect */}
             <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 dark:from-amber-500/10 dark:via-orange-500/10 dark:to-red-500/10 rounded-3xl blur-2xl opacity-60" />
-            
+
             <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-zinc-900/10 dark:shadow-black/20 p-8">
               {/* Header */}
               <div className="mb-6 flex items-center justify-between">
@@ -428,7 +430,7 @@ export default function LandingPage() {
                         maxLength={6}
                       />
                       <p className="text-xs text-zinc-500 mt-3 text-center">
-                        Sent to {phone} 
+                        Sent to {phone}
                         <button onClick={() => setStep('PHONE')} className="text-amber-600 dark:text-amber-400 font-medium ml-2 hover:underline">Change</button>
                       </p>
                     </div>
@@ -572,18 +574,18 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <p className="text-center text-sm font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Trusted Partners & Networks</p>
         </div>
-        
+
         {/* Scrolling Container */}
         <div className="relative">
           {/* Fade edges */}
           <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white dark:from-zinc-950 to-transparent z-10 pointer-events-none" />
           <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white dark:from-zinc-950 to-transparent z-10 pointer-events-none" />
-          
+
           {/* Scrolling track */}
           <div className="flex partners-scroll">
             {[...PARTNERS, ...PARTNERS].map((partner, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="flex-shrink-0 mx-8 px-8 py-4 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50"
               >
                 <span className="text-lg font-bold text-zinc-400 dark:text-zinc-500 whitespace-nowrap">{partner}</span>
@@ -591,7 +593,7 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-        
+
         {/* Add scroll animation */}
         <style jsx>{`
           @keyframes scroll {
@@ -621,8 +623,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {SERVICES.map((service, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="group relative p-8 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-300 hover:shadow-xl hover:shadow-zinc-900/5 dark:hover:shadow-black/20"
               >
                 <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -650,13 +652,13 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {BENEFITS.map((benefit, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="relative p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden group hover:shadow-2xl hover:shadow-zinc-900/10 dark:hover:shadow-black/30 transition-all duration-300"
               >
                 {/* Gradient accent */}
                 <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${benefit.gradient} opacity-10 rounded-bl-full group-hover:opacity-20 transition-opacity`} />
-                
+
                 <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${benefit.gradient} flex items-center justify-center mb-6 shadow-lg`}>
                   <benefit.icon className="h-7 w-7 text-white" />
                 </div>
@@ -681,7 +683,7 @@ export default function LandingPage() {
                 Unbeatable Rates
               </h2>
               <p className="text-xl text-zinc-600 dark:text-zinc-400 mb-8 leading-relaxed">
-                Why pay more? Get wholesale prices on every transaction. 
+                Why pay more? Get wholesale prices on every transaction.
                 Whether you&apos;re buying for personal use or reselling, our rates maximize your value.
               </p>
               <div className="space-y-4 mb-10">
@@ -746,16 +748,16 @@ export default function LandingPage() {
               <div key={idx} className="relative p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl transition-shadow">
                 {/* Quote mark */}
                 <div className="absolute top-6 right-8 text-6xl font-serif text-zinc-100 dark:text-zinc-800">&quot;</div>
-                
+
                 {/* Stars */}
                 <div className="flex items-center gap-1 mb-6">
                   {[...Array(t.rating)].map((_, i) => (
                     <Star key={i} className="h-5 w-5 text-amber-400 fill-current" />
                   ))}
                 </div>
-                
+
                 <p className="text-lg text-zinc-700 dark:text-zinc-300 mb-8 leading-relaxed relative z-10">&quot;{t.content}&quot;</p>
-                
+
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-100 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300">
                     {t.avatar}
@@ -785,8 +787,8 @@ export default function LandingPage() {
 
           <div className="space-y-4">
             {FAQS.map((faq, idx) => (
-              <details 
-                key={idx} 
+              <details
+                key={idx}
                 className="group rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <summary className="flex items-center justify-between p-6 cursor-pointer select-none">
@@ -810,10 +812,10 @@ export default function LandingPage() {
           <div className="relative rounded-3xl overflow-hidden">
             {/* Background gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-white dark:via-zinc-100 dark:to-white" />
-            
+
             {/* Crystal overlay */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)] dark:bg-[radial-gradient(circle_at_30%_50%,rgba(0,0,0,0.1),transparent)]" />
-            
+
             <div className="relative px-8 py-16 sm:px-16 sm:py-20 text-center">
               <h2 className="text-4xl sm:text-5xl font-bold text-white dark:text-zinc-900 mb-6">
                 Ready to Get Started?
@@ -822,14 +824,14 @@ export default function LandingPage() {
                 Join 50,000+ Nigerians saving money on every transaction. Create your free account in seconds.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link 
+                <Link
                   href="/auth/register"
                   className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shadow-lg"
                 >
                   Create Free Account
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
-                <Link 
+                <Link
                   href="/pricing"
                   className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl border-2 border-white/30 dark:border-zinc-900/30 text-white dark:text-zinc-900 hover:bg-white/10 dark:hover:bg-zinc-900/10 transition-all"
                 >

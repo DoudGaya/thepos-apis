@@ -17,10 +17,10 @@ export async function middleware(request: NextRequest) {
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
     })
-    
+
     // If authenticated, redirect to dashboard
     if (token) {
-       return NextResponse.redirect(new URL('/dashboard', request.url))
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 
@@ -116,7 +116,8 @@ export async function middleware(request: NextRequest) {
       '/api/auth/request-password-reset',
       '/api/auth/reset-password',
       '/api/auth/send-otp',
-      '/api/store/quick-checkout'
+      '/api/store/quick-checkout',
+      '/api/auth/mobile-login'
     ];
 
     // Specific NextAuth internal routes to allow
@@ -160,9 +161,9 @@ export async function middleware(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim()
-      
+
       const jwtSecret = process.env.JWT_SECRET;
-      
+
       try {
         // Use Edge-compatible JWT verification (jose library)
         const decoded = await verifyTokenEdge(token)
@@ -180,9 +181,9 @@ export async function middleware(request: NextRequest) {
         // Get token signature (last part) to compare tokens
         const tokenParts = token.split('.');
         const signature = tokenParts.length === 3 ? tokenParts[2].substring(0, 20) : 'INVALID';
-        
-        console.error(`❌ [MW] FAIL err="${error?.message}" secret=${jwtSecret?.substring(0,5)}...${jwtSecret?.substring(jwtSecret.length-5)} sig=${signature}... tokenLen=${token.length}`)
-        
+
+        console.error(`❌ [MW] FAIL err="${error?.message}" secret=${jwtSecret?.substring(0, 5)}...${jwtSecret?.substring(jwtSecret.length - 5)} sig=${signature}... tokenLen=${token.length}`)
+
         return NextResponse.json(
           { error: 'Invalid token' },
           {

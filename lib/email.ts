@@ -106,52 +106,130 @@ class EmailService {
   }
 
   async sendPasswordResetOTP(email: string, otp: string): Promise<boolean> {
-    const subject = 'Password Reset Code - NillarPay';
+    const subject = 'Password Reset Code - Nillar Pay';
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #10b981;">NillarPay Password Reset</h2>
-        <p>You requested a password reset for your NillarPay account.</p>
-        <p>Your verification code is:</p>
-        <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
-          <h1 style="color: #10b981; font-size: 32px; margin: 0; letter-spacing: 8px;">${otp}</h1>
-        </div>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you didn't request this reset, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-        <p style="color: #6b7280; font-size: 14px;">NillarPay - Your Digital Utility Platform</p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #000000; padding: 32px 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Nillar Pay</h1>
+                  </td>
+                </tr>
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <h2 style="margin: 0 0 16px 0; color: #000000; font-size: 20px; font-weight: 600;">Password Reset Request</h2>
+                    <p style="margin: 0 0 24px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                      We received a request to reset your password. Use the verification code below to complete the process.
+                    </p>
+                    <!-- OTP Box -->
+                    <div style="background-color: #f9f9f9; border: 2px solid #e5e5e5; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                      <p style="margin: 0 0 8px 0; color: #888888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+                      <h1 style="margin: 0; color: #000000; font-size: 36px; font-weight: 700; letter-spacing: 8px;">${otp}</h1>
+                    </div>
+                    <p style="margin: 0 0 8px 0; color: #888888; font-size: 13px;">
+                      ⏱ This code expires in <strong>10 minutes</strong>
+                    </p>
+                    <p style="margin: 0; color: #888888; font-size: 13px;">
+                      If you didn't request this reset, you can safely ignore this email.
+                    </p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 24px 40px; border-top: 1px solid #eeeeee; text-align: center;">
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Nillar Pay. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
 
     return await this.sendEmail({
       to: email,
       subject,
       html,
-      text: `Your NillarPay password reset code is: ${otp}. This code expires in 10 minutes.`
+      text: `Your Nillar Pay password reset code is: ${otp}. This code expires in 10 minutes.`
     });
   }
 
   async sendOTP(email: string, otp: string): Promise<boolean> {
-    const subject = 'Account Verification - NillarPay';
+    const subject = 'Verify Your Account - Nillar Pay';
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #10b981;">Welcome to NillarPay!</h2>
-        <p>Thank you for registering with NillarPay. Please verify your email address to complete your registration.</p>
-        <p>Your verification code is:</p>
-        <div style="background: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0;">
-          <h1 style="color: #10b981; font-size: 32px; margin: 0; letter-spacing: 8px;">${otp}</h1>
-        </div>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you didn't create this account, please ignore this email.</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-        <p style="color: #6b7280; font-size: 14px;">NillarPay - Your Digital Utility Platform</p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #000000; padding: 32px 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Nillar Pay</h1>
+                  </td>
+                </tr>
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <h2 style="margin: 0 0 16px 0; color: #000000; font-size: 20px; font-weight: 600;">Welcome to Nillar Pay!</h2>
+                    <p style="margin: 0 0 24px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                      Thank you for creating an account. Please verify your email address using the code below.
+                    </p>
+                    <!-- OTP Box -->
+                    <div style="background-color: #f9f9f9; border: 2px solid #e5e5e5; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                      <p style="margin: 0 0 8px 0; color: #888888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+                      <h1 style="margin: 0; color: #000000; font-size: 36px; font-weight: 700; letter-spacing: 8px;">${otp}</h1>
+                    </div>
+                    <p style="margin: 0 0 8px 0; color: #888888; font-size: 13px;">
+                      ⏱ This code expires in <strong>10 minutes</strong>
+                    </p>
+                    <p style="margin: 0; color: #888888; font-size: 13px;">
+                      If you didn't create this account, you can safely ignore this email.
+                    </p>
+                  </td>
+                </tr>
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 24px 40px; border-top: 1px solid #eeeeee; text-align: center;">
+                    <p style="margin: 0; color: #999999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Nillar Pay. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
 
     return await this.sendEmail({
       to: email,
       subject,
       html,
-      text: `Your NillarPay verification code is: ${otp}. This code expires in 10 minutes.`
+      text: `Your Nillar Pay verification code is: ${otp}. This code expires in 10 minutes.`
     });
   }
 

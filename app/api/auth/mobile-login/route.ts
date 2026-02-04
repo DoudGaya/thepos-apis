@@ -20,9 +20,15 @@ export async function POST(req: NextRequest) {
 
         if (provider === 'google') {
             try {
+                const audiences = [
+                    process.env.GOOGLE_CLIENT_ID,
+                    process.env.GOOGLE_ANDROID_CLIENT_ID,
+                    process.env.GOOGLE_IOS_CLIENT_ID
+                ].filter((id) => Boolean(id)) as string[];
+
                 const ticket = await googleClient.verifyIdToken({
                     idToken: token,
-                    audience: process.env.GOOGLE_CLIENT_ID,
+                    audience: audiences.length > 0 ? audiences : process.env.GOOGLE_CLIENT_ID,
                 });
                 const payload = ticket.getPayload();
                 if (payload) {
@@ -86,13 +92,13 @@ export async function POST(req: NextRequest) {
         // Generate tokens using the unified auth helper (uses JWT_SECRET)
         // Access token: 1 hour
         const accessToken = generateToken(
-            { userId: user.id, role: user.role }, 
+            { userId: user.id, role: user.role },
             '1h'
         );
-        
+
         // Refresh token: 30 days
         const refreshToken = generateToken(
-            { userId: user.id, role: user.role }, 
+            { userId: user.id, role: user.role },
             '30d'
         );
 

@@ -7,8 +7,18 @@ export const runtime = 'nodejs'
 
 const resetPasswordSchema = z.object({
   email: z.string().email('Valid email is required'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
-  otp: z.string().length(6, 'OTP must be 6 digits'),
+  // Accept both 'newPassword' and 'password' for compatibility
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  // Accept both 'otp' and 'token' for compatibility
+  otp: z.string().length(6, 'OTP must be 6 digits').optional(),
+  token: z.string().length(6, 'Token must be 6 digits').optional(),
+}).refine(data => data.newPassword || data.password, {
+  message: 'Password is required',
+  path: ['password'],
+}).refine(data => data.otp || data.token, {
+  message: 'OTP/Token is required',
+  path: ['otp'],
 })
 
 export async function POST(request: NextRequest) {
@@ -17,17 +27,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('📥 Reset Password request:', {
       email: body.email,
-      otpLength: body.otp?.length,
+      hasOtp: !!body.otp,
+      hasToken: !!body.token,
     })
 
     const parsed = resetPasswordSchema.parse(body)
 
-    // Verify OTP
+    // Normalize field names
+    const otpCode = parsed.otp || parsed.token || ''
+    const newPassword = parsed.newPassword || parsed.password || ''
+
+    // Verify OTP - check for PASSWORD_RESET type (created by forgot-password endpoint)
     const otp = await prisma.oTP.findFirst({
       where: {
-        phone: parsed.email, // Phone can be email for password reset
-        code: parsed.otp,
-        type: 'FORGOT_PASSWORD',
+        code: otpCode,
+        type: 'PASSWORD_RESET',
         used: false,
       },
     })
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(parsed.newPassword, 10)
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
 
     // Update user password and mark OTP as used
     await Promise.all([
