@@ -6,6 +6,18 @@ import { AlertCircle, CheckCircle2, Loader2, Smartphone, Wallet } from 'lucide-r
 import PhoneInput from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { TransactionPinModal } from '@/components/transaction-pin-modal'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 
 const NETWORKS = ['MTN', 'GLO', 'AIRTEL', '9MOBILE'] as const
 const QUICK_AMOUNTS = [100, 200, 500, 1000, 2000, 5000]
@@ -70,7 +82,7 @@ export default function AirtimePurchasePage() {
       setError('Maximum airtime amount is ₦50,000')
       return
     }
-    
+
     if (walletBalance < formData.amount) {
       setError('Insufficient wallet balance')
       return
@@ -82,7 +94,7 @@ export default function AirtimePurchasePage() {
   const handleConfirmPurchase = async (pin: string) => {
     setLoading(true)
     setError('')
-    
+
     try {
       const res = await fetch('/api/airtime/purchase', {
         method: 'POST',
@@ -103,20 +115,16 @@ export default function AirtimePurchasePage() {
       setSuccess(
         `Airtime purchase successful! ${formData.network} ₦${formData.amount.toLocaleString()} sent to ${formData.phone}. Reference: ${data.data.transaction?.reference || 'N/A'}`
       )
-      
+
       // Update balance
       setWalletBalance(data.data.balance || (walletBalance - formData.amount))
-      
+
       // Reset form and close modal
       setFormData({ network: 'MTN', phone: '', amount: 0 })
       setIsPinModalOpen(false)
-      
+
     } catch (err: any) {
       setError(err.message || 'Failed to purchase airtime')
-      // Keep modal open on error so user can retry PIN if it was just wrong PIN
-      // But if it's other error, maybe close it? 
-      // For now, let's close it if it's not PIN error, but usually we want to keep it open for PIN retry.
-      // The error message is shown in the main page, so closing modal is safer to see the error.
       setIsPinModalOpen(false)
     } finally {
       setLoading(false)
@@ -124,8 +132,8 @@ export default function AirtimePurchasePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <TransactionPinModal 
+    <div className="space-y-6">
+      <TransactionPinModal
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onConfirm={handleConfirmPurchase}
@@ -135,193 +143,195 @@ export default function AirtimePurchasePage() {
         isLoading={loading}
       />
 
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center">
-                <Smartphone className="mr-2" size={28} />
-                Buy Airtime
-              </h1>
-              <p className="text-gray-300 mt-2">
-                All networks available • Instant delivery
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-gray-400 text-sm">Wallet Balance</p>
-              <p className="text-2xl font-bold flex items-center justify-end">
-                <Wallet className="mr-2" size={20} />
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Buy Airtime</h1>
+        <p className="text-muted-foreground">Top up airtime for any network instantly.</p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Purchase Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Airtime Topup
+              </CardTitle>
+              <CardDescription>
+                Select network and enter details to proceed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleInitiatePurchase} className="space-y-6">
+
+                {/* Network Selection */}
+                <div className="space-y-3">
+                  <Label>Select Network</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {NETWORKS.map((network) => (
+                      <div
+                        key={network}
+                        onClick={() => setFormData({ ...formData, network })}
+                        className={`
+                          cursor-pointer rounded-md border-2 p-4 flex items-center justify-center font-semibold transition-all hover:bg-muted/50
+                          ${formData.network === network ? 'border-primary bg-primary/5' : 'border-muted'}
+                        `}
+                      >
+                        {network}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <PhoneInput
+                    international
+                    defaultCountry="NG"
+                    value={formData.phone}
+                    onChange={(value) => setFormData({ ...formData, phone: value || '' })}
+                    placeholder="Enter phone number"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
+                  />
+                </div>
+
+                {/* Amount Section */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <Label>Amount (₦)</Label>
+                    <span className="text-xs text-muted-foreground">Min: ₦50 - Max: ₦50,000</span>
+                  </div>
+
+                  <Input
+                    type="number"
+                    value={formData.amount || ''}
+                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                    placeholder="Enter amount"
+                    min={50}
+                    max={50000}
+                    className="text-lg font-semibold"
+                  />
+
+                  {/* Quick Amounts */}
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {QUICK_AMOUNTS.map((amount) => (
+                      <Button
+                        key={amount}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickAmount(amount)}
+                        className={formData.amount === amount ? 'border-primary bg-primary/5 text-primary' : ''}
+                      >
+                        ₦{amount}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price Info */}
+                {formData.amount >= 50 && (
+                  <div className="bg-muted p-4 rounded-lg space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Airtime Value</span>
+                      <span className="font-medium">₦{formData.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t pt-2 mt-2 border-border/50">
+                      <span className="font-semibold">You Pay</span>
+                      <span className="font-bold text-lg">₦{formData.amount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error/Success Messages */}
+                {error && (
+                  <div className="bg-destructive/15 text-destructive border-destructive/20 border p-3 rounded-md flex items-start gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 text-green-700 border-green-200 border p-3 rounded-md flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5" />
+                    <span>{success}</span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading || loadingBalance || walletBalance < formData.amount || formData.amount < 50}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Proceed to Payment"
+                  )}
+                </Button>
+
+                {walletBalance < formData.amount && formData.amount >= 50 && (
+                  <p className="text-destructive text-sm text-center">
+                    Insufficient balance. Please fund your wallet first.
+                  </p>
+                )}
+
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar Info */}
+        <div className="space-y-6">
+          {/* Wallet Balance Widget */}
+          <Card className="bg-primary text-primary-foreground border-0">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-primary-foreground/70">Wallet Balance</CardDescription>
+              <CardTitle className="text-3xl">
                 {loadingBalance ? (
-                  <Loader2 className="animate-spin" size={20} />
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
                   `₦${walletBalance.toLocaleString()}`
                 )}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleInitiatePurchase} className="space-y-6">
-            {/* Network Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Network
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {NETWORKS.map((network) => (
-                  <button
-                    key={network}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, network })}
-                    className={`p-4 rounded-lg border-2 font-semibold transition-all ${
-                      formData.network === network
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    {network}
-                  </button>
-                ))}
+              </CardTitle>
+            </CardHeader>
+            <CardFooter>
+              <div className="flex items-center gap-2 text-sm text-primary-foreground/80">
+                <Wallet className="h-4 w-4" />
+                <span>Available for spend</span>
               </div>
-            </div>
+            </CardFooter>
+          </Card>
 
-            {/* Phone Number */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <PhoneInput
-                international
-                defaultCountry="NG"
-                value={formData.phone}
-                onChange={(value) => setFormData({ ...formData, phone: value || '' })}
-                placeholder="Enter phone number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
-              />
-            </div>
-
-            {/* Quick Amounts */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quick Amounts
-              </label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {QUICK_AMOUNTS.map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => handleQuickAmount(amount)}
-                    className={`py-2 px-3 rounded-lg border-2 font-semibold text-sm transition-all ${
-                      formData.amount === amount
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400'
-                    }`}
-                  >
-                    ₦{amount}
-                  </button>
-                ))}
+          {/* Guidelines */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">How it works</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-4">
+              <div className="flex gap-3">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                <p className="text-muted-foreground">Select your preferred mobile network.</p>
               </div>
-            </div>
-
-            {/* Custom Amount */}
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Amount (₦50 - ₦50,000)
-              </label>
-              <input
-                type="number"
-                id="amount"
-                value={formData.amount || ''}
-                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                placeholder="Enter amount"
-                min={50}
-                max={50000}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              />
-            </div>
-
-            {/* Price Info */}
-            {formData.amount >= 50 && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2 text-gray-900">Pricing Information</h3>
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-600">Airtime Value: ₦{formData.amount.toLocaleString()}</p>
-                  <p className="font-bold text-lg text-gray-900">
-                    You Pay: ₦{formData.amount.toLocaleString()}
-                  </p>
-                  <p className="text-green-600 text-xs">
-                    * Airtime is sold at face value. We earn profit from network commission.
-                  </p>
-                </div>
+              <div className="flex gap-3">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                <p className="text-muted-foreground">Enter the 11-digit phone number.</p>
               </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || loadingBalance || walletBalance < formData.amount || formData.amount < 50}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={20} />
-                  Processing...
-                </>
-              ) : (
-                `Proceed to Payment`
-              )}
-            </button>
-
-            {walletBalance < formData.amount && formData.amount >= 50 && (
-              <p className="text-red-600 text-sm text-center">
-                Insufficient balance. Please fund your wallet first.
-              </p>
-            )}
-          </form>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
-              <AlertCircle className="text-red-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-red-800 font-semibold">Error</p>
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="flex gap-3">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                <p className="text-muted-foreground">Input amount or choose quick topup.</p>
               </div>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start">
-              <CheckCircle2 className="text-green-600 mr-2 mt-0.5 flex-shrink-0" size={20} />
-              <div>
-                <p className="text-green-800 font-semibold">Success!</p>
-                <p className="text-green-600 text-sm">{success}</p>
+              <div className="flex gap-3">
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center font-bold text-xs shrink-0">4</div>
+                <p className="text-muted-foreground">Authorize with your secure PIN.</p>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Info Section */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">��� How to Buy Airtime</h3>
-          <ol className="space-y-2 text-sm text-gray-600">
-            <li>1. Select your network (MTN, GLO, AIRTEL, 9MOBILE)</li>
-            <li>2. Enter the phone number to receive airtime</li>
-            <li>3. Choose a quick amount or enter custom amount</li>
-            <li>4. Click "Purchase Airtime" to complete</li>
-            <li>5. Airtime is delivered instantly!</li>
-          </ol>
-          
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              <strong>Note:</strong> Minimum purchase is ₦50, maximum is ₦50,000 per transaction. 
-              Airtime is delivered within seconds to the specified phone number.
-            </p>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

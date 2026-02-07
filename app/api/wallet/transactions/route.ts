@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform transactions to match frontend interface
-    const transformedTransactions = transactions.map(transaction => ({
+    const transformedTransactions = transactions.map((transaction: any) => ({
       id: transaction.id,
       type: mapTransactionType(transaction),
       amount: transaction.amount,

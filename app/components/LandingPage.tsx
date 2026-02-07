@@ -197,8 +197,7 @@ export default function LandingPage() {
             price: (p.costPrice || 0) + margin
           }))
           setDataPlans(mappedPlans)
-        } catch (error) {
-          console.error('Failed to fetch plans', error)
+        } catch {
           setDataPlans([])
         }
       }
@@ -583,12 +582,37 @@ export default function LandingPage() {
 
           {/* Scrolling track */}
           <div className="flex partners-scroll">
-            {[...PARTNERS, ...PARTNERS].map((partner, idx) => (
+            {[
+              { name: 'MTN', logo: '/assets/partners/MTN-Logo.png' },
+              { name: 'Airtel', logo: '/assets/partners/airtel.png' },
+              { name: 'Glo', logo: '/assets/partners/glo.webp' },
+              { name: 'DSTV', logo: '/assets/partners/324-3247567_dstv-logo-dstv-now-logo-png.png' },
+              { name: 'Ikeja Electric', logo: '/assets/partners/ikeja-electric.png' },
+              { name: 'Paystack', logo: '/assets/partners/Paystack_Logo.png' },
+              { name: 'Flutterwave', logo: '/assets/partners/flutterwave.png' },
+              { name: 'Nomba', logo: '/assets/partners/nomba.png' },
+              // Repeated for scroll effect
+              { name: 'MTN', logo: '/assets/partners/MTN-Logo.png' },
+              { name: 'Airtel', logo: '/assets/partners/airtel.png' },
+              { name: 'Glo', logo: '/assets/partners/glo.webp' },
+              { name: 'DSTV', logo: '/assets/partners/324-3247567_dstv-logo-dstv-now-logo-png.png' },
+              { name: 'Ikeja Electric', logo: '/assets/partners/ikeja-electric.png' },
+              { name: 'Paystack', logo: '/assets/partners/Paystack_Logo.png' },
+              { name: 'Flutterwave', logo: '/assets/partners/flutterwave.png' },
+              { name: 'Nomba', logo: '/assets/partners/nomba.png' },
+            ].map((partner, idx) => (
               <div
                 key={idx}
-                className="flex-shrink-0 mx-8 px-8 py-4 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50"
+                className="flex-shrink-0 mx-8 px-8 py-4 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 flex items-center justify-center min-w-[150px]"
               >
-                <span className="text-lg font-bold text-zinc-400 dark:text-zinc-500 whitespace-nowrap">{partner}</span>
+                <div className="relative h-8 w-24 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
+                  <Image
+                    src={partner.logo}
+                    alt={partner.name}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
             ))}
           </div>

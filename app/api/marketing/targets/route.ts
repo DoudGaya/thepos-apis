@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     const targets = await targetService.getUserTargetsEnhanced(session.user.id);
 
     // Calculate summary stats
-    const completedCount = targets.filter(t => t.isClaimed || (t.tiers && t.tiers.every((tier: any) => tier.claimed))).length;
-    const totalEarnings = targets.reduce((sum, t) => {
+    const completedCount = targets.filter((t: any) => t.isClaimed || (t.tiers && t.tiers.every((tier: any) => tier.claimed))).length;
+    const totalEarnings = targets.reduce((sum: number, t: any) => {
       let earnings = 0;
       if (t.isClaimed) earnings += t.rewardAmount;
       if (t.tiers) {

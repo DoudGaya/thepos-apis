@@ -1,0 +1,137 @@
+app/admin/page.tsx(120,39): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/admin/page.tsx(124,13): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/admin/page.tsx(124,16): error TS7006: Parameter 'b' implicitly has an 'any' type.
+app/admin/page.tsx(205,40): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/admin/routing/actions.ts(5,33): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/admin/vendors/page.tsx(59,23): error TS7006: Parameter 'vendor' implicitly has an 'any' type.
+app/api/admin/dashboard/route.ts(205,38): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/dashboard/route.ts(211,44): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/dashboard/route.ts(222,40): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/api/admin/dashboard/route.ts(222,45): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/metrics/route.ts(144,25): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/metrics/route.ts(226,54): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/metrics/route.ts(238,20): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/api/admin/metrics/route.ts(238,23): error TS7006: Parameter 'b' implicitly has an 'any' type.
+app/api/admin/metrics/route.ts(239,18): error TS7006: Parameter 'stat' implicitly has an 'any' type.
+app/api/admin/notifications/route.ts(6,34): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/admin/sales/route.ts(74,47): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(90,26): error TS7006: Parameter 'a' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(90,29): error TS7006: Parameter 'b' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(111,24): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(157,26): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(178,49): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(178,54): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(179,48): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(179,53): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(180,54): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+app/api/admin/sales/route.ts(180,59): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/stats/route.ts(157,33): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/transactions/[id]/refund/route.ts(62,51): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/transactions/route.ts(144,44): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/transactions/route.ts(149,40): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/users/[id]/credit/route.ts(44,51): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/users/[id]/debit/route.ts(50,51): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/admin/users/[id]/route.ts(141,50): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/admin/users/route.ts(91,22): error TS7006: Parameter 'user' implicitly has an 'any' type.
+app/api/auth/verify-otp/route.ts(84,77): error TS7006: Parameter 'otp' implicitly has an 'any' type.
+app/api/debug/auth/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/debug/simulate-payment/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/marketing/targets/[id]/progress/route.ts(5,22): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/marketing/targets/[id]/route.ts(5,22): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/marketing/targets/admin/route.ts(5,22): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/clear/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/push-token/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/read/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/settings/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/stats/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/notifications/stats/route.ts(49,33): error TS7006: Parameter 'item' implicitly has an 'any' type.
+app/api/notifications/test/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/pricing/route.ts(98,48): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/api/pricing/route.ts(98,53): error TS7006: Parameter 'plan' implicitly has an 'any' type.
+app/api/pricing/route.ts(118,50): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+app/api/pricing/route.ts(118,55): error TS7006: Parameter 'plan' implicitly has an 'any' type.
+app/api/pricing/route.ts(171,48): error TS7006: Parameter 'p' implicitly has an 'any' type.
+app/api/referrals/route.ts(109,41): error TS7006: Parameter 'r' implicitly has an 'any' type.
+app/api/referrals/withdraw/route.ts(66,36): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/store/quick-checkout/route.ts(9,52): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/transactions/receipt/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/user/profile/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/users/push-token/route.ts(3,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/wallet/test-fund/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/wallet/transactions/[transactionId]/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/wallet/transactions/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/wallet/transfer/validate/route.ts(75,37): error TS7006: Parameter 'u' implicitly has an 'any' type.
+app/api/wallet/transfer/validate/route.ts(89,45): error TS7006: Parameter 'user' implicitly has an 'any' type.
+app/api/wallet/verify/[reference]/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+app/api/webhooks/opay/route.ts(94,46): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+app/api/webhooks/paystack/route.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/prisma.ts(1,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/NotificationService.ts(2,48): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/pricing.service.ts(358,24): error TS7006: Parameter 'item' implicitly has an 'any' type.
+lib/services/pricing.service.ts(400,24): error TS7006: Parameter 'item' implicitly has an 'any' type.
+lib/services/purchase.service.ts(365,45): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/purchase.service.ts(421,38): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/PurchaseService.ts(13,52): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/ReferralService.ts(3,33): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/ReferralService.ts(129,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+lib/services/TargetService.ts(2,93): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/TargetService.ts(146,57): error TS7006: Parameter 'target' implicitly has an 'any' type.
+lib/services/TargetService.ts(270,45): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/TargetService.ts(336,15): error TS7006: Parameter 't' implicitly has an 'any' type.
+lib/services/TargetService.ts(337,12): error TS7006: Parameter 't' implicitly has an 'any' type.
+lib/services/TargetService.ts(369,30): error TS7006: Parameter 'target' implicitly has an 'any' type.
+lib/services/TargetService.ts(426,44): error TS7006: Parameter 'p' implicitly has an 'any' type.
+lib/services/TargetService.ts(427,47): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+lib/services/TargetService.ts(427,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+lib/services/WalletService.ts(6,66): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+lib/services/WalletService.ts(47,50): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/WalletService.ts(87,50): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/WalletService.ts(128,50): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/WalletService.ts(236,50): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/WalletService.ts(322,50): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+lib/services/WalletService.ts(393,52): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+prisma/seed-vendors.ts(1,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+prisma/seed.ts(1,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+scripts/check_push_tokens.ts(1,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+scripts/check_push_tokens.ts(24,19): error TS7006: Parameter 'user' implicitly has an 'any' type.
+scripts/count_notifications.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+scripts/debug-request.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+scripts/inspect_transactions.ts(1,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`
+scripts/inspect_transactions.ts(23,27): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+scripts/inspect_transactions.ts(23,31): error TS7006: Parameter 'i' implicitly has an 'any' type.
+scripts/list_vtpass_transactions.ts(2,30): error TS7016: Could not find a declaration file for module '@prisma/client'. 'C:/projects/the-pos/the-backend/node_modules/@prisma/client/default.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/prisma__client` if it exists or add a new declaration (.d.ts) file containing `declare module '@prisma/client';`

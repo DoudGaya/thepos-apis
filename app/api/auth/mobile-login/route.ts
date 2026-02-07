@@ -19,13 +19,14 @@ export async function POST(req: NextRequest) {
         let emailVerified = false;
 
         if (provider === 'google') {
-            try {
-                const audiences = [
-                    process.env.GOOGLE_CLIENT_ID,
-                    process.env.GOOGLE_ANDROID_CLIENT_ID,
-                    process.env.GOOGLE_IOS_CLIENT_ID
-                ].filter((id) => Boolean(id)) as string[];
+            const audiences = [
+                process.env.GOOGLE_CLIENT_ID,
+                process.env.GOOGLE_ANDROID_CLIENT_ID,
+                process.env.GOOGLE_ANDROID_CLIENT_ID_2,
+                process.env.GOOGLE_IOS_CLIENT_ID
+            ].filter((id) => Boolean(id)) as string[];
 
+            try {
                 const ticket = await googleClient.verifyIdToken({
                     idToken: token,
                     audience: audiences.length > 0 ? audiences : process.env.GOOGLE_CLIENT_ID,
@@ -36,18 +37,41 @@ export async function POST(req: NextRequest) {
                     name = payload.name || '';
                     emailVerified = payload.email_verified || false;
                 }
-            } catch (error) {
-                console.error('Google token verification failed:', error);
+            } catch (error: any) {
+                console.error('Google token verification failed:', error.message);
+
+                // Decode token without verification to see what's inside (for debugging)
+                try {
+                    const ticket = await googleClient.verifyIdToken({
+                        idToken: token,
+                        // Don't enforce audience here just to see what it is
+                    });
+                    const payload = ticket.getPayload();
+                    console.log('DEBUG: Token Payload Audience:', payload?.aud);
+                    console.log('DEBUG: Expected Audiences:', audiences);
+                } catch (innerError) {
+                    // If it fails even without audience check, try to decode manually
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        try {
+                            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+                            console.log('DEBUG: Manual Decode Audience:', payload.aud);
+                        } catch (e) {
+                            console.log('DEBUG: Failed to manual decode');
+                        }
+                    }
+                    console.log('DEBUG: Expected Audiences:', audiences);
+                }
+
                 return NextResponse.json({ error: 'Invalid Google token' }, { status: 401 });
             }
         } else if (provider === 'apple') {
             try {
                 // Implement Apple token verification
-                // token passed here is the identityToken
                 const payload = await verifyAppleToken({
                     idToken: token,
                     clientId: process.env.APPLE_ID!,
-                    nonce: 'nonce', // Optional: validate nonce if used
+                    nonce: 'nonce',
                 });
                 email = payload.email || '';
                 emailVerified = String(payload.email_verified) === 'true';

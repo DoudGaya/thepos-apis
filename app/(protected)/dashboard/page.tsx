@@ -2,12 +2,12 @@
 
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { 
-  Wallet, 
-  Smartphone, 
-  Wifi, 
-  Zap, 
-  TrendingUp, 
+import {
+  Wallet,
+  Smartphone,
+  Wifi,
+  Zap,
+  TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
   Plus,
@@ -15,8 +15,22 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  CreditCard,
+  Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { formatDistanceToNow } from 'date-fns'
+
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
 
 interface WalletData {
   balance: number
@@ -39,7 +53,6 @@ interface RecentTransaction {
   createdAt: string
 }
 
-// Helper functions to calculate stats
 function calculateTotalSpent(transactions: RecentTransaction[]): string {
   const total = transactions
     .filter(t => t.amount < 0 && (t.status === 'COMPLETED' || t.status === 'PENDING'))
@@ -50,7 +63,7 @@ function calculateTotalSpent(transactions: RecentTransaction[]): string {
 function calculateMonthlySpent(transactions: RecentTransaction[]): string {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  
+
   const total = transactions
     .filter(t => {
       const txDate = new Date(t.createdAt)
@@ -62,19 +75,19 @@ function calculateMonthlySpent(transactions: RecentTransaction[]): string {
 
 function getTransactionDescription(tx: any): string {
   const details = tx.details || {}
-  
+
   switch (tx.type) {
     case 'DATA':
       return `${details.network} ${details.planName || 'Data Bundle'}`
     case 'AIRTIME':
-      return `${details.network} Airtime ₦${tx.amount}`
+      return `${details.network} Airtime`
     case 'ELECTRICITY':
-      return `Electricity Token ₦${tx.amount}`
+      return `Electricity Token`
     case 'CABLE':
     case 'CABLE_TV':
-      return `Cable TV Subscription ₦${tx.amount}`
+      return `Cable TV Subscription`
     case 'WALLET_FUNDING':
-      return `Wallet Funding ₦${tx.amount}`
+      return `Wallet Funding`
     default:
       return tx.type
   }
@@ -92,22 +105,14 @@ export default function DashboardPage() {
       try {
         setLoading(true)
 
-        // Fetch wallet balance
-        const walletRes = await fetch('/api/wallet/balance', {
-          credentials: 'include'
-        })
+        const [walletRes, transactionsRes, referralsRes] = await Promise.all([
+          fetch('/api/wallet/balance', { credentials: 'include' }),
+          fetch('/api/transactions?limit=5', { credentials: 'include' }),
+          fetch('/api/referrals', { credentials: 'include' })
+        ])
+
         const walletData = walletRes.ok ? await walletRes.json() : null
-
-        // Fetch transactions
-        const transactionsRes = await fetch('/api/transactions?limit=5', {
-          credentials: 'include'
-        })
         const transactionsData = transactionsRes.ok ? await transactionsRes.json() : null
-
-        // Fetch referral stats
-        const referralsRes = await fetch('/api/referrals', {
-          credentials: 'include'
-        })
         const referralsData = referralsRes.ok ? await referralsRes.json() : null
 
         if (walletData?.data) {
@@ -117,14 +122,13 @@ export default function DashboardPage() {
           })
         }
 
-        // Process transactions once
         let sanitizedTransactions: RecentTransaction[] = []
-        
+
         if (transactionsData?.data?.transactions) {
           const rawTransactions = Array.isArray(transactionsData.data.transactions)
             ? transactionsData.data.transactions
             : [transactionsData.data.transactions]
-            
+
           sanitizedTransactions = rawTransactions.map((tx: any, index: number) => ({
             id: tx.id || `tx-${Date.now()}-${index}`,
             type: tx.type,
@@ -133,43 +137,43 @@ export default function DashboardPage() {
             status: tx.status === 'SUCCESS' ? 'COMPLETED' : tx.status,
             createdAt: tx.createdAt,
           }))
-          
+
           setTransactions(sanitizedTransactions)
         }
 
+        // Stats calculation
         if (sanitizedTransactions.length > 0 || referralsData?.data?.stats) {
           const referralStats = referralsData?.data?.stats
-          
+
           setStats([
-            { 
-              label: 'Total Spent', 
+            {
+              label: 'Total Spent',
               value: calculateTotalSpent(sanitizedTransactions),
-              change: '+12%', 
-              isPositive: true 
+              change: '+12%',
+              isPositive: true
             },
-            { 
-              label: 'Transactions', 
+            {
+              label: 'Transactions',
               value: (transactionsData?.data?.total || sanitizedTransactions.length).toString(),
-              change: '+8%', 
-              isPositive: true 
+              change: '+8%',
+              isPositive: true
             },
-            { 
-              label: 'This Month', 
+            {
+              label: 'This Month',
               value: calculateMonthlySpent(sanitizedTransactions),
-              change: '-3%', 
-              isPositive: false 
+              change: '-3%',
+              isPositive: false
             },
-            { 
-              label: 'Referral Earnings', 
+            {
+              label: 'Referral Earnings',
               value: `₦${(referralStats?.totalEarned || 0).toLocaleString()}`,
-              change: '+25%', 
-              isPositive: true 
+              change: '+25%',
+              isPositive: true
             },
           ])
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
-        // Keep initial loading state to show skeleton
       } finally {
         setLoading(false)
       }
@@ -178,23 +182,10 @@ export default function DashboardPage() {
     fetchData()
   }, [])
 
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    return `${days}d ago`
-  }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     )
   }
@@ -202,218 +193,196 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          Welcome back, {session?.user?.name?.split(' ')[0] || 'User'}! 👋
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {session?.user?.name?.split(' ')[0] || 'User'}
         </h1>
-        <p className="mt-1 text-gray-600">
-          Here's what's happening with your account today.
+        <p className="text-muted-foreground">
+          Here's an overview of your financial activity.
         </p>
       </div>
 
-      {/* Wallet Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Main Wallet */}
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white shadow-lg">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-gray-300 text-sm">Main Wallet</p>
-              <h2 className="text-3xl font-bold mt-1">
-                ₦{wallet.balance.toLocaleString()}
-              </h2>
+      {/* Wallet Section */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Main Wallet Card - Spans 4 columns */}
+        <Card className="col-span-4 bg-primary text-primary-foreground shadow-lg border-0">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-primary-foreground/70">Main Wallet Balance</CardDescription>
+            <CardTitle className="text-4xl font-bold">₦{wallet.balance.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mt-4">
+              <Button asChild variant="secondary" className="flex-1 font-semibold">
+                <Link href="/dashboard/wallet?action=fund">
+                  <Plus className="mr-2 h-4 w-4" /> Fund Wallet
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="flex-1 border-primary-foreground/20 bg-primary-foreground/10 hover:bg-primary-foreground/20 text-primary-foreground">
+                <Link href="/dashboard/wallet?action=transfer">
+                  <Send className="mr-2 h-4 w-4" /> Transfer
+                </Link>
+              </Button>
             </div>
-            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-              <Wallet className="w-6 h-6" />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <Link
-              href="/dashboard/wallet?action=fund"
-              className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-900 py-2 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Fund
-            </Link>
-            <Link
-              href="/dashboard/wallet?action=transfer"
-              className="flex-1 flex items-center justify-center gap-2 bg-white/20 backdrop-blur-sm py-2 px-4 rounded-lg font-medium hover:bg-white/30 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              Transfer
-            </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Commission Wallet */}
-        <div className="bg-white rounded-xl p-6 border-2 border-gray-200 shadow-sm">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-gray-600 text-sm">Commission Balance</p>
-              <h2 className="text-3xl font-bold text-gray-900 mt-1">
-                ₦{wallet.commissionBalance.toLocaleString()}
-              </h2>
+        {/* Commission Wallet Card - Spans 3 columns */}
+        <Card className="col-span-3">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardDescription>Commission Balance</CardDescription>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <CardTitle className="text-3xl font-bold">₦{wallet.commissionBalance.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mt-4">
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/referrals">
+                  View Referrals <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-          </div>
-          <div className="mt-6">
-            <Link
-              href="/dashboard/referrals"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 px-4 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-colors"
-            >
-              View Referrals
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <p className="text-sm text-gray-600">{stat.label}</p>
-            <div className="flex items-end justify-between mt-2">
-              <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-              <span
-                className={`flex items-center text-xs font-medium ${
-                  stat.isPositive ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {stat.isPositive ? (
-                  <ArrowUpRight className="w-3 h-3" />
-                ) : (
-                  <ArrowDownRight className="w-3 h-3" />
-                )}
-                {stat.change}
-              </span>
-            </div>
-          </div>
+      {/* Quick Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.label}
+              </CardTitle>
+              {stat.isPositive ? <ArrowUpRight className="h-4 w-4 text-muted-foreground" /> : <ArrowDownRight className="h-4 w-4 text-muted-foreground" />}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground">
+                {stat.change} from last month
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link
-            href="/dashboard/airtime"
-            className="group bg-white rounded-lg p-6 border-2 border-gray-200 hover:border-gray-900 hover:shadow-md transition-all text-center"
-          >
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Smartphone className="w-6 h-6 text-gray-900" />
-            </div>
-            <h3 className="mt-3 font-semibold text-gray-900">Buy Airtime</h3>
-            <p className="text-xs text-gray-600 mt-1">All networks</p>
-          </Link>
-
-          <Link
-            href="/dashboard/data"
-            className="group bg-white rounded-lg p-6 border-2 border-gray-200 hover:border-gray-900 hover:shadow-md transition-all text-center"
-          >
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Wifi className="w-6 h-6 text-gray-900" />
-            </div>
-            <h3 className="mt-3 font-semibold text-gray-900">Buy Data</h3>
-            <p className="text-xs text-gray-600 mt-1">Best prices</p>
-          </Link>
-
-          <Link
-            href="/dashboard/electricity"
-            className="group bg-white rounded-lg p-6 border-2 border-gray-200 hover:border-gray-900 hover:shadow-md transition-all text-center"
-          >
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Zap className="w-6 h-6 text-gray-900" />
-            </div>
-            <h3 className="mt-3 font-semibold text-gray-900">Electricity</h3>
-            <p className="text-xs text-gray-600 mt-1">Pay bills</p>
-          </Link>
-
-          <Link
-            href="/dashboard/transactions"
-            className="group bg-white rounded-lg p-6 border-2 border-gray-200 hover:border-gray-900 hover:shadow-md transition-all text-center"
-          >
-            <div className="w-12 h-12 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Clock className="w-6 h-6 text-gray-900" />
-            </div>
-            <h3 className="mt-3 font-semibold text-gray-900">Transactions</h3>
-            <p className="text-xs text-gray-600 mt-1">View history</p>
-          </Link>
-        </div>
-      </div>
-
-      {/* Recent Transactions */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
-            <Link
-              href="/dashboard/transactions"
-              className="text-sm text-gray-900 hover:text-gray-700 font-medium"
-            >
-              View all
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Quick Actions */}
+        <div className="col-span-4">
+          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <Link href="/dashboard/airtime">
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer  border-l-primary/10">
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Smartphone className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Buy Airtime</CardTitle>
+                      <CardDescription>Top up any network</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link href="/dashboard/data">
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer  border-l-primary/10">
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Wifi className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Buy Data</CardTitle>
+                      <CardDescription>Get internet bundles</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link href="/dashboard/electricity">
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer  border-l-primary/10">
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Zap className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Electricity</CardTitle>
+                      <CardDescription>Pay bills instantly</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
+            <Link href="/dashboard/transactions">
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer  border-l-primary/10">
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Clock className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">History</CardTitle>
+                      <CardDescription>View transactions</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
             </Link>
           </div>
         </div>
-        <div className="divide-y divide-gray-200">
-          {transactions.map((transaction) => (
-            <div key={transaction.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      transaction.amount > 0
-                        ? 'bg-green-100'
-                        : 'bg-gray-100'
-                    }`}
-                  >
-                    {transaction.amount > 0 ? (
-                      <ArrowDownRight className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <ArrowUpRight className="w-5 h-5 text-gray-900" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{transaction.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-500">
-                        {formatTimeAgo(transaction.createdAt)}
-                      </span>
-                      {transaction.status === 'COMPLETED' && (
-                        <span className="flex items-center gap-1 text-xs text-green-600">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Completed
-                        </span>
-                      )}
-                      {transaction.status === 'PENDING' && (
-                        <span className="flex items-center gap-1 text-xs text-yellow-600">
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
-                      )}
-                      {transaction.status === 'FAILED' && (
-                        <span className="flex items-center gap-1 text-xs text-red-600">
-                          <XCircle className="w-3 h-3" />
-                          Failed
-                        </span>
-                      )}
+
+        {/* Recent Transactions */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Your latest financial movements.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[300px] pr-4">
+              <div className="space-y-4">
+                {transactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No recent transactions</p>
+                ) : (
+                  transactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className={`rounded-full p-2 ${transaction.amount > 0 ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                          {transaction.amount > 0 ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium leading-none truncate max-w-[150px]">{transaction.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(() => {
+                              try {
+                                const date = new Date(transaction.createdAt);
+                                if (isNaN(date.getTime())) return 'Recently';
+                                return formatDistanceToNow(date, { addSuffix: true });
+                              } catch (e) {
+                                return 'Recently';
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-medium ${transaction.amount > 0 ? 'text-green-600' : ''}`}>
+                          {transaction.amount > 0 ? '+' : ''}₦{Math.abs(transaction.amount).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">{(transaction.status || 'unknown').toLowerCase()}</p>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`font-semibold ${
-                      transaction.amount > 0 ? 'text-green-600' : 'text-gray-900'
-                    }`}
-                  >
-                    {transaction.amount > 0 ? '+' : ''}₦{Math.abs(transaction.amount).toLocaleString()}
-                  </p>
-                </div>
+                  ))
+                )}
               </div>
-            </div>
-          ))}
-        </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
