@@ -43,26 +43,56 @@ class NombaService {
     }
 
     private async getAccessToken(): Promise<string> {
-        // If we have a hardcoded access token in config (unlikely for prod but possible for dev)
-        if (this.config.accessToken) return this.config.accessToken;
-
-        // Check if current cached token is valid
+        // 1. Check if we have a valid cached token (and it's not expired)
         if (this.accessToken && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
 
-        // Refresh token logic would go here if using Client Credentials flow
-        // For now, we'll assume the token is provided via env var or we'll retrieve it
-        // NOTE: Nomba docs say "You will get an ACCESS_TOKEN". Usually this implies an auth endpoint.
-        // However, for this implementation, we will assume the ACCESS_TOKEN is configured in ENV 
-        // or we're using a long-lived one if available. 
-        // If strictly OAuth2, we'd implementation /auth/token call here.
+        // 2. Check for hardcoded/env token first (Simple API Key integration)
+        // If provided, we assume it's valid and long-lived.
+        if (this.config.accessToken) {
+            return this.config.accessToken;
+        }
 
-        // Fallback to checking process.env directly if not in config instance (dynamic reload)
         const envToken = process.env.NOMBA_ACCESS_TOKEN;
         if (envToken) return envToken;
 
-        throw new Error('Nomba Access Token not configured');
+        // 3. If no static token, try to fetch new one using Client Credentials (OAuth2)
+        if (this.config.clientId && this.config.clientSecret) {
+            return this.fetchAccessToken();
+        }
+
+        throw new Error('Nomba Access Token not configured. Provide NOMBA_ACCESS_TOKEN or (NOMBA_CLIENT_ID + NOMBA_CLIENT_SECRET)');
+    }
+
+    private async fetchAccessToken(): Promise<string> {
+        try {
+            console.log('Fetching new Nomba Access Token...');
+            const response = await axios.post(
+                `${this.config.baseURL}/auth/token`,
+                {
+                    client_id: this.config.clientId,
+                    client_secret: this.config.clientSecret,
+                    grant_type: 'client_credentials'
+                },
+                {
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            if (response.data && response.data.access_token) {
+                this.accessToken = response.data.access_token;
+                // Set expiry (default to 3500s or check response.expires_in)
+                const expiresIn = response.data.expires_in || 3600;
+                this.tokenExpiry = Date.now() + (expiresIn * 1000) - 60000; // Buffer 60s
+                return this.accessToken as string;
+            }
+
+            throw new Error('Invalid response from Nomba Auth endpoint');
+        } catch (error: any) {
+            console.error('Failed to fetch Nomba Access Token:', error.response?.data || error.message);
+            throw new Error('Authentication failed: Could not retrieve Access Token');
+        }
     }
 
     private async getHeaders() {
@@ -129,7 +159,9 @@ class NombaService {
 // Create and export default instance
 const nombaService = new NombaService({
     accountId: process.env.NOMBA_ACCOUNT_ID || '',
-    accessToken: process.env.NOMBA_ACCESS_TOKEN, // Optional, can be fetched dynamically if implemented
+    accessToken: process.env.NOMBA_ACCESS_TOKEN, // Optional if Client ID/Secret provided
+    clientId: process.env.NOMBA_CLIENT_ID,
+    clientSecret: process.env.NOMBA_CLIENT_SECRET,
     baseURL: process.env.NOMBA_BASE_URL || 'https://api.nomba.com',
 });
 
