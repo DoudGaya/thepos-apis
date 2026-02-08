@@ -1,9 +1,10 @@
 import '@/app/globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+// import { Inter } from 'next/font/google'
 import { SessionProvider } from '@/app/components/SessionProvider'
 
-const inter = Inter({ subsets: ['latin'] })
+// const inter = Inter({ subsets: ['latin'] })
+const inter = { className: 'font-sans' }
 
 export const metadata: Metadata = {
   title: 'NillarPay - Buy Data, Airtime & Pay Bills Instantly',

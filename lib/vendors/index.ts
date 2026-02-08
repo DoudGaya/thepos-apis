@@ -67,7 +67,7 @@ export class VendorService {
    */
   private buildCredentials(adapterId: string, dbCredentials: any): any {
     console.log(`[VendorService] Building credentials for ${adapterId}`)
-    
+
     // For VTPASS, load from environment variables and ensure production mode
     if (adapterId === 'VTPASS') {
       const useSandbox = process.env.VTPASS_USE_SANDBOX === 'true'
@@ -147,11 +147,11 @@ export class VendorService {
       if (routing && routing.isActive) {
         // Try Primary
         if (routing.primaryVendor && routing.primaryVendor.isEnabled) {
-           try {
-             return await this.getAdapter(routing.primaryVendor.adapterId)
-           } catch (e) {
-             console.warn(`Primary vendor ${routing.primaryVendor.adapterId} failed init, trying fallback`)
-           }
+          try {
+            return await this.getAdapter(routing.primaryVendor.adapterId)
+          } catch (e) {
+            console.warn(`Primary vendor ${routing.primaryVendor.adapterId} failed init, trying fallback`)
+          }
         }
 
         // Try Fallback
@@ -166,7 +166,7 @@ export class VendorService {
     if (service === 'AIRTIME') return this.getAdapter('VTU_NG')
     if (service === 'ELECTRICITY') return this.getAdapter('VTU_NG')
     if (service === 'CABLE' || service === 'CABLE_TV') return this.getAdapter('VTU_NG')
-    
+
     // Last resort: Try to find any enabled vendor that supports the service
     // (This part is tricky without querying all vendors, so we'll just throw for now)
     throw new Error(`No vendor configured for ${service} ${network || ''}`)
@@ -183,7 +183,7 @@ export class VendorService {
       // Let's keep it simple: The PurchaseService handles the high-level flow.
       // Actually, the previous implementation handled failover inside buyService.
       // Let's try to implement simple failover here.
-      
+
       console.error(`Purchase failed: ${error.message}`)
       throw error
     }
@@ -224,10 +224,10 @@ export class VendorService {
   // Helper for admin dashboard to get all vendors status
   async getAllVendorsStatus() {
     const configs = await prisma.vendorConfig.findMany()
-    const statuses = []
-    
+    const statuses: any[] = []
+
     for (const config of configs) {
-      let balance = null
+      let balance: any = null
       let status = 'Unknown'
       try {
         const adapter = await this.getAdapter(config.adapterId)

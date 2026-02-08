@@ -1,4 +1,4 @@
-import { Expo, ExpoPushMessage } from 'expo-server-sdk';
+import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 
 const expo = new Expo();
 
@@ -26,7 +26,7 @@ export async function sendPushNotification(
     }
 
     const chunks = expo.chunkPushNotifications(messages);
-    const tickets = [];
+    const tickets: any[] = [];
 
     for (const chunk of chunks) {
         try {

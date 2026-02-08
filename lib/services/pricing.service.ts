@@ -251,7 +251,7 @@ export class PricingService {
 
       const item = summary.get(margin.service)
       item.totalMargins++
-      
+
       if (margin.isActive) {
         item.activeMargins++
       }
@@ -264,7 +264,7 @@ export class PricingService {
     }
 
     // Calculate averages
-    const result = []
+    const result: any[] = []
     for (const [service, data] of summary.entries()) {
       result.push({
         service,
@@ -273,12 +273,12 @@ export class PricingService {
         avgPercentage:
           data.percentageMargins.length > 0
             ? data.percentageMargins.reduce((a: number, b: number) => a + b, 0) /
-              data.percentageMargins.length
+            data.percentageMargins.length
             : null,
         avgFixed:
           data.fixedMargins.length > 0
             ? data.fixedMargins.reduce((a: number, b: number) => a + b, 0) /
-              data.fixedMargins.length
+            data.fixedMargins.length
             : null,
       })
     }

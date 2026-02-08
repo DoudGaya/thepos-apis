@@ -1,8 +1,3 @@
-/**
- * Fund Wallet API
- * POST - Initialize Paystack or OPay payment for wallet funding
- */
-
 import { z } from 'zod'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -16,17 +11,18 @@ import {
   generateReference,
   BadRequestError,
 } from '@/lib/api-utils'
+import nombaService from '@/lib/nomba'
 
 // Fund wallet validation schema
 const fundWalletSchema = z.object({
   amount: z.number().min(100, 'Minimum funding amount is ₦100').max(500000, 'Maximum funding amount is ₦500,000'),
-  paymentMethod: z.enum(['paystack', 'opay']).default('paystack'),
+  paymentMethod: z.enum(['paystack', 'opay', 'nomba']).default('paystack'),
   callbackUrl: z.string().url().optional(),
 })
 
 /**
  * POST /api/wallet/fund
- * Initialize wallet funding with Paystack or OPay
+ * Initialize wallet funding with Paystack, OPay, or Nomba
  */
 export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser(request)
@@ -53,7 +49,7 @@ export const POST = apiHandler(async (request: Request) => {
 
   try {
     if (paymentMethod === 'opay') {
-      // Initialize OPay payment
+      // ... existing OPay logic ...
       if (!opayService.isConfigured()) {
         throw new BadRequestError('OPay payment is not configured');
       }
@@ -152,6 +148,42 @@ export const POST = apiHandler(async (request: Request) => {
           },
         },
       });
+    } else if (paymentMethod === 'nomba') {
+      // Initialize Nomba payment
+      const nombaResponse = await nombaService.initializeTransaction({
+        order: {
+          amount: amount, // Nomba takes Naira
+          currency: 'NGN',
+          customerEmail: user.email,
+          orderReference: reference,
+          callbackUrl: data.callbackUrl || `${process.env.NEXTAUTH_URL}/api/webhooks/nomba`,
+        }
+      });
+
+      // Update transaction with Nomba details
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          details: {
+            paymentMethod: 'nomba',
+            nombaReference: reference,
+            nombaOrderReference: nombaResponse.data.orderReference
+          },
+        },
+      });
+
+      return successResponse({
+        reference,
+        authorizationUrl: nombaResponse.data.checkoutLink,
+        accessCode: nombaResponse.data.orderReference,
+        transaction: {
+          id: transaction.id,
+          amount: transaction.amount,
+          status: transaction.status,
+          createdAt: transaction.createdAt,
+        },
+      }, 'Nomba payment initialized successfully');
+
     } else {
       // Initialize Paystack payment (existing code)
       const paystackResponse = await paystackService.initializeTransaction({

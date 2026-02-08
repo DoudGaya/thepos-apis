@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { User } from '@prisma/client'
 import { generateOTP, formatPhoneNumber } from '@/lib/auth'
 import { smsService } from '@/lib/sms'
 import { emailService } from '@/lib/email'
@@ -21,11 +22,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     console.log('Resend OTP request body:', body)
-    
+
     const parsed = resendOTPSchema.parse(body)
 
+
+    // ... existing code ...
+
     // Resolve user by email or phone (format phone into canonical form)
-    let user = null
+    let user: User | null = null
     if (parsed.email) {
       user = await prisma.user.findUnique({ where: { email: parsed.email } })
     } else if (parsed.phone) {
@@ -50,8 +54,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  // Rate limit resend per phone: max 3 per 15 minutes
-  const rl = consumeToken(`resendotp:${user.phone}`, 3, 15 * 60 * 1000)
+    // Rate limit resend per phone: max 3 per 15 minutes
+    const rl = consumeToken(`resendotp:${user.phone}`, 3, 15 * 60 * 1000)
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many resend attempts. Please try again later.' }, { status: 429 })
     }
@@ -86,8 +90,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ New OTP Generated for ${user.phone}: ${otpCode}`);
 
-    // Send OTP via SMS and Email
-    // Attempt to send OTP via SMS
     let smsSent = false
     try {
       const smsPhone = smsService.formatPhoneForSMS(user.phone);
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
       console.log(`💡 Use this OTP for testing: ${otpCode}`)
     }
 
-    const messageParts = []
+    const messageParts: string[] = []
     if (smsSent) messageParts.push('SMS')
     if (emailSent) messageParts.push('Email')
     const deliveredTo = messageParts.length ? messageParts.join(' and ') : 'none'
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Resend OTP error:', error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },

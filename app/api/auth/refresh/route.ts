@@ -23,16 +23,25 @@ export async function POST(request: NextRequest) {
     }
 
     const { refreshToken } = refreshSchema.parse(body)
-    console.log('🔄 Attempting to refresh token...')
+    console.log(`🔄 Attempting to refresh token... Token received (len=${refreshToken?.length})`)
 
     // Verify refresh token
     let decoded;
     try {
       decoded = verifyToken(refreshToken)
-    } catch (err) {
-      console.error('❌ Refresh token verification failed:', (err as any).message)
+    } catch (err: any) {
+      console.error('❌ Refresh token verification failed:', err.message);
+      console.error('❌ Token Details:', {
+        tokenLength: refreshToken.length,
+        tokenStart: refreshToken.substring(0, 20) + '...',
+        errorName: err.name,
+        errorStack: err.stack
+      });
       return NextResponse.json(
-        { error: 'Invalid or expired refresh token' },
+        {
+          error: 'Invalid or expired refresh token',
+          details: err.message // exposing this temporarily for debugging 
+        },
         { status: 401 }
       )
     }
@@ -64,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Log the new token signature for debugging
     const newTokenSig = accessToken.split('.')[2]?.substring(0, 20) || 'N/A';
     console.log(`✅ Token refreshed for user: ${user.email} newTokenSig=${newTokenSig}... tokenLen=${accessToken.length}`)
-    
+
     return NextResponse.json({
       message: 'Token refreshed successfully',
       token: accessToken,

@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import {
   Wallet,
   Plus,
@@ -64,7 +64,7 @@ interface Transaction {
   createdAt: string
 }
 
-export default function WalletPage() {
+function WalletContent() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
   const action = searchParams.get('action')
@@ -505,5 +505,13 @@ export default function WalletPage() {
         </Dialog>
       </div>
     </>
+  )
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+      <WalletContent />
+    </Suspense>
   )
 }

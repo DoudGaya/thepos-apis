@@ -22,15 +22,31 @@ class EmailService {
 
     // Check if using custom SMTP server
     if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
-      smtpConfig.host = process.env.SMTP_HOST;
-      smtpConfig.port = parseInt(process.env.SMTP_PORT);
-      smtpConfig.secure = process.env.SMTP_PORT === '465'; // true for 465, false for other ports
-      smtpConfig.auth = {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      };
-      console.log(`📧 Email service using SMTP server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
-      this.transporter = nodemailer.createTransport(smtpConfig);
+      if (process.env.SMTP_HOST === 'smtp.gmail.com') {
+        // Special handling for Gmail to avoid timeout issues
+        console.log('📧 Email service using Gmail (service preset) for robust connection');
+        this.transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        });
+      } else {
+        // Standard SMTP configuration
+        smtpConfig.host = process.env.SMTP_HOST;
+        smtpConfig.port = parseInt(process.env.SMTP_PORT);
+        smtpConfig.secure = process.env.SMTP_PORT === '465'; // true for 465, false for other ports
+        smtpConfig.auth = {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        };
+        console.log(`📧 Email service using SMTP server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+        this.transporter = nodemailer.createTransport(smtpConfig);
+      }
     } else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       // Try using Gmail or configured provider via 'service' when explicit host/port not provided
       smtpConfig.service = 'gmail';
