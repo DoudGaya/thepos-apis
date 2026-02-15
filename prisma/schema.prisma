@@ -40,8 +40,65 @@ model User {
   receivedRequests         MoneyRequest[]       @relation("ReceivedRequests")
   targetProgress           UserTargetProgress[]
   rewardHistory            RewardHistory[]
+  
+  // Referral System Extensions
+  passiveReferralGroupId   String?
+  passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
+
+  // RBAC for Admins
+  adminRoleId              String?
+  adminRole                AdminRole?            @relation(fields: [adminRoleId], references: [id])
 
   @@map("users")
+}
+
+model AdminRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String[] // e.g. ["users.view", "users.edit", "vendors.manage"]
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("admin_roles")
+}
+
+model FixedReferralRule {
+  id              String                 @id @default(cuid())
+  name            String
+  description     String?
+  commissionType  ReferralCommissionType
+  commissionValue Float // Percentage (e.g., 10 for 10%) or Fixed Amount (e.g., 500)
+  minFundingAmount Float                 @default(0)
+  isActive        Boolean                @default(true)
+
+  // Audience targeting
+  audience        TargetAudience         @default(ALL)
+  specificUserIds Json? // Array of user IDs if audience is SPECIFIC
+
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@map("fixed_referral_rules")
+}
+
+model PassiveReferralGroup {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  commissionPercent Float // Percentage of profit (e.g., 10 for 10%)
+  isActive          Boolean  @default(true)
+  users             User[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("passive_referral_groups")
+}
+
+enum ReferralCommissionType {
+  PERCENTAGE
+  FIXED_AMOUNT
 }
 
 model Account {
@@ -107,6 +164,8 @@ model Transaction {
   referralEarnings ReferralEarning[]
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([userId, status])
   @@map("transactions")
 }
 
@@ -156,6 +215,7 @@ model ReferralEarning {
   transaction    Transaction? @relation(fields: [transactionId], references: [id])
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, status])
   @@map("referral_earnings")
 }
 

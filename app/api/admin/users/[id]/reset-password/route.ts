@@ -25,7 +25,7 @@ const resetPasswordSchema = z.object({
 export const POST = apiHandler(async (request: Request, context: any) => {
   await requireAdmin()
 
-  const { id } = context.params
+  const { id } = await context.params
   const data = (await validateRequestBody(request, resetPasswordSchema)) as z.infer<typeof resetPasswordSchema>
 
   // Check if user exists

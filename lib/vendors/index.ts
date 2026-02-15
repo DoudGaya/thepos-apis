@@ -163,9 +163,9 @@ export class VendorService {
 
     // 2. Fallback defaults if no routing found
     if (service === 'DATA') return this.getAdapter('AMIGO')
-    if (service === 'AIRTIME') return this.getAdapter('VTU_NG')
-    if (service === 'ELECTRICITY') return this.getAdapter('VTU_NG')
-    if (service === 'CABLE' || service === 'CABLE_TV') return this.getAdapter('VTU_NG')
+    if (service === 'AIRTIME') return this.getAdapter('VTPASS')
+    if (service === 'ELECTRICITY') return this.getAdapter('VTPASS')
+    if (service === 'CABLE' || service === 'CABLE_TV') return this.getAdapter('VTPASS')
 
     // Last resort: Try to find any enabled vendor that supports the service
     // (This part is tricky without querying all vendors, so we'll just throw for now)
@@ -198,9 +198,85 @@ export class VendorService {
     throw new Error('Vendor name required for getBalance')
   }
 
-  async getPlans(service: ServiceType, network?: NetworkType): Promise<ServicePlan[]> {
-    const adapter = await this.getBestVendor(service, network)
+  async getPlans(service: ServiceType, network?: NetworkType, vendorId?: string): Promise<ServicePlan[]> {
+    const adapter = vendorId 
+      ? await this.getAdapter(vendorId) 
+      : await this.getBestVendor(service, network)
     return await adapter.getPlans(service, network)
+  }
+
+  /**
+   * Sync data plans from vendor to database
+   */
+  async syncPlans(adapterId: string): Promise<{ count: number, errors: any[] }> {
+    const adapter = await this.getAdapter(adapterId)
+    const vendorConfig = await prisma.vendorConfig.findUnique({ where: { adapterId } })
+    
+    if (!vendorConfig) throw new Error(`Vendor ${adapterId} not found in DB`)
+    if (!vendorConfig.supportsData) throw new Error(`Vendor ${adapterId} does not support data`)
+
+    const plans = await adapter.getPlans('DATA')
+    let count = 0
+    const errors: any[] = []
+
+    for (const plan of plans) {
+      try {
+        // Extract size from name (e.g., "1GB", "500MB")
+        const sizeMatch = plan.name.match(/(\d+(\.\d+)?(MB|GB|TB))/)
+        const size = sizeMatch ? sizeMatch[0] : 'Unknown'
+        
+        // Infer plan type (SME, CG, etc.) from name
+        let planType = 'Corporate Gifting' // Default
+        const nameUpper = plan.name.toUpperCase()
+        if (nameUpper.includes('SME')) planType = 'SME'
+        else if (nameUpper.includes('GIFTING')) planType = 'Gifting'
+        else if (nameUpper.includes('CORPORATE')) planType = 'Corporate'
+
+        // Calculate default selling price (e.g., +10% or just cost for now)
+        // Ideally fetch ProfitMargin rules, but for sync just set cost
+        const sellingPrice = plan.price // Admin can adjust later
+
+        // Check for existing plan
+        const existingPlan = await prisma.dataPlan.findFirst({
+            where: {
+                planId: plan.id,
+                vendorId: vendorConfig.id
+            }
+        })
+
+        if (existingPlan) {
+            await prisma.dataPlan.update({
+                where: { id: existingPlan.id },
+                data: {
+                    costPrice: plan.price,
+                    validity: plan.validity || '30 Days',
+                    isActive: plan.isAvailable
+                    // sellingPrice: Keep existing
+                }
+            })
+        } else {
+             await prisma.dataPlan.create({
+                data: {
+                    planId: plan.id,
+                    network: plan.network,
+                    vendorId: vendorConfig.id,
+                    planType: planType,
+                    size: size,
+                    validity: plan.validity || '30 Days',
+                    costPrice: plan.price,
+                    sellingPrice: sellingPrice,
+                    isActive: plan.isAvailable
+                }
+            })
+        }
+        count++
+      } catch (error) {
+        console.error(`Error syncing plan ${plan.name}:`, error)
+        errors.push({ plan: plan.name, error })
+      }
+    }
+    
+    return { count, errors }
   }
 
   async verifyCustomer(payload: VerifyCustomerPayload): Promise<CustomerVerification> {

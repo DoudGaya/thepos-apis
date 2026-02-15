@@ -44,6 +44,17 @@ export async function syncBalances() {
   revalidatePath('/admin/vendors')
 }
 
+export async function syncVendorPlans(adapterId: string) {
+  try {
+    const result = await vendorService.syncPlans(adapterId)
+    revalidatePath(`/admin/vendors/${adapterId}`) // Assuming detail page exists
+    return { success: true, count: result.count, errors: result.errors }
+  } catch (error: any) {
+    console.error(`Failed to sync plans for ${adapterId}:`, error)
+    return { success: false, error: error.message }
+  }
+}
+
 export async function updateVendor(id: string, formData: FormData) {
   const vendorName = formData.get('vendorName') as string
   const isEnabled = formData.get('isEnabled') === 'on'

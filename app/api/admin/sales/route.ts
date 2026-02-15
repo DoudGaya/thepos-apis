@@ -4,22 +4,20 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   parseQueryParams,
 } from '@/lib/api-utils'
 
 /**
  * GET /api/admin/sales
  * Fetch detailed sales analytics for admin
- * Query params: 
- *  - period (today, week, month, year, all)
- *  - groupBy (hour, day, week, month)
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.TRANSACTIONS_VIEW, request)
   
   const params = parseQueryParams(request.url)
   const period = params.getString('period', 'month')

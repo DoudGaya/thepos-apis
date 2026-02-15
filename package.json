@@ -44,6 +44,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
     "@types/nodemailer": "^7.0.1",
+    "@upstash/redis": "^1.36.2",
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

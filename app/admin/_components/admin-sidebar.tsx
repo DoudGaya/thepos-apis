@@ -18,7 +18,8 @@ import {
   Bell,
   ChevronsUpDown,
   BadgeCheck,
-  Target, // Added
+  Target,
+  Gift, // Added
 } from "lucide-react"
 
 import {
@@ -43,17 +44,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSidebar } from "@/components/ui/sidebar"
+import { PERMISSIONS, hasPermission } from "@/lib/rbac"
 
 const navigation = [
-  { name: 'Overview', href: '/admin', icon: LayoutDashboard },
-  { name: 'Transactions', href: '/admin/transactions', icon: CreditCard },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Vendors', href: '/admin/vendors', icon: Server },
-  { name: 'Service Routing', href: '/admin/routing', icon: ArrowLeftRight },
-  { name: 'Pricing & Plans', href: '/admin/pricing', icon: Tags },
-  { name: 'Sales Targets', href: '/admin/targets', icon: Target },
-  { name: 'Push Notifications', href: '/admin/notifications', icon: Bell },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Overview', href: '/admin', icon: LayoutDashboard, permission: null },
+  { name: 'Transactions', href: '/admin/transactions', icon: CreditCard, permission: PERMISSIONS.TRANSACTIONS_VIEW },
+  { name: 'Users', href: '/admin/users', icon: Users, permission: PERMISSIONS.USERS_VIEW },
+  { name: 'Vendors', href: '/admin/vendors', icon: Server, permission: PERMISSIONS.VENDORS_VIEW },
+  { name: 'Service Routing', href: '/admin/routing', icon: ArrowLeftRight, permission: PERMISSIONS.ROUTING_VIEW },
+  { name: 'Pricing & Plans', href: '/admin/pricing', icon: Tags, permission: PERMISSIONS.PRICING_VIEW },
+  { name: 'Sales Targets', href: '/admin/targets', icon: Target, permission: PERMISSIONS.TARGETS_VIEW },
+  { name: 'Referral System', href: '/admin/referrals', icon: Gift, permission: PERMISSIONS.REFERRALS_VIEW },
+  { name: 'Push Notifications', href: '/admin/notifications', icon: Bell, permission: PERMISSIONS.NOTIFICATIONS_SEND },
+  { name: 'Settings', href: '/admin/settings', icon: Settings, permission: PERMISSIONS.SETTINGS_MANAGE },
 ]
 
 function AdminNavUser() {
@@ -147,6 +150,7 @@ function AdminNavUser() {
 
 export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -184,10 +188,16 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
-            {navigation.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <SidebarMenuItem key={item.name}>
+            {navigation
+              .filter(item => {
+                if (!item.permission) return true;
+                // Cast is safe because we check for null/undefined
+                return hasPermission(session?.user?.permissions, item.permission as any);
+              })
+              .map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
                     tooltip={item.name}

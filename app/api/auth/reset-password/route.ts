@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
     const otpCode = parsed.otp || parsed.token || ''
     const newPassword = parsed.newPassword || parsed.password || ''
 
-    // Verify OTP - check for PASSWORD_RESET type (created by forgot-password endpoint)
+    // Verify OTP - accept both PASSWORD_RESET (from /forgot-password) and FORGOT_PASSWORD (from /send-otp)
     const otp = await prisma.oTP.findFirst({
       where: {
         code: otpCode,
-        type: 'PASSWORD_RESET',
+        type: {
+          in: ['PASSWORD_RESET', 'FORGOT_PASSWORD'],
+        },
         used: false,
       },
     })

@@ -69,7 +69,7 @@ class NombaService {
         try {
             console.log('Fetching new Nomba Access Token...');
             const response = await axios.post(
-                `${this.config.baseURL}/auth/token`,
+                `https://api.nomba.com/v1/auth/token`,
                 {
                     client_id: this.config.clientId,
                     client_secret: this.config.clientSecret,
@@ -79,6 +79,14 @@ class NombaService {
                     headers: { 'Content-Type': 'application/json' }
                 }
             );
+
+            if (response.data && response.data.data && response.data.data.access_token) {
+                this.accessToken = response.data.data.access_token;
+                // Set expiry (default to 3500s or check response.expires_in)
+                const expiresIn = response.data.data.expires_in || 3600;
+                this.tokenExpiry = Date.now() + (expiresIn * 1000) - 60000; // Buffer 60s
+                return this.accessToken as string;
+            }	    
 
             if (response.data && response.data.access_token) {
                 this.accessToken = response.data.access_token;

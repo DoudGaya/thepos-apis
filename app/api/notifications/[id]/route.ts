@@ -19,7 +19,7 @@ import {
  */
 export const PATCH = apiHandler(async (request: Request, context: any) => {
   const user = await getAuthenticatedUser()
-  const { id } = context.params
+  const { id } = await context.params
 
   // Find notification
   const notification = await prisma.notification.findUnique({
@@ -53,7 +53,7 @@ export const PATCH = apiHandler(async (request: Request, context: any) => {
  */
 export const DELETE = apiHandler(async (request: Request, context: any) => {
   const user = await getAuthenticatedUser()
-  const { id } = context.params
+  const { id } = await context.params
 
   // Find notification
   const notification = await prisma.notification.findUnique({

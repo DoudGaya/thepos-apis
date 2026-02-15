@@ -5,10 +5,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   NotFoundError,
   validateRequestBody,
   BadRequestError,
@@ -20,7 +21,7 @@ import { z } from 'zod'
  * Fetch all pricing configurations with profit margins
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.PRICING_VIEW, request)
   
   // Define service pricing structure
   // In a real app, this would come from a database table
@@ -149,7 +150,7 @@ const updatePricingSchema = z.object({
 })
 
 export const PUT = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.PRICING_MANAGE, request)
   
   const body = await validateRequestBody(request, updatePricingSchema)
   const data = body as {

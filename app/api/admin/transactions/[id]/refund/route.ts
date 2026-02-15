@@ -25,7 +25,7 @@ const refundSchema = z.object({
 export const POST = apiHandler(async (request: Request, context: any) => {
   const admin = await requireAdmin()
   
-  const { id: transactionId } = context.params
+  const { id: transactionId } = await context.params
   const body = await validateRequestBody(request, refundSchema)
   const { reason } = body as { reason: string }
 

@@ -3,10 +3,11 @@
  * GET - Monitor vendor health and balances
  */
 
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
 } from '@/lib/api-utils'
 import vtuService from '@/lib/vtu'
 
@@ -15,7 +16,7 @@ import vtuService from '@/lib/vtu'
  * Monitor all vendor services (VTU.NG, Paystack)
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.VENDORS_VIEW, request)
   
   // Check VTU.NG service status and balance
   let vtuStatus = {

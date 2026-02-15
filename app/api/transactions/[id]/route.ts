@@ -18,7 +18,7 @@ import {
  */
 export const GET = apiHandler(async (request: Request, context: any) => {
   const user = await getAuthenticatedUser(request)
-  const { id } = context.params
+  const { id } = await context.params
 
   // Fetch transaction
   const transaction = await prisma.transaction.findUnique({

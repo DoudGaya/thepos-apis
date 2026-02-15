@@ -5,10 +5,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   validateRequestBody,
   BadRequestError,
 } from '@/lib/api-utils'
@@ -19,7 +20,7 @@ import { z } from 'zod'
  * Fetch all system settings organized by category
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.SETTINGS_MANAGE, request)
 
   // In a real application, these would be stored in a settings table
   // For now, we'll return default/hardcoded values with database-driven overrides where applicable
@@ -287,7 +288,7 @@ const updateSettingsSchema = z.object({
 })
 
 export const PATCH = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.SETTINGS_MANAGE, request)
 
   const body = await validateRequestBody(request, updateSettingsSchema)
   const { category, settings } = body as {

@@ -27,7 +27,7 @@ const creditSchema = z.object({
 export const POST = apiHandler(async (request: Request, context: any) => {
   const admin = await requireAdmin()
   
-  const { id: userId } = context.params
+  const { id: userId } = await context.params
   const body = await validateRequestBody(request, creditSchema)
   const { amount, reason } = body as { amount: number; reason: string }
 

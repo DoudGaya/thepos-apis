@@ -212,11 +212,9 @@ export class VTPassAdapter implements VendorAdapter {
   async getBalance(): Promise<WalletBalance> {
     // Check for placeholder credentials to avoid API errors during development
     if (!this.apiKey || this.apiKey.includes('placeholder') || this.apiKey.includes('your-')) {
-      console.warn('[VTPass] Using placeholder/missing credentials - returning simulated balance')
-      return {
-        balance: 50000.00,
-        currency: 'NGN'
-      }
+       console.warn(`[VTPass] Warning: API Key appears to be invalid or placeholder. Key length: ${this.apiKey?.length}`);
+       // We will proceed to attempt the API call anyway, so that real errors are shown
+       // instead of a fake 50,000 balance which is confusing in production.
     }
 
     try {
@@ -272,8 +270,11 @@ export class VTPassAdapter implements VendorAdapter {
     if (service === 'DATA' && network) {
       serviceID = VTPASS_SERVICE_IDS.DATA[network as keyof typeof VTPASS_SERVICE_IDS.DATA]
     } else if (service === 'CABLE_TV' || service === 'CABLE') {
-      // Default to DSTV, caller should specify provider in metadata
-      serviceID = 'dstv'
+      if (network) {
+        serviceID = VTPASS_SERVICE_IDS.CABLE_TV[network as keyof typeof VTPASS_SERVICE_IDS.CABLE_TV]
+      }
+      // Only default if still undefined
+      if (!serviceID) serviceID = 'dstv'
     }
 
     if (!serviceID) {

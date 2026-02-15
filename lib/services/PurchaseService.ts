@@ -109,12 +109,31 @@ class PurchaseService {
 
       // Step 5: Handle vendor response
       if (vendorResult.success) {
+        
+        // Calculate Profit
+        let costPrice = 0;
+        let profit = 0;
+        try {
+           // Attempt to find cost via DataPlan
+           const plan = await prisma.dataPlan.findFirst({
+             where: { planId: planCode, network: network }
+           });
+           if (plan) {
+             costPrice = plan.costPrice;
+             profit = amount - costPrice;
+           }
+        } catch (e) {
+           console.error('Failed to calculate profit for data purchase', e);
+        }
+
         // Update transaction status
         const transactionDetails = walletTransaction.details as any;
         await prisma.transaction.update({
           where: { id: walletTransaction.id },
           data: {
             status: TransactionStatus.SUCCESS,
+            costPrice,
+            profit,
             details: {
               ...transactionDetails,
               vendorReference: vendorResult.vendorReference,
@@ -128,7 +147,8 @@ class PurchaseService {
         await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.DATA, {
           planCode,
           network,
-          phoneNumber
+          phoneNumber,
+          profit
         });
 
         return {
@@ -222,12 +242,31 @@ class PurchaseService {
 
       // Step 7: Handle vendor response
       if (vendorResult.success) {
+        
+        // Calculate Profit for Airtime
+        let costPrice = amount;
+        let profit = 0;
+        try {
+            const pricing = await prisma.pricing.findUnique({
+                where: { service_network: { service: 'AIRTIME', network: network } }
+            });
+            if (pricing) {
+                // If profitMargin is e.g. 2.5, it means 2.5% profit
+                profit = amount * (pricing.profitMargin / 100);
+                costPrice = amount - profit;
+            }
+        } catch (e) {
+            console.error('Failed to calculate profit for airtime', e);
+        }
+
         // Update transaction status
         const transactionDetails = walletTransaction.details as any;
         await prisma.transaction.update({
           where: { id: walletTransaction.id },
           data: {
             status: TransactionStatus.SUCCESS,
+            costPrice,
+            profit,
             details: {
               ...transactionDetails,
               vendorReference: vendorResult.vendorReference,
@@ -240,7 +279,8 @@ class PurchaseService {
         // Trigger post-purchase actions
         await this.handlePostPurchase(userId, amount, walletTransaction.id, TransactionType.AIRTIME, {
           network,
-          phoneNumber
+          phoneNumber,
+          profit
         });
 
         return {
@@ -630,11 +670,13 @@ class PurchaseService {
         { transactionId, type: 'PURCHASE_SUCCESS', ...metadata }
       );
 
-      // Update sales targets
-      await targetService.updateProgress(userId, type, amount, metadata);
+        // Update sales targets
+        await targetService.updateProgress(userId, type, amount, metadata);
 
-      // Process referral commission
-      await referralService.processTransactionCommission(userId, amount, transactionId);
+        // Process referral commission
+        const profit = metadata?.profit || 0;
+        await referralService.processTransactionCommission(userId, amount, transactionId, profit);
+      
     } catch (error) {
       console.error('Error in post-purchase processing:', error);
       // Don't throw, as the purchase was successful

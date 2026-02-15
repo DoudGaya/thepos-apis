@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/nextauth'
+import { hasPermission } from '@/lib/rbac'
 
 /**
  * Standard API Response Interface
@@ -134,6 +135,7 @@ export async function getAuthenticatedUser(request?: Request) {
       email: session.user.email!,
       name: session.user.name!,
       role: (session.user as any).role as 'USER' | 'ADMIN',
+      permissions: (session.user as any).permissions || [],
     }
   }
 
@@ -167,7 +169,16 @@ async function fetchUserFromDb(userId: string) {
   const { prisma } = await import('./prisma')
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, firstName: true, lastName: true, role: true }
+    select: { 
+      id: true, 
+      email: true, 
+      firstName: true, 
+      lastName: true, 
+      role: true,
+      adminRole: {
+        select: { permissions: true }
+      }
+    }
   })
 
   if (user) {
@@ -176,6 +187,7 @@ async function fetchUserFromDb(userId: string) {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       role: user.role as 'USER' | 'ADMIN',
+      permissions: user.adminRole?.permissions || [],
     }
   }
   throw new UnauthorizedError('User not found')
@@ -193,6 +205,31 @@ export async function requireAdmin(request?: Request) {
   }
 
   return user
+}
+
+/**
+ * Require Specific Permission
+ * Throws ForbiddenError if user does not have permission
+ */
+export async function requirePermission(permission: string, request?: Request) {
+  const user = await getAuthenticatedUser(request);
+  
+  if (user.role === 'ADMIN' && !hasPermission(user.permissions, permission as any)) {
+     // Optional: Super admin hack or if role is exactly 'ADMIN' maybe implied?
+     // For now strict permission check.
+     // But wait, if role is ADMIN but permissions are missing, deny?
+     // Yes, unless we treat 'ADMIN' role as having all permissions implicitly?
+     // The prompt implies we want roles management, so existing ADMINs might initially have no permissions until assigned a role.
+     // However, `PERMISSIONS.ALL` exists.
+     throw new ForbiddenError(`Permission denied: ${permission} required`);
+  }
+  
+  // If user is not ADMIN, they definitely don't have admin permissions (unless we allow USER to have permissions?)
+  if (user.role !== 'ADMIN') {
+    throw new ForbiddenError('Admin access required');
+  }
+
+  return user;
 }
 
 /**

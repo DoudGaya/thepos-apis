@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { z } from 'zod'
-import { pairgateService } from '@/lib/pairgate'
+import { purchaseService } from '@/lib/services/purchase.service'
+import { ServiceType } from '@/lib/vendors/adapter.interface'
 
 const purchaseSchema = z.object({
   type: z.string().min(1, 'Bill type is required'),
   provider: z.string().min(1, 'Provider is required'),
   customerInfo: z.record(z.any()),
   amount: z.number().min(1, 'Amount is required'),
+  // Add support for plan/variation
+  planId: z.string().optional(),
+  variationCode: z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -33,120 +37,63 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { type, provider, customerInfo, amount } = purchaseSchema.parse(body)
+    const { type, provider, customerInfo, amount, planId, variationCode } = purchaseSchema.parse(body)
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    // Identify Service Type
+    let serviceType: ServiceType = 'ELECTRICITY';
+    if (type.toLowerCase() === 'cable' || type.toLowerCase() === 'cable_tv') {
+        serviceType = 'CABLE'; 
+    } else if (type.toLowerCase() === 'electricity') {
+        serviceType = 'ELECTRICITY';
+    } else {
+        serviceType = 'ELECTRICITY';
     }
 
-    // Check wallet balance
-    if (user.credits < amount) {
-      return NextResponse.json(
-        { error: 'Insufficient wallet balance' },
-        { status: 400 }
-      )
-    }
+    // Extract recipient (customer ID)
+    const recipient = customerInfo.meterNumber || customerInfo.smartCardNumber || customerInfo.phoneNumber || Object.values(customerInfo)[0];
+    
+    // For electricity, meter type might be needed
+    const meterType = customerInfo.meterType;
 
-    // Create transaction record
-    const transaction = await prisma.transaction.create({
-      data: {
-        userId: user.id,
-        type: type === 'electricity' ? 'ELECTRICITY' : type === 'cable' ? 'CABLE' : type === 'water' ? 'WATER' : 'ELECTRICITY',
-        status: 'PENDING',
-        amount: amount,
-        reference: `BILL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        details: {
-          billType: type,
-          provider,
-          customerInfo,
-          description: `${type} bill payment`,
-        },
-      },
-    })
-
+    // Use purchase service
     try {
-      // Call Pairgate API to pay bill
-      const paymentResult = await pairgateService.payBill({
-        type,
-        provider,
-        customerInfo,
-        amount
-      })
+        const result = await purchaseService.purchase({
+            userId: decoded.userId,
+            service: serviceType,
+            recipient: String(recipient),
+            amount: amount,
+            planId: planId || variationCode, // Need planId for Cable
+            metadata: {
+                provider, // 'IKEJA', 'DSTV' etc.
+                meterType,
+                ...customerInfo, // Spread rest
+                source: 'web_app'
+            }
+        });
 
-      if (paymentResult.success) {
-        // Deduct from wallet
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            credits: user.credits - amount,
-          },
-        })
+        if (result.success) {
+            return NextResponse.json({
+                success: true,
+                message: result.message,
+                transactionId: result.transaction.id,
+                reference: result.transaction.reference,
+                data: result.transaction
+            });
+        } else {
+             return NextResponse.json(
+                { error: result.message || 'Purchase failed' },
+                { status: 400 }
+            );
+        }
 
-        // Update transaction status
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'COMPLETED',
-            details: {
-              ...(transaction.details as object || {}),
-              externalReference: paymentResult.reference,
-              completedAt: new Date().toISOString(),
-            },
-          },
-        })
-
-        return NextResponse.json({
-          success: true,
-          message: 'Bill payment successful',
-          transactionId: transaction.id,
-          reference: paymentResult.reference
-        })
-      } else {
-        // Update transaction as failed
-        await prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'FAILED',
-            details: {
-              ...(transaction.details as object || {}),
-              error: paymentResult.message || 'Payment failed',
-            },
-          },
-        })
-
+    } catch (error: any) {
+        console.error('Purchase service error:', error);
         return NextResponse.json(
-          { error: paymentResult.message || 'Bill payment failed' },
-          { status: 500 }
-        )
-      }
-    } catch (paymentError: any) {
-      console.error('Pairgate payment error:', paymentError)
-
-      // Update transaction as failed
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: 'FAILED',
-          details: {
-            ...(transaction.details as object || {}),
-            error: paymentError.message,
-          },
-        },
-      })
-
-      return NextResponse.json(
-        { error: 'Bill payment failed. Please try again.' },
-        { status: 500 }
-      )
+            { error: error.message || 'Purchase failed' },
+            { status: 500 }
+        );
     }
+
   } catch (error) {
     console.error('Bill payment error:', error)
 

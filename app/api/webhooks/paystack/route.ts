@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { referralService } from '@/lib/services/ReferralService';
 
 // Paystack webhook endpoint
 export async function POST(request: NextRequest) {
@@ -65,12 +64,21 @@ export async function POST(request: NextRequest) {
 
       // Update user wallet balance
       const amountInNaira = amount / 100; // Convert from kobo to naira
+
+      try {
+        // Process Referral Bonus (First Funding)
+        await referralService.processFirstFundingBonus(transaction.userId, amountInNaira);
+      } catch (err) {
+        console.error("Error processing referral bonus:", err);
+      }
+
       await prisma.user.update({
         where: { id: transaction.userId },
         data: {
           credits: {
             increment: amountInNaira,
           },
+          hasFundedWallet: true,
         },
       });
 

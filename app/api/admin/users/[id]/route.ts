@@ -5,10 +5,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   NotFoundError,
   validateRequestBody,
   getPaginationParams,
@@ -21,9 +22,9 @@ import { z } from 'zod'
  * Fetch detailed user information including stats
  */
 export const GET = apiHandler(async (request: Request, context: any) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.USERS_VIEW, request)
   
-  const { id } = context.params
+  const { id } = await context.params
 
   // Fetch user with all details
   const user = await prisma.user.findUnique({
@@ -159,9 +160,9 @@ const updateUserSchema = z.object({
 })
 
 export const PATCH = apiHandler(async (request: Request, context: any) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.USERS_EDIT, request)
   
-  const { id } = context.params
+  const { id } = await context.params
   const data = (await validateRequestBody(request, updateUserSchema)) as z.infer<typeof updateUserSchema>
 
   // Check if user exists

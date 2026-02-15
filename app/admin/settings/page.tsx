@@ -105,8 +105,11 @@ interface SettingsData {
   }
 }
 
+import { RolesManagement } from './_components/roles-management'
+
 const tabs = [
   { id: 'general', label: 'General', icon: '🏢' },
+  { id: 'roles', label: 'Roles & Permissions', icon: '🛡️' },
   { id: 'payment', label: 'Payment', icon: '💳' },
   { id: 'system', label: 'System', icon: '⚙️' },
   { id: 'email', label: 'Email', icon: '📧' },
@@ -340,7 +343,7 @@ export default function AdminSettingsPage() {
                   <PhoneInput
                     international
                     defaultCountry="NG"
-                    value={settings.general.supportPhone}
+                    value={settings.general.supportPhone?.replace(/\s/g, '')}
                     onChange={(value) => handleSettingChange('general', 'supportPhone', value || '')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 [&>input]:outline-none [&>input]:bg-transparent [&>input]:w-full"
                   />
@@ -403,6 +406,13 @@ export default function AdminSettingsPage() {
                   {saving ? 'Saving...' : 'Save General Settings'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Roles Settings */}
+          {activeTab === 'roles' && (
+            <div className="space-y-6">
+              <RolesManagement />
             </div>
           )}
 

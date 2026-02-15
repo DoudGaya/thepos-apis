@@ -67,6 +67,19 @@ export async function POST(request: NextRequest) {
         )
     }
 
+    // Check if user exists before update (prevent P2025)
+    const existingUser = await prisma.user.findUnique({
+      where: { id: token.sub },
+      select: { id: true }
+    });
+
+    if (!existingUser) {
+        return NextResponse.json(
+        { error: 'User does not exist. Session invalid.' },
+        { status: 401 }
+        )
+    }
+
     // Update user in database
     const user = await prisma.user.update({
       where: { id: token.sub },

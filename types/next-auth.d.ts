@@ -10,6 +10,7 @@ declare module 'next-auth' {
     role: Role
     phone: string
     isVerified: boolean
+    permissions?: string[]
   }
 
   interface Session {
@@ -20,6 +21,7 @@ declare module 'next-auth' {
       role: Role
       phone: string
       isVerified: boolean
+      permissions?: string[]
     }
   }
 }
@@ -33,5 +35,6 @@ declare module 'next-auth/jwt' {
     role: Role
     phone: string
     isVerified: boolean
+    permissions?: string[]
   }
 }

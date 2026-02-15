@@ -12,6 +12,7 @@ import {
   getAuthenticatedUser,
   validateRequestBody,
   BadRequestError,
+  UnauthorizedError,
 } from '@/lib/api-utils'
 
 // PIN validation schema
@@ -37,7 +38,12 @@ export const POST = apiHandler(async (request: Request) => {
     select: { pinHash: true },
   })
 
-  if (dbUser?.pinHash) {
+  // Ensure user exists (fixes P2025 if session is stale)
+  if (!dbUser) {
+    throw new UnauthorizedError('User record not found. Please login again.')
+  }
+
+  if (dbUser.pinHash) {
     throw new BadRequestError('PIN is already set. Use update-pin endpoint to change it.')
   }
 

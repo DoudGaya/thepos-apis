@@ -4,10 +4,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   getPaginationParams,
   parseQueryParams,
 } from '@/lib/api-utils'
@@ -15,14 +16,9 @@ import {
 /**
  * GET /api/admin/users
  * List all users with search and filters
- * Query params:
- *  - search (name, email, phone)
- *  - role (USER, ADMIN)
- *  - status (Active, Suspended)
- *  - page, limit
  */
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.USERS_VIEW, request)
   
   const params = parseQueryParams(request.url)
   const search = params.getString('search')

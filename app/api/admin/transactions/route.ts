@@ -4,10 +4,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { PERMISSIONS } from '@/lib/rbac'
 import {
   apiHandler,
   successResponse,
-  requireAdmin,
+  requirePermission,
   getPaginationParams,
   parseQueryParams,
 } from '@/lib/api-utils'
@@ -26,7 +27,7 @@ import {
 export const dynamic = 'force-dynamic'
 
 export const GET = apiHandler(async (request: Request) => {
-  await requireAdmin()
+  await requirePermission(PERMISSIONS.TRANSACTIONS_VIEW, request)
   
   const params = parseQueryParams(request.url)
   const search = params.getString('search')

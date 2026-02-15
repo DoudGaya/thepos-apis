@@ -603,9 +603,9 @@ export default function LandingPage() {
             ].map((partner, idx) => (
               <div
                 key={idx}
-                className="flex-shrink-0 mx-8 px-8 py-4 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50 flex items-center justify-center min-w-[150px]"
+                className="flex-shrink-0 mx-8 px-8 py-4 border-zinc-200/50 dark:border-zinc-700/50 flex items-center justify-center min-w-[150px]"
               >
-                <div className="relative h-8 w-24 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
+                <div className="relative h-32 w-24 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
                   <Image
                     src={partner.logo}
                     alt={partner.name}

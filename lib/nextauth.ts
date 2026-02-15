@@ -35,6 +35,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { adminRole: true },
         });
 
         if (!user || !user.passwordHash) {
@@ -63,6 +64,7 @@ export const authOptions: NextAuthOptions = {
           isVerified: user.isVerified,
           firstName: user.firstName,
           lastName: user.lastName,
+          permissions: user.adminRole?.permissions || [],
         };
       },
     }),
@@ -76,8 +78,19 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       // Authorization already checked in the authorize function
+      // for Credentials provider.
+      
+      // For OAuth providers (Google/Apple), check if additional details are needed
+      if (account?.provider === 'google' || account?.provider === 'apple') {
+        const anyUser = user as any;
+        // If phone is missing, it's definitely an incomplete profile
+        if (!anyUser.phone) {
+          return '/profile-completion';
+        }
+      }
+
       // Just return true to allow the sign in
       return true;
     },
@@ -107,19 +120,14 @@ export const authOptions: NextAuthOptions = {
         token.isVerified = (user as any).isVerified;
         token.firstName = (user as any).firstName;
         token.lastName = (user as any).lastName;
+        token.permissions = (user as any).permissions;
       } else if (trigger === 'update' && session) {
         // Only refresh from database when explicitly triggered by session update
         // This prevents excessive database queries on every request
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.sub },
-            select: {
-              firstName: true,
-              lastName: true,
-              role: true,
-              isVerified: true,
-              phone: true,
-            },
+            include: { adminRole: true },
           });
 
           if (dbUser) {
@@ -129,6 +137,7 @@ export const authOptions: NextAuthOptions = {
             token.isVerified = dbUser.isVerified;
             token.phone = dbUser.phone || '';
             token.name = `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim();
+            token.permissions = dbUser.adminRole?.permissions || [];
           }
         } catch (error) {
           console.error('Error refreshing user data from database:', error);
@@ -146,6 +155,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).isVerified = token.isVerified;
         (session.user as any).firstName = token.firstName;
         (session.user as any).lastName = token.lastName;
+        (session.user as any).permissions = token.permissions;
         session.user.name = token.name || "";
       }
       return session;

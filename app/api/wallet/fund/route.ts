@@ -156,7 +156,8 @@ export const POST = apiHandler(async (request: Request) => {
           currency: 'NGN',
           customerEmail: user.email,
           orderReference: reference,
-          callbackUrl: data.callbackUrl || `${process.env.NEXTAUTH_URL}/api/webhooks/nomba`,
+          // Redirect user to a success page after payment, not the webhook
+          callbackUrl: data.callbackUrl || `${process.env.NEXTAUTH_URL}/payment/status?reference=${reference}`,
         }
       });
 
