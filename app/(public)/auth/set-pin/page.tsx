@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { AlertCircle, CheckCircle2, Loader2, Lock } from 'lucide-react'
 import { Suspense } from 'react'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
@@ -44,6 +45,7 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
 function SetPinContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { update } = useSession()
 
   const [userId, setUserId] = useState('')
   const [pin, setPin] = useState('')
@@ -122,6 +124,10 @@ function SetPinContent() {
         type: 'success',
         message: 'PIN set successfully! Redirecting to dashboard...',
       })
+
+      // Update the session to ensure client has latest user data (including isVerified)
+      // This is crucial for middleware to allow access to dashboard
+      await update({ trigger: 'refresh' })
 
       // Redirect to dashboard after a short delay
       setTimeout(() => {

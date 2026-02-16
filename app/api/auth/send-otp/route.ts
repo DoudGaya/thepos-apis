@@ -6,6 +6,7 @@ import { consumeToken } from '@/lib/rateLimiter'
 import { smsService } from '@/lib/sms'
 import { emailService } from '@/lib/email'
 import { z } from 'zod'
+import { getToken } from 'next-auth/jwt'
 
 export const runtime = 'nodejs'
 
@@ -30,7 +31,10 @@ export async function POST(request: NextRequest) {
     // Format phone number
     const formattedPhone = formatPhoneNumber(parsed.phone)
     console.log('📞 Formatted phone:', formattedPhone)
-
+    
+    // Check if user is logged in
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    
     // Rate limit per phone: max 3 sends per 15 minutes
     const rl = consumeToken(`sendotp:${formattedPhone}`, 3, 15 * 60 * 1000)
     if (!rl.allowed) {
@@ -64,7 +68,20 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      if (existingUser) {
+      // If existing user is DIFFERENT from logged in user, block
+      if (existingUser && token && token.sub && existingUser.id !== token.sub) {
+          return NextResponse.json(
+            { error: `Phone number or email is already used by another account.` },
+            { status: 400 }
+          )
+      }
+
+      // If logged in user, we allow sending OTP to verify this NEW phone number
+      if (token && token.sub) {
+          // Proceed to send OTP
+          console.log(`✔️  Sending OTP to logged in user ${token.sub} for new phone: ${formattedPhone}`)
+      } else if (existingUser) {
+        // ... existing logic for non-logged in users ...
         // ✅ If user is NOT verified, allow resending OTP
         if (!existingUser.isVerified) {
           console.log(`✔️  User exists but not verified (isVerified=false). Allowing OTP resend for: ${formattedPhone}`)

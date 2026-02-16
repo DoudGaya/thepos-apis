@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateToken, formatPhoneNumber, generateReferralCode } from '@/lib/auth'
 import { z } from 'zod'
+import { getToken } from 'next-auth/jwt'
 // import { consumeToken } from '@/lib/rateLimiter'
 import { consumeToken } from '@/lib/rateLimiter'
 
@@ -21,14 +22,40 @@ export async function POST(request: NextRequest) {
     
     const { phone, email, code, type } = verifyOTPSchema.parse(body)
 
+    // Check if user is already authenticated (e.g. Google Login but missing phone)
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    
     // Format phone number if provided
     const formattedPhone = phone ? formatPhoneNumber(phone) : undefined
     console.log('🔥 Original phone:', phone, '→ Formatted phone:', formattedPhone)
 
-    // Find user by formatted phone or email
-    let user = await prisma.user.findFirst({
-      where: formattedPhone ? { phone: formattedPhone } : { email },
-    })
+    // Check if phone is already used by ANOTHER user
+    if (formattedPhone) {
+      const existingUserWithPhone = await prisma.user.findUnique({
+        where: { phone: formattedPhone }
+      })
+
+      // If phone exists on DIFFERENT user than the logged in one
+      if (existingUserWithPhone && token && existingUserWithPhone.id !== token.sub) {
+         return NextResponse.json(
+          { error: 'Phone number already registered to another account' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Find user target
+    let user: any = null;
+
+    if (token && token.sub) {
+       // Logged in user
+       user = await prisma.user.findUnique({ where: { id: token.sub } })
+    } else {
+       // Not logged in, find by phone/email
+       user = await prisma.user.findFirst({
+         where: formattedPhone ? { phone: formattedPhone } : { email },
+       })
+    }
 
     console.log('🔥 User lookup result:', user ? `Found user: ${user.email}` : 'User not found')
 
@@ -124,10 +151,19 @@ export async function POST(request: NextRequest) {
             }
         })
     } else if (user && type === 'REGISTER') {
+      
+      const updateData: any = { isVerified: true };
+      
+      // If logged-in user is verifying a phone number for the first time
+      if (token && token.sub === user.id && !user.phone && formattedPhone) {
+         updateData.phone = formattedPhone;
+         // Also update referrence code if missing? No, create handles that.
+      }
+
       // If this is registration verification, mark user as verified
       await prisma.user.update({
         where: { id: user.id },
-        data: { isVerified: true },
+        data: updateData,
       })
       // Refresh user object
       user = await prisma.user.findUnique({ where: { id: user.id } })

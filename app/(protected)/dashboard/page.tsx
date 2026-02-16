@@ -1,6 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation' // Added useRouter import
 import Link from 'next/link'
 import {
   Wallet,
@@ -95,6 +96,19 @@ function getTransactionDescription(tx: any): string {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const router = useRouter() // Use router for redirection
+
+  useEffect(() => {
+    // Client-side check for profile completion
+    if (session?.user) {
+      const u = session.user as any
+      // If phone is missing, it is definitely a new/incomplete user
+      if (!u.phone) {
+        router.push('/profile-completion')
+      }
+    }
+  }, [session, router])
+
   const [wallet, setWallet] = useState<WalletData>({ balance: 0, commissionBalance: 0 })
   const [stats, setStats] = useState<QuickStat[]>([])
   const [transactions, setTransactions] = useState<RecentTransaction[]>([])

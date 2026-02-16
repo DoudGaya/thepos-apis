@@ -6,12 +6,45 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
+function generateReferralCode() {
+  return 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+const adapter = PrismaAdapter(prisma);
+const originalCreateUser = adapter.createUser;
+
+adapter.createUser = async (data) => {
+  // Extract fields that might come from NextAuth but aren't in our Prisma schema
+  const { name, image, emailVerified, ...rest } = data as any;
+  
+  let firstName = '', lastName = '';
+  
+  if (name) {
+    const parts = name.split(' ');
+    firstName = parts[0];
+    lastName = parts.slice(1).join(' ');
+  }
+
+  // Create user with only the fields our schema supports
+  return prisma.user.create({
+    data: {
+      ...rest,
+      firstName: (rest.firstName) || firstName,
+      lastName: (rest.lastName) || lastName,
+      referralCode: generateReferralCode(),
+      // Map emailVerified to isVerified if it exists (it's a Date in NextAuth)
+      isVerified: !!emailVerified, 
+    },
+  }) as any;
+};
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: adapter as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      allowDangerousEmailAccountLinking: true,
     }),
     AppleProvider({
       clientId: process.env.APPLE_ID || "",
@@ -82,19 +115,14 @@ export const authOptions: NextAuthOptions = {
       // Authorization already checked in the authorize function
       // for Credentials provider.
       
-      // For OAuth providers (Google/Apple), check if additional details are needed
-      if (account?.provider === 'google' || account?.provider === 'apple') {
-        const anyUser = user as any;
-        // If phone is missing, it's definitely an incomplete profile
-        if (!anyUser.phone) {
-          return '/profile-completion';
-        }
-      }
-
       // Just return true to allow the sign in
       return true;
     },
     async redirect({ url, baseUrl }) {
+      if (url === '/profile-completion') {
+        return `${baseUrl}/profile-completion`;
+      }
+      
       // Support relative URLs
       if (url.startsWith('/')) {
         // Default to dashboard instead of home

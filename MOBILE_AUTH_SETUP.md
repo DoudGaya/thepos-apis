@@ -18,10 +18,10 @@ This guide walks you through setting up Google and Apple authentication in the N
 4. **Create Credentials** (You need separate Client IDs for iOS and Android):
     - **iOS**:
         - Create OAuth client ID -> **iOS**.
-        - Bundle ID: `com.nillarpay.app` (Match your `app.json` bundleIdentifier).
+        - Bundle ID: `com.NillarPay` (Match your `app.json` bundleIdentifier).
     - **Android**:
         - Create OAuth client ID -> **Android**.
-        - Package name: `com.nillarpay.app` (Match your `app.json` package).
+        - Package name: `com.NillarPay` (Match your `app.json` package).
         - SHA-1 Certificate Fingerprint: Run `cd android && ./gradlew signingReport` (for bare workflow) or use `eas credentials` if using EAS Build.
     - **Web** (Required for Expo Go & Web):
         - You should already have this from the web setup.

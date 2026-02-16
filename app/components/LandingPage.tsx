@@ -46,7 +46,7 @@ const BENEFITS = [
     icon: Zap,
     title: 'Lightning Fast',
     description: 'Transactions processed in under 3 seconds with our advanced automation systems.',
-    gradient: 'from-amber-500 to-orange-600'
+    gradient: 'from-gray-500 to-gray-600'
   },
   {
     icon: ShieldCheck,
@@ -310,7 +310,7 @@ export default function LandingPage() {
           <div className="space-y-8">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200/50 dark:border-zinc-700/50 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 shadow-sm backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-amber-500" />
+              <Sparkles className="h-4 w-4 text-gray-500" />
               <span>Trusted by 50,000+ Nigerians</span>
               <ChevronRight className="h-4 w-4" />
             </div>
@@ -327,8 +327,8 @@ export default function LandingPage() {
                   <path d="M2 10C50 4 100 2 150 6C200 10 250 4 298 8" stroke="url(#gradient)" strokeWidth="3" strokeLinecap="round" />
                   <defs>
                     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#f59e0b" />
-                      <stop offset="100%" stopColor="#ef4444" />
+                      <stop offset="0%" stopColor="#595959" className=' bg-[#1d1515]' />
+                      <stop offset="100%" stopColor="#1d1515" />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -378,7 +378,7 @@ export default function LandingPage() {
           {/* Quick Purchase Widget */}
           <div id="quick-buy" className="relative z-10">
             {/* Glow Effect */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 dark:from-amber-500/10 dark:via-orange-500/10 dark:to-red-500/10 rounded-3xl blur-2xl opacity-60" />
+            <div className="absolute -inset-4 bg-gradient-to-r from-gray-500/20 via-gray-500/20 to-red-500/20 dark:from-gray-500/10 dark:via-gray-500/10 dark:to-red-500/10 rounded-3xl blur-2xl opacity-60" />
 
             <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-zinc-900/10 dark:shadow-black/20 p-8">
               {/* Header */}
@@ -387,7 +387,7 @@ export default function LandingPage() {
                   <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Quick Top-up</h3>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">No account needed</p>
                 </div>
-                <div className="h-12 w-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                <div className="h-12 w-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center shadow-lg shadow-gray-500/30">
                   <Smartphone className="h-6 w-6 text-white" />
                 </div>
               </div>
@@ -400,7 +400,7 @@ export default function LandingPage() {
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Phone Number</label>
                       <input
                         type="tel"
-                        className="w-full px-4 py-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400 outline-none transition-all text-lg text-zinc-900 dark:text-white"
+                        className="w-full px-4 py-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-400 outline-none transition-all text-lg text-zinc-900 dark:text-white"
                         placeholder="080 1234 5678"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -422,7 +422,7 @@ export default function LandingPage() {
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Verification Code</label>
                       <input
                         type="number"
-                        className="w-full px-4 py-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-center tracking-[0.5em] text-2xl font-mono text-zinc-900 dark:text-white"
+                        className="w-full px-4 py-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/50 focus:ring-2 focus:ring-gray-500 outline-none transition-all text-center tracking-[0.5em] text-2xl font-mono text-zinc-900 dark:text-white"
                         placeholder="••••••"
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
@@ -430,7 +430,7 @@ export default function LandingPage() {
                       />
                       <p className="text-xs text-zinc-500 mt-3 text-center">
                         Sent to {phone}
-                        <button onClick={() => setStep('PHONE')} className="text-amber-600 dark:text-amber-400 font-medium ml-2 hover:underline">Change</button>
+                        <button onClick={() => setStep('PHONE')} className="text-gray-600 dark:text-gray-400 font-medium ml-2 hover:underline">Change</button>
                       </p>
                     </div>
                     <button
@@ -455,7 +455,7 @@ export default function LandingPage() {
                         <button
                           key={net}
                           onClick={() => setNetwork(net)}
-                          className={cn("py-3 text-xs font-semibold rounded-lg border-2 transition-all", network === net ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300")}
+                          className={cn("py-3 text-xs font-semibold rounded-lg border-2 transition-all", network === net ? "border-gray-500 bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-400" : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300")}
                         >
                           {net}
                         </button>
@@ -545,7 +545,7 @@ export default function LandingPage() {
                     </div>
                     <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Success!</h3>
                     <p className="text-zinc-500 mb-8">Your transaction has been processed.</p>
-                    <button onClick={() => { setStep('PHONE'); setAmount(0); setPlan(''); setOtp(''); }} className="text-sm font-semibold text-amber-600 dark:text-amber-400 hover:underline">Make another purchase</button>
+                    <button onClick={() => { setStep('PHONE'); setAmount(0); setPlan(''); setOtp(''); }} className="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:underline">Make another purchase</button>
                   </div>
                 )}
               </div>
@@ -645,7 +645,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {SERVICES.map((service, idx) => (
               <div
                 key={idx}
@@ -682,7 +682,6 @@ export default function LandingPage() {
               >
                 {/* Gradient accent */}
                 <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${benefit.gradient} opacity-10 rounded-bl-full group-hover:opacity-20 transition-opacity`} />
-
                 <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${benefit.gradient} flex items-center justify-center mb-6 shadow-lg`}>
                   <benefit.icon className="h-7 w-7 text-white" />
                 </div>
@@ -693,7 +692,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
       {/* Pricing Preview */}
       <section id="pricing" className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -718,7 +716,7 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Link href="/pricing" className="inline-flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+              <Link href="/pricing" className="inline-flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-400 transition-colors">
                 View full pricing
                 <ArrowRight className="h-5 w-5" />
               </Link>
@@ -776,7 +774,7 @@ export default function LandingPage() {
                 {/* Stars */}
                 <div className="flex items-center gap-1 mb-6">
                   {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-amber-400 fill-current" />
+                    <Star key={i} className="h-5 w-5 text-gray-400 fill-current" />
                   ))}
                 </div>
 
