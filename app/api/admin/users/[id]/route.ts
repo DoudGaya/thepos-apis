@@ -116,7 +116,7 @@ export const GET = apiHandler(async (request: Request, context: any) => {
   })
 
   // Get referrer information if user was referred
-  let referrer = null
+  let referrer: any = null
   if (user.referredBy) {
     referrer = await prisma.user.findUnique({
       where: { referralCode: user.referredBy },
