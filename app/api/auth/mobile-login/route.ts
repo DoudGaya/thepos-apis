@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
                 });
                 const payload = ticket.getPayload();
                 if (payload) {
-                    email = payload.email || '';
+                    email = (payload.email || '').toLowerCase();
                     name = payload.name || '';
                     emailVerified = payload.email_verified || false;
                 }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
                     clientId: process.env.APPLE_ID!,
                     nonce: 'nonce',
                 });
-                email = payload.email || '';
+                email = (payload.email || '').toLowerCase();
                 emailVerified = String(payload.email_verified) === 'true';
                 // Apple only sends name on first sign in, so might be passed in body
                 name = `${firstName || ''} ${lastName || ''}`.trim();

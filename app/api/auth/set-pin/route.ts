@@ -47,12 +47,15 @@ export const POST = apiHandler(async (request: Request) => {
     throw new BadRequestError('PIN is already set. Use update-pin endpoint to change it.')
   }
 
-  // Hash and store the PIN
+  // Hash and store the PIN, and ensure isVerified is true
   const pinHash = await hashPassword(data.pin)
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { pinHash },
+    data: { 
+      pinHash,
+      isVerified: true // Ensure user is marked verified when they complete this step
+    },
   })
 
   return successResponse(

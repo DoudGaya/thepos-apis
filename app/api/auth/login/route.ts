@@ -15,9 +15,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Find user by email (case-insensitive to support legacy mixed-case records)
+    const user = await prisma.user.findFirst({
+      where: { 
+        email: {
+          equals: email.toLowerCase(),
+          mode: 'insensitive'
+        }
+      },
     })
 
     if (!user) {

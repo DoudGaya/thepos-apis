@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertCircle, CheckCircle2, Loader2, Eye, EyeOff } from 'lucide-react'
 import { Suspense } from 'react'
+import { signIn } from 'next-auth/react'
 
 // Toast Component (Vercel Style)
 function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' | 'error' | 'info' | 'warning'; message: string; onClose: () => void; autoClose?: number }) {
@@ -45,6 +46,7 @@ function SetPasswordContent() {
   const searchParams = useSearchParams()
 
   const [userId, setUserId] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -63,6 +65,12 @@ function SetPasswordContent() {
       if (storedUserId) {
         setUserId(storedUserId)
       }
+    }
+
+    // Get email from localStorage
+    const storedEmail = localStorage.getItem('userEmail')
+    if (storedEmail) {
+      setEmail(storedEmail)
     }
   }, [searchParams])
 
@@ -119,9 +127,35 @@ function SetPasswordContent() {
         return
       }
 
+      // Attempt auto-login if email is available so the user is authenticated for the next step (set-pin)
+      if (email) {
+        try {
+          const result = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+          })
+          
+          if (result?.error) {
+            console.error('Auto-login failed:', result.error)
+            // If login fails, redirect to login page instead of set-pin
+            setToast({
+              type: 'success',
+              message: 'Password set! Please log in to continue.',
+            })
+            setTimeout(() => {
+              router.push('/auth/login')
+            }, 2000)
+            return
+          }
+        } catch (loginError) {
+          console.error('Auto-login error:', loginError)
+        }
+      }
+
       setToast({
         type: 'success',
-        message: 'Password set successfully! Redirecting to PIN setup...',
+        message: 'Password set! Redirecting to PIN setup...',
       })
 
       // Redirect to PIN setup after a short delay

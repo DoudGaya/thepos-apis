@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod'
-import { purchaseService } from '@/lib/services/PurchaseService'
+import { purchaseService } from '@/lib/services/purchase.service'
 import {
   apiHandler,
   successResponse,
@@ -41,21 +41,25 @@ export const POST = apiHandler(async (req) => {
   } = body as z.infer<typeof electricityPurchaseSchema>
 
   try {
-    const result = await purchaseService.purchaseElectricity({
+    const result = await purchaseService.purchase({
       userId: user.id,
-      disco: provider,
-      meterNumber,
-      meterType: meterType.toUpperCase() as 'PREPAID' | 'POSTPAID',
+      service: 'ELECTRICITY',
+      network: provider as any,
+      recipient: meterNumber,
       amount: vendorCost,
-      customerName,
-      customerAddress
+      metadata: { 
+        meterType: meterType.toUpperCase(),
+        customerName,
+        customerAddress
+      }
     });
 
     return successResponse({
-      token: result.data?.token,
-      reference: result.reference,
-      ...result.data
-    }, 'Electricity purchase successful');
+      transactionId: result.transaction.id,
+      reference: result.transaction.reference,
+      status: 'PENDING',
+      message: 'Transaction initiated. Please check status shortly.'
+    }, 'Electricity purchase initiated');
 
   } catch (error: any) {
     if (error.message.includes('Insufficient balance')) {

@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
     
     console.log('✔️  Parsing schema...')
     const parsed = registerSchema.parse(body)
+    
+    // Force email to lowercase
+    parsed.email = parsed.email.toLowerCase()
+    
     console.log('✅ Schema validation passed')
     
     // Phase 1: Only email and phone required for OTP generation

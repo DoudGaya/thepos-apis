@@ -1,5 +1,5 @@
 import { apiHandler } from '@/lib/api-handler';
-import { purchaseService } from '@/lib/services/PurchaseService';
+import { vendorService } from '@/lib/vendors';
 import { successResponse } from '@/lib/api-response';
 import { z } from 'zod';
 import { BadRequestError } from '@/lib/errors';
@@ -20,20 +20,24 @@ export const POST = apiHandler(async (req) => {
   const { provider, smartCardNumber } = validation.data;
 
   try {
-    const result = await purchaseService.verifySmartCard(provider, smartCardNumber);
+    const result = await vendorService.verifyCustomer({
+      customerId: smartCardNumber,
+      service: 'CABLE_TV',
+      serviceProvider: provider,
+    });
 
-    if (!result.success || !result.data) {
-      throw new BadRequestError(result.message || 'Verification failed');
+    if (!result.isValid) {
+      throw new BadRequestError('Verification failed');
     }
 
     return successResponse({
-      customerName: result.data.customerName,
+      customerName: result.customerName,
       customerNumber: smartCardNumber,
-      currentBouquet: result.data.currentBouquet,
-      currentBouquetCode: result.data.currentBouquetCode,
-      renewalAmount: result.data.renewalAmount,
-      dueDate: result.data.dueDate,
-      status: result.data.status || 'ACTIVE',
+      currentBouquet: result.metadata?.currentBouquet,
+      currentBouquetCode: result.metadata?.currentBouquetCode,
+      renewalAmount: result.metadata?.renewalAmount,
+      dueDate: result.metadata?.dueDate,
+      status: result.metadata?.status || 'ACTIVE',
     }, 'Smart card verification successful');
 
   } catch (error: any) {

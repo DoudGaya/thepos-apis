@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/nextauth'
-import { purchaseService } from '@/lib/services/PurchaseService'
+import { vendorService } from '@/lib/vendors';
 import { z } from 'zod'
 
 const verifySchema = z.object({
@@ -20,12 +20,17 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { disco, meterNumber, meterType } = verifySchema.parse(body)
 
-    const result = await purchaseService.verifyMeter(disco, meterNumber, meterType)
+    const result = await vendorService.verifyCustomer({
+      customerId: meterNumber,
+      serviceProvider: disco,
+      meterType,
+      service: 'ELECTRICITY'
+    })
 
-    if (result.success) {
-      return NextResponse.json({ success: true, data: result.data })
+    if (result.isValid) {
+      return NextResponse.json({ success: true, data: result })
     } else {
-      return NextResponse.json({ success: false, error: result.error || 'Verification failed' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 400 })
     }
   } catch (error: any) {
     console.error('Verification error:', error)

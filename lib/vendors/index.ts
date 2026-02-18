@@ -97,14 +97,6 @@ export class VendorService {
       }
     }
 
-    // For VTU_NG
-    if (adapterId === 'VTU_NG') {
-      return {
-        username: process.env.VTU_NG_USERNAME || dbCredentials?.username,
-        password: process.env.VTU_NG_PASSWORD || dbCredentials?.password,
-      }
-    }
-
     // For EBILLS
     if (adapterId === 'EBILLS') {
       return {
@@ -113,13 +105,6 @@ export class VendorService {
       }
     }
 
-    // For CLUBKONNECT
-    if (adapterId === 'CLUBKONNECT') {
-      return {
-        userId: process.env.CLUBKONNECT_USER_ID || dbCredentials?.userId,
-        apiKey: process.env.CLUBKONNECT_API_KEY || dbCredentials?.apiKey,
-      }
-    }
 
     // For other vendors, use database credentials as-is
     return dbCredentials || {}

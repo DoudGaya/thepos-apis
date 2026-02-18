@@ -1,5 +1,5 @@
 import { apiHandler } from '@/lib/api-handler';
-import { purchaseService } from '@/lib/services/PurchaseService';
+import { purchaseService } from '@/lib/services/purchase.service';
 import { successResponse } from '@/lib/api-response';
 import { z } from 'zod';
 import { BadRequestError } from '@/lib/errors';
@@ -34,19 +34,20 @@ export const POST = apiHandler(async (req) => {
   } = validation.data;
 
   try {
-    const result = await purchaseService.purchaseCableTV({
+    const result = await purchaseService.purchase({
       userId: user.id,
-      provider,
-      smartCardNumber,
-      plan,
-      amount,
-      customerName
+      service: 'CABLE_TV',
+      network: provider as any,
+      recipient: smartCardNumber,
+      planId: plan,
+      amount: amount,
+      metadata: { customerName }
     });
 
     return successResponse({
-      transactionId: result.transactionId,
-      reference: result.reference,
-      ...result.data
+      transactionId: result.transaction.id,
+      reference: result.transaction.reference,
+      status: result.transaction.status
     }, 'Cable TV purchase successful');
 
   } catch (error: any) {

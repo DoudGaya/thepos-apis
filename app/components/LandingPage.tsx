@@ -833,7 +833,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative rounded-3xl overflow-hidden">
             {/* Background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-white dark:via-zinc-100 dark:to-white" />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 dark:from-gray-400 dark:via-zinc-500 dark:to-gray-400" />
 
             {/* Crystal overlay */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent)] dark:bg-[radial-gradient(circle_at_30%_50%,rgba(0,0,0,0.1),transparent)]" />

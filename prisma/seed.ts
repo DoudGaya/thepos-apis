@@ -52,20 +52,6 @@ async function main() {
   
   const vendors = [
     {
-        vendorName: 'VTU.NG',
-        adapterId: 'VTU_NG',
-        type: 'ALL',
-        priority: 100,
-        supportsAirtime: true,
-        supportsData: true,
-        supportsElectric: true,
-        supportsCableTV: true,
-        credentials: {
-          username: process.env.VTU_NG_USERNAME || '',
-          password: process.env.VTU_NG_PASSWORD || '',
-        },
-    },
-    {
         vendorName: 'Amigo',
         adapterId: 'AMIGO',
         type: 'ALL',
@@ -77,20 +63,6 @@ async function main() {
         credentials: {
           apiToken: process.env.AMIGO_API_TOKEN || '',
           baseUrl: process.env.AMIGO_BASE_URL || 'https://amigo.ng/api'
-        },
-    },
-    {
-        vendorName: 'ClubKonnect',
-        adapterId: 'CLUBKONNECT',
-        type: 'ALL',
-        priority: 80,
-        supportsAirtime: true,
-        supportsData: true,
-        supportsElectric: true,
-        supportsCableTV: true,
-        credentials: {
-          userId: process.env.CLUBKONNECT_USER_ID || '',
-          apiKey: process.env.CLUBKONNECT_API_KEY || ''
         },
     },
     {
@@ -250,6 +222,82 @@ async function main() {
       })
       console.log(`✅ Created profit margin for ${margin.service}`)
     }
+  }
+
+  // --- SERVICE ROUTING CONFIGURATION ---
+  console.log('\n🗺️  Seeding Service Routing...')
+
+  const amigoConfig = await prisma.vendorConfig.findUnique({ where: { adapterId: 'AMIGO' } });
+  const vtpassConfig = await prisma.vendorConfig.findUnique({ where: { adapterId: 'VTPASS' } });
+  const subandgainConfig = await prisma.vendorConfig.findUnique({ where: { adapterId: 'SUBANDGAIN' } });
+
+  if (amigoConfig && subandgainConfig) {
+     // MTN Data -> Amigo (Fallback: SubAndGain)
+     await prisma.serviceRouting.upsert({
+        where: {
+          serviceType_network: {
+            serviceType: 'DATA',
+            network: 'MTN',
+          },
+        },
+        update: {
+          primaryVendorId: amigoConfig.id,
+          fallbackVendorId: subandgainConfig.id,
+        },
+        create: {
+          serviceType: 'DATA',
+          network: 'MTN',
+          primaryVendorId: amigoConfig.id,
+          fallbackVendorId: subandgainConfig.id,
+        },
+     })
+     console.log('✅ Service Routing: MTN DATA -> Amigo (Fallback: SubAndGain)')
+  }
+
+  if (vtpassConfig && subandgainConfig) {
+     // MTN Airtime -> VTPass
+     await prisma.serviceRouting.upsert({
+        where: {
+          serviceType_network: {
+            serviceType: 'AIRTIME',
+            network: 'MTN',
+          },
+        },
+        update: {
+          primaryVendorId: vtpassConfig.id,
+          fallbackVendorId: subandgainConfig.id,
+        },
+        create: {
+          serviceType: 'AIRTIME',
+          network: 'MTN',
+          primaryVendorId: vtpassConfig.id,
+          fallbackVendorId: subandgainConfig.id,
+        },
+     })
+     console.log('✅ Service Routing: MTN AIRTIME -> VTPass (Fallback: SubAndGain)')
+  }
+
+  if (vtpassConfig) {
+      // ELECTRICITY -> VTPass
+      await prisma.serviceRouting.upsert({
+        where: {
+          serviceType_network: {
+            serviceType: 'ELECTRICITY',
+            network: 'IKEDC', 
+          },
+        },
+        update: {
+          primaryVendorId: vtpassConfig.id,
+          fallbackVendorId: null,
+        },
+        create: {
+          serviceType: 'ELECTRICITY',
+          network: 'IKEDC',
+          primaryVendorId: vtpassConfig.id,
+          fallbackVendorId: null, 
+        },
+      })
+      console.log('✅ Service Routing: IKEDC ELECTRICITY -> VTPass')
   }
 
   console.log('✨ Seeding complete!')

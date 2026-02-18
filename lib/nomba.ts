@@ -69,22 +69,33 @@ class NombaService {
         try {
             console.log('Fetching new Nomba Access Token...');
             const response = await axios.post(
-                `https://api.nomba.com/v1/auth/token`,
+                `${this.config.baseURL}/v1/auth/token/issue`,
                 {
                     client_id: this.config.clientId,
                     client_secret: this.config.clientSecret,
                     grant_type: 'client_credentials'
                 },
                 {
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'accountId': this.config.accountId
+                    }
                 }
             );
 
             if (response.data && response.data.data && response.data.data.access_token) {
                 this.accessToken = response.data.data.access_token;
-                // Set expiry (default to 3500s or check response.expires_in)
-                const expiresIn = response.data.data.expires_in || 3600;
-                this.tokenExpiry = Date.now() + (expiresIn * 1000) - 60000; // Buffer 60s
+                
+                // Parse expiresAt if available ("2026-02-18T20:02:32.283Z")
+                if (response.data.data.expiresAt) {
+                    const expiryTime = new Date(response.data.data.expiresAt).getTime();
+                    this.tokenExpiry = expiryTime - 60000; // Buffer 60s
+                } else {
+                    // Fallback to default 1 hour
+                    const expiresIn = response.data.data.expires_in || 3600;
+                    this.tokenExpiry = Date.now() + (expiresIn * 1000) - 60000;
+                }
+                
                 return this.accessToken as string;
             }	    
 
@@ -134,6 +145,8 @@ class NombaService {
                 payload,
                 { headers }
             );
+
+            console.log('[NOMBA] Initialize response:', JSON.stringify(response.data, null, 2));
 
             if (response.data.code !== '00') {
                 throw new Error(response.data.description || 'Failed to initialize Nomba transaction');

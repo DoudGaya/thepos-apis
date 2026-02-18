@@ -26,9 +26,12 @@ adapter.createUser = async (data) => {
   }
 
   // Create user with only the fields our schema supports
+  const email = rest.email?.toLowerCase();
+  
   return prisma.user.create({
     data: {
       ...rest,
+      email,
       firstName: (rest.firstName) || firstName,
       lastName: (rest.lastName) || lastName,
       referralCode: generateReferralCode(),
@@ -67,7 +70,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase() },
           include: { adminRole: true },
         });
 
@@ -149,9 +152,9 @@ export const authOptions: NextAuthOptions = {
         token.firstName = (user as any).firstName;
         token.lastName = (user as any).lastName;
         token.permissions = (user as any).permissions;
-      } else if (trigger === 'update' && session) {
-        // Only refresh from database when explicitly triggered by session update
-        // This prevents excessive database queries on every request
+      } else if ((trigger === 'update' && session) || (!token.isVerified && token.sub)) {
+        // Refresh from database when explicitly triggered by session update
+        // OR when the token says not verified but we have a user ID (to catch status changes)
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.sub },
@@ -159,6 +162,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (dbUser) {
+            // Update all fields to ensure consistency
             token.firstName = dbUser.firstName;
             token.lastName = dbUser.lastName;
             token.role = dbUser.role;

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import paystackService from '@/lib/paystack';
 import opayService from '@/lib/services/OpayService';
-import { purchaseService } from '@/lib/services/PurchaseService';
+import { purchaseService } from '@/lib/services/purchase.service';
 import { walletService } from '@/lib/services/WalletService';
 import { TransactionType, TransactionStatus } from '@prisma/client';
 import { generateToken } from '@/lib/auth';
@@ -114,11 +114,12 @@ export async function POST(req: NextRequest) {
                 if (!data.planCode || !data.network) {
                     throw new Error('Missing plan details for Data purchase');
                 }
-                purchaseResult = await purchaseService.purchaseData({
+                purchaseResult = await purchaseService.purchase({
                     userId: user.id,
-                    network: data.network,
-                    phoneNumber: data.phoneNumber,
-                    planCode: data.planCode,
+                    service: 'DATA',
+                    network: data.network as any,
+                    recipient: data.phoneNumber,
+                    planId: data.planCode,
                     amount: data.amount
                 });
             } else {
@@ -126,11 +127,12 @@ export async function POST(req: NextRequest) {
                 if (!data.network) {
                     throw new Error('Missing network for Airtime purchase');
                 }
-                purchaseResult = await purchaseService.purchaseAirtime({
+                purchaseResult = await purchaseService.purchase({
                     userId: user.id,
-                    network: data.network,
-                    phoneNumber: data.phoneNumber,
-                    amount: data.amount
+                    service: 'AIRTIME',
+                    network: data.network as any,
+                    amount: data.amount,
+                    recipient: data.phoneNumber
                 });
             }
         } catch (purchaseError: any) {

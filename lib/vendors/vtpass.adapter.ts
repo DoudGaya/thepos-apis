@@ -238,8 +238,17 @@ export class VTPassAdapter implements VendorAdapter {
         }
       }
 
+      if (data.code === '027' && data.content && data.content.errors && data.content.errors.includes('IP NOT WHITELISTED')) {
+        throw new VendorError(
+          'VTPass Error: Your IP is not whitelisted. Please add your IP to the VTPass Dashboard -> API Settings.',
+          'VTPASS',
+          403,
+          data
+        )
+      }
+
       throw new VendorError(
-        data.response_description || 'Failed to get balance',
+        data.response_description || (data.content && data.content.errors) || 'Failed to get balance',
         'VTPASS',
         400,
         data

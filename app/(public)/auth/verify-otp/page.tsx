@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { AlertCircle, CheckCircle2, Loader2, Phone, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
@@ -44,6 +45,7 @@ function Toast({ type, message, onClose, autoClose = 4000 }: { type: 'success' |
 function VerifyOTPContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { update } = useSession()
 
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
@@ -137,6 +139,9 @@ function VerifyOTPContent() {
         type: 'success',
         message: 'Phone verified successfully!',
       })
+
+      // Force session update to reflect verification status immediately
+      await update()
 
       // Store user data for next steps
       const nextStep = data.nextStep || 'SET_PASSWORD'

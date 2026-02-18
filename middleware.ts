@@ -117,7 +117,9 @@ export async function middleware(request: NextRequest) {
       '/api/auth/reset-password',
       '/api/auth/send-otp',
       '/api/store/quick-checkout',
-      '/api/auth/mobile-login'
+      '/api/auth/mobile-login',
+      '/api/auth/set-password',
+      '/api/auth/set-pin'
     ];
 
     // Specific NextAuth internal routes to allow
