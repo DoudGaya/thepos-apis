@@ -7,122 +7,182 @@ interface TermiiSMSResponse {
   user: string;
 }
 
+interface SendchampSMSResponse {
+  status: string;
+  data: {
+    id: string;
+    business_id: string;
+    message: string;
+    contacts: Array<{
+      phone_number: string;
+      status: string;
+    }>;
+  };
+}
+
 interface SendSMSParams {
   to: string;
   message: string;
 }
 
 class SMSService {
+  // Termii Config (Primary)
   private apiKey: string;
   private senderId: string;
   private baseUrl: string;
 
+  // Sendchamp Config (Fallback)
+  private sendchampApiKey: string;
+  private sendchampSenderId: string;
+  private sendchampBaseUrl: string;
+
   constructor() {
+    // Initialize Termii
     this.apiKey = process.env.TERMII_API_KEY || 'TLPKjucDosWbPhSjyoUlxSQSclkPPEiyFzJmdOfaLCUFLtywTdWObsYBAMaiwg';
     this.senderId = process.env.TERMII_SENDER_ID || 'CCSA';
     this.baseUrl = process.env.TERMII_BASE_URL || 'https://v3.api.termii.com';
-    
-    if (!this.apiKey) {
-      console.warn('⚠️ TERMII_API_KEY not configured. SMS will not be sent.');
+
+    // Initialize Sendchamp
+    this.sendchampApiKey = process.env.SENDCHAMP_API_KEY || '';
+    this.sendchampSenderId = process.env.SENDCHAMP_SENDER_ID || 'Sendchamp';
+    this.sendchampBaseUrl = process.env.SENDCHAMP_BASE_URL || 'https://api.sendchamp.com/api/v1';
+
+    this.logConfiguration();
+  }
+
+  private logConfiguration() {
+    if (this.apiKey) {
+      console.log(`🔑 Termii SMS API configured (Primary).`);
     } else {
-      console.log(`🔑 Termii API configured with key: ${this.apiKey.substring(0, 8)}...`);
+      console.warn('⚠️ TERMII_API_KEY not configured.');
+    }
+
+    if (this.sendchampApiKey) {
+      console.log(`🔑 Sendchamp SMS API configured (Fallback).`);
+    } else {
+      console.warn('⚠️ SENDCHAMP_API_KEY not configured.');
     }
   }
 
+  /**
+   * Tests connection to both providers.
+   * Returns true if at least one provider is working.
+   */
   async testConnection(): Promise<boolean> {
-    if (!this.apiKey) {
-      console.log('❌ Cannot test connection - no API key configured');
-      return false;
+    let termiiOk = false;
+    let sendchampOk = false;
+
+    // Test Termii
+    if (this.apiKey) {
+      try {
+        console.log('🔄 Testing Termii connection...');
+        await axios.get(`${this.baseUrl}/api/get-balance?api_key=${this.apiKey}`, { timeout: 10000 });
+        console.log('✅ Termii connection successful');
+        termiiOk = true;
+      } catch (error: any) {
+        console.error('❌ Termii connection failed:', error.message);
+      }
     }
 
-    try {
-      console.log('🔄 Testing Termii API connection...');
-      const response = await axios.get(`${this.baseUrl}/api/get-balance?api_key=${this.apiKey}`, {
-        timeout: 10000
-      });
-      
-      console.log('✅ Termii API connection successful:', response.data);
-      return true;
-    } catch (error: any) {
-      console.error('❌ Termii API connection failed:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-      return false;
+    // Test Sendchamp
+    if (this.sendchampApiKey) {
+      try {
+        console.log('🔄 Testing Sendchamp connection...');
+        await axios.get(`${this.sendchampBaseUrl}/wallet/wallet_balance`, {
+          headers: {
+            'Authorization': `Bearer ${this.sendchampApiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+        console.log('✅ Sendchamp connection successful');
+        sendchampOk = true;
+      } catch (error: any) {
+        console.error('❌ Sendchamp connection failed:', error.message);
+      }
     }
+
+    return termiiOk || sendchampOk;
   }
 
-  async sendSMS({ to, message }: SendSMSParams): Promise<TermiiSMSResponse | null> {
-    if (!this.apiKey) {
-      console.log(`📱 SMS would be sent to ${to}: ${message}`);
-      console.log('💡 Configure TERMII_API_KEY to enable actual SMS sending');
-      return null;
+  private async sendWithSendchamp(to: string, message: string): Promise<SendchampSMSResponse> {
+    const payload = {
+      to: [to], // Sendchamp expects array
+      message: message,
+      sender_name: this.sendchampSenderId,
+      route: 'dnd' // or 'international'/'non_dnd'
+    };
+
+    const response = await axios.post(`${this.sendchampBaseUrl}/sms/send`, payload, {
+      headers: {
+        'Authorization': `Bearer ${this.sendchampApiKey}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+
+    return response.data;
+  }
+
+  async sendSMS({ to, message }: SendSMSParams): Promise<any> {
+    const formattedPhone = this.formatPhoneForSMS(to);
+
+    // 1. Try Termii First
+    if (this.apiKey) {
+      try {
+        console.log(`🔄 Sending SMS via Termii to ${formattedPhone}`);
+        const payload = {
+          api_key: this.apiKey,
+          to: formattedPhone,
+          from: this.senderId,
+          sms: message,
+          type: 'plain',
+          channel: 'generic'
+        };
+
+        const response = await axios.post(`${this.baseUrl}/api/sms/send`, payload, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 15000
+        });
+
+        console.log('✅ SMS sent successfully via Termii');
+        return response.data;
+      } catch (error: any) {
+        console.error('❌ Termii SMS failed:', error.message);
+        console.log('🔄 Attempting fallback to Sendchamp...');
+      }
     }
 
-    try {
-      console.log(`🔄 Sending SMS to ${to}`);
-      console.log(`📱 Message: ${message}`);
-
-      const payload = {
-        api_key: this.apiKey,
-        to: to,
-        from: this.senderId,
-        sms: message,
-        type: 'plain',
-        channel: 'generic'
-      };
-
-      console.log(`📤 SMS Payload:`, { ...payload, api_key: '***' });
-
-      const response = await axios.post(`${this.baseUrl}/api/sms/send`, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 15000 // 15 second timeout
-      });
-
-      console.log('✅ SMS sent successfully:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ SMS sending failed:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method
-        }
-      });
-      
-      // Don't throw error - just log it so registration can continue
-      console.log('⚠️ SMS service unavailable - registration will continue without SMS verification');
-      return null;
+    // 2. Fallback to Sendchamp
+    if (this.sendchampApiKey) {
+      try {
+        console.log(`🔄 Sending SMS via Sendchamp to ${formattedPhone}`);
+        const response = await this.sendWithSendchamp(formattedPhone, message);
+        console.log('✅ SMS sent successfully via Sendchamp');
+        return response;
+      } catch (error: any) {
+        console.error('❌ Sendchamp SMS failed:', error.response?.data || error.message);
+      }
     }
+
+    console.error('❌ All SMS providers failed to send message.');
+    return null;
   }
 
   async sendOTP(phone: string, code: string): Promise<void> {
     const message = `Your NillarPay verification code is: ${code}. This code expires in 10 minutes. Do not share this code with anyone.`;
-    
-    await this.sendSMS({
-      to: phone,
-      message: message
-    });
+    await this.sendSMS({ to: phone, message });
   }
 
   formatPhoneForSMS(phone: string): string {
-    // Ensure phone number is in international format for Termii
-    if (phone.startsWith('0')) {
-      return `234${phone.substring(1)}`;
-    }
-    if (phone.startsWith('+234')) {
-      return phone.substring(1);
-    }
-    if (phone.startsWith('234')) {
-      return phone;
-    }
-    return `234${phone}`;
+    // Both providers accept international format without + (e.g., 23480...)
+    let p = phone.replace(/\s+/g, '');
+    if (p.startsWith('0')) return `234${p.substring(1)}`;
+    if (p.startsWith('+234')) return p.substring(1);
+    if (p.startsWith('234')) return p;
+    return `234${p}`;
   }
 }
 

@@ -46,6 +46,19 @@ export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, dataPurchaseSchema)) as z.infer<typeof dataPurchaseSchema>
 
+  // Check if DATA service is enabled for this network in Pricing table
+  const pricing = await prisma.pricing.findFirst({
+    where: {
+      service: 'DATA',
+      network: data.network,
+    },
+  })
+
+  // If service is globally disabled
+  if (pricing && !pricing.isActive) {
+    throw new BadRequestError(`Data purchases are currently disabled for ${data.network}. Please try again later.`)
+  }
+
   // ========================================
   // 1. Validate Phone Number
   // ========================================
@@ -114,60 +127,37 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   // ========================================
-  // 3. Get Plan Details from Constants (same source as frontend)
+  // 3. Get Plan Details from Database
   // ========================================
-  const { getAllPlansForNetwork, DATA_PLANS } = await import('@/lib/constants/data-plans')
-
   console.log('📊 Plan Lookup Debug:')
-  console.log('  - Network received (string):', data.network)
-  console.log('  - Network type:', typeof data.network)
-  console.log('  - Network JSON:', JSON.stringify(data.network))
-  console.log('  - Available network keys in DATA_PLANS:', Object.keys(DATA_PLANS))
+  console.log('  - Network:', data.network)
+  console.log('  - Plan UUID:', data.planId)
 
-  const plans = getAllPlansForNetwork(data.network as 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE')
-
-  console.log('  - Plans array length:', plans.length)
-  console.log('  - PlanId received (string):', data.planId)
-  console.log('  - PlanId type:', typeof data.planId)
-  console.log('  - PlanId JSON:', JSON.stringify(data.planId))
-  console.log('  - Available plan IDs:', plans.map(p => p.id).join(', '))
-
-  const selectedPlan = plans.find(p => p.id === data.planId)
+  // Find plan in database using UUID
+  const selectedPlan = await prisma.dataPlan.findUnique({
+    where: { id: data.planId },
+    include: { vendor: true }
+  })
 
   if (!selectedPlan) {
-    console.error('❌ CRITICAL: Plan not found during purchase!')
-    console.error('  - Network:', data.network)
-    console.error('  - Requested planId:', data.planId)
-    console.error('  - Requested planId type:', typeof data.planId)
-    console.error('  - Requested planId length:', data.planId.length)
-    console.error('  - Available plans count:', plans.length)
-    console.error('  - Available plan IDs:', plans.map(p => p.id).join(', '))
-    console.error('  - Debug comparison:')
-    plans.forEach(p => {
-      const matches = p.id === data.planId
-      console.error(`    "${p.id}" (${p.id.length}) === "${data.planId}" (${data.planId.length}) ? ${matches}`)
-    })
-
-    // Provide helpful error message
-    const availablePlansStr = plans.length > 0
-      ? plans.map(p => `${p.name} (${p.id}): ₦${p.sellingPrice}`).join(', ')
-      : 'No plans available'
-
-    throw new BadRequestError(
-      `Selected plan not found. Requested: "${data.planId}". Available plans for ${data.network}: ${availablePlansStr}`
-    )
+    throw new BadRequestError(`Selected plan not found. Please refresh the plans list and try again.`)
   }
 
-  if (!selectedPlan.isAvailable) {
+  // Validate Network match
+  if (selectedPlan.network !== data.network) {
+     throw new BadRequestError(`Plan network mismatch. Expected ${data.network} but plan is for ${selectedPlan.network}`)
+  }
+
+  if (!selectedPlan.isActive) {
     throw new BadRequestError('Selected plan is currently unavailable. Please try another plan.')
   }
 
   // ========================================
   // 4. Calculate Final Pricing
   // ========================================
-  const costPrice = selectedPlan.costPrice // Base cost from plans
-  const sellingPrice = selectedPlan.sellingPrice // Already includes ₦100 margin
-  const profit = PROFIT_MARGIN
+  const costPrice = selectedPlan.costPrice 
+  const sellingPrice = selectedPlan.sellingPrice
+  const profit = sellingPrice - costPrice
 
   // ========================================
   // 5. Validate Wallet Balance
@@ -187,11 +177,14 @@ export const POST = apiHandler(async (request: Request) => {
       service: 'DATA',
       network: data.network,
       recipient: formattedPhone,
-      planId: data.planId,
+      planId: selectedPlan.planId, // Use Vendor's Plan ID (e.g. "5000") NOT our UUID
+      dataPlanPrice: selectedPlan.sellingPrice, // Use Database Price as source of truth
+      costPrice: selectedPlan.costPrice, // Pass cost price from DB for vendors that don't support dynamic lookup
+      targetVendor: selectedPlan.vendor.adapterId, // Force usage of plan's vendor
       idempotencyKey: data.idempotencyKey,
       metadata: {
         source: 'web_app',
-        planName: selectedPlan.name,
+        planName: selectedPlan.size, // Use size as name since DB doesn't have name
         costPrice,
         sellingPrice,
         profit,

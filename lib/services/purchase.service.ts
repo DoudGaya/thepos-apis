@@ -26,7 +26,10 @@ export interface PurchaseRequest {
   recipient: string // phone number or account number
   amount?: number // for airtime
   planId?: string // for data bundles, cable, etc.
+  dataPlanPrice?: number // Optional: Override selling price (e.g. from DB Plan)
   idempotencyKey?: string // optional: auto-generated if not provided
+  targetVendor?: string // Optional: Force usage of a specific vendor
+  costPrice?: number // Optional: Override cost price (for vendors without dynamic plan API)
   metadata?: Record<string, any>
 }
 
@@ -98,13 +101,22 @@ export class PurchaseService {
     // 8. Calculate pricing (cost + profit margin)
     let pricing
 
-    // Special case: AIRTIME uses 1:1 pricing (Amount = Cost), no profit added
-    if (request.service === 'AIRTIME') {
+    // Priority 1: Use DB Plan price if provided
+    if (request.dataPlanPrice) {
+      pricing = {
+        costPrice,
+        sellingPrice: request.dataPlanPrice,
+        profit: request.dataPlanPrice - costPrice,
+        margin: { type: 'FIXED', value: request.dataPlanPrice - costPrice },
+      }
+    } 
+    // Priority 2: Special case: AIRTIME uses 1:1 pricing (Amount = Cost), no profit added
+    else if (request.service === 'AIRTIME') {
       pricing = {
         costPrice,
         sellingPrice: costPrice, // 1:1 pricing
         profit: 0,
-        margin: { type: 'FIXED', value: 0 } as const,
+        margin: { type: 'FIXED', value: 0 },
       }
     } else {
       try {
@@ -184,6 +196,7 @@ export class PurchaseService {
       amount: pricing.costPrice,
       planId: request.planId,
       idempotencyKey,
+      targetVendor: request.targetVendor,
       metadata: {
         ...request.metadata,
         transactionId: transaction.id,
@@ -334,13 +347,25 @@ export class PurchaseService {
     }
 
     try {
+      // Pass targetVendor if present, otherwise let it route automatically
       const plans = await vendorService.getPlans(
         request.service,
-        request.network
+        request.network,
+        request.targetVendor
       )
 
       const plan = plans.find((p) => p.id === request.planId)
       if (!plan) {
+        // Special case: If vendor does not support plan listing (returns empty),
+        // we must trust the DB costPrice if provided.
+        // Specifically for SubAndGain which returns empty array.
+        if (plans.length === 0 && request.costPrice !== undefined) {
+             return {
+                 price: request.costPrice,
+                 name: request.metadata?.planName || 'Data Plan'
+             }
+        }
+        
         throw new Error('Plan not found')
       }
 

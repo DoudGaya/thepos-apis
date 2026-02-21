@@ -40,6 +40,8 @@ export const GET = apiHandler(async (request: Request, context: any) => {
       referralCode: true,
       referredBy: true,
       isVerified: true,
+      emailVerified: true,
+      phoneVerified: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -157,13 +159,15 @@ export const GET = apiHandler(async (request: Request, context: any) => {
 const updateUserSchema = z.object({
   role: z.enum(['USER', 'ADMIN']).optional(),
   isVerified: z.boolean().optional(),
+  emailVerified: z.boolean().optional(),
+  phoneVerified: z.boolean().optional(),
 })
 
 export const PATCH = apiHandler(async (request: Request, context: any) => {
   await requirePermission(PERMISSIONS.USERS_EDIT, request)
   
   const { id } = await context.params
-  const data = (await validateRequestBody(request, updateUserSchema)) as z.infer<typeof updateUserSchema>
+  const input = await validateRequestBody<z.infer<typeof updateUserSchema>>(request, updateUserSchema)
 
   // Check if user exists
   const user = await prisma.user.findUnique({
@@ -174,10 +178,46 @@ export const PATCH = apiHandler(async (request: Request, context: any) => {
     throw new NotFoundError('User not found')
   }
 
+  // Calculate new verification states
+  const newEmailVerified =
+    input.emailVerified !== undefined
+      ? input.emailVerified
+        ? new Date()
+        : null
+      : user.emailVerified
+
+  const newPhoneVerified =
+    input.phoneVerified !== undefined
+      ? input.phoneVerified
+      : user.phoneVerified
+
+  // Verification status logic:
+  // If explicitly provided in input, use that
+  // Otherwise, auto-calculate based on email & phone verification
+  let newIsVerified = input.isVerified
+  
+  if (newIsVerified === undefined) {
+    // Only auto-calculate if not explicitly setting it
+    // If either changed, re-calculate
+    if (input.emailVerified !== undefined || input.phoneVerified !== undefined) {
+      newIsVerified = !!newEmailVerified && !!newPhoneVerified
+    } else {
+      newIsVerified = user.isVerified
+    }
+  }
+
+  // Prepare update data
+  const updateData: any = {
+    ...input,
+    emailVerified: newEmailVerified,
+    phoneVerified: newPhoneVerified,
+    isVerified: newIsVerified,
+  }
+
   // Update user
   const updatedUser = await prisma.user.update({
     where: { id },
-    data,
+    data: updateData,
     select: {
       id: true,
       firstName: true,
@@ -186,6 +226,8 @@ export const PATCH = apiHandler(async (request: Request, context: any) => {
       phone: true,
       role: true,
       isVerified: true,
+      emailVerified: true,
+      phoneVerified: true,
       updatedAt: true,
     },
   })

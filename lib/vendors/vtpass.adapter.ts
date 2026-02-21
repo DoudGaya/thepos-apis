@@ -148,6 +148,12 @@ export class VTPassAdapter implements VendorAdapter {
     this.baseURL = config.useSandbox
       ? 'https://sandbox.vtpass.com/api'
       : 'https://vtpass.com/api'
+    
+    // Developer Note:
+    // Base URL ends with /api. Endpoints are appended relative to this base.
+    // e.g. /pay becomes https://vtpass.com/api/pay
+    // e.g. /balance becomes https://vtpass.com/api/balance
+    // e.g. /service-variations becomes https://vtpass.com/api/service-variations
 
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -159,6 +165,7 @@ export class VTPassAdapter implements VendorAdapter {
 
     console.log(`[VTPass] Initialized with ${config.useSandbox ? 'SANDBOX' : 'LIVE'} environment`)
     console.log(`[VTPass] Base URL: ${this.baseURL}`)
+    console.log(`[VTPass] Purchase Endpoint: ${this.baseURL}/pay`) // Explicitly log full purchase URL
     console.log(`[VTPass] API Key: ${this.apiKey.substring(0, 10)}...`)
   }
 

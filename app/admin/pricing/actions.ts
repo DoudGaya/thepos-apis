@@ -21,14 +21,28 @@ export async function syncDataPlans() {
     for (const network of NETWORKS) {
       try {
         // Use vendorService.getPlans which properly handles vendor initialization with env variables
-        const plans = await vendorService.getPlans('DATA', network)
+        const plans = await vendorService.getPlans('DATA', network, vendor.adapterId)
         
         for (const plan of plans) {
           // Infer plan type from name
           let planType = 'SME'
           const nameLower = plan.name.toLowerCase()
-          if (nameLower.includes('gifting') || nameLower.includes('direct')) planType = 'GIFTING'
-          if (nameLower.includes('corporate') || nameLower.includes('cg')) planType = 'CG'
+          
+          if (nameLower.includes('corporate') || nameLower.includes('cg')) {
+            planType = 'CG'
+          } else if (nameLower.includes('sme')) {
+            planType = 'SME'
+          } else if (nameLower.includes('gifting') || nameLower.includes('gift') || nameLower.includes('direct')) {
+            planType = 'GIFTING'
+          } else if (nameLower.includes('coupon')) {
+            planType = 'DATA COUPON'
+          } else {
+            // Default based on network if not specified
+            if (network === 'GLO') planType = 'GIFTING' // Glo is often gifting/direct
+            if (network === '9MOBILE') planType = 'GIFTING' // 9Mobile often gifting
+            if (network === 'AIRTEL') planType = 'GIFTING' // Airtel often corporate or gifting
+            if (network === 'MTN') planType = 'SME' // MTN default usually implies SME
+          }
 
           await prisma.dataPlan.upsert({
             where: {
@@ -39,7 +53,7 @@ export async function syncDataPlans() {
             },
             update: {
               costPrice: plan.price,
-              isActive: plan.isAvailable,
+              // isActive: Do not update status on sync to preserve admin settings
             },
             create: {
               planId: plan.id,
@@ -50,7 +64,7 @@ export async function syncDataPlans() {
               vendorId: vendor.id,
               costPrice: plan.price,
               sellingPrice: plan.price * 1.05, // Default 5% margin
-              isActive: plan.isAvailable
+              isActive: false // Default to disabled so admin must approve
             }
           })
           totalSynced++

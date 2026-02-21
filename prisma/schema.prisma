@@ -2,52 +2,49 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id                       String               @id @default(cuid())
-  email                    String               @unique
-  phone                    String?              @unique
-  firstName                String? // Optional - filled in Phase 5
-  lastName                 String? // Optional - filled in Phase 5
-  passwordHash             String? // Optional - set in Phase 3 (set-password)
-  pinHash                  String?
-  isVerified               Boolean              @default(false)
-  hasFundedWallet          Boolean              @default(false)
-  referralCode             String               @unique
+  id                       String                @id @default(cuid())
+  email                    String                @unique
+  phone                    String?               @unique
+  firstName                String?
+  lastName                 String?
+  passwordHash             String?
+  isVerified               Boolean               @default(false)
+  referralCode             String                @unique
   referredBy               String?
-  credits                  Float                @default(0)
+  credits                  Float                 @default(0)
+  role                     Role                  @default(USER)
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  pinHash                  String?
+  adminRoleId              String?
+  hasFundedWallet          Boolean               @default(false)
+  passiveReferralGroupId   String?
   pushToken                String?
-  role                     Role                 @default(USER)
-  createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
+  emailVerified            DateTime?
+  phoneVerified            Boolean               @default(false)
   accounts                 Account[]
+  receivedRequests         MoneyRequest[]        @relation("ReceivedRequests")
+  sentRequests             MoneyRequest[]        @relation("SentRequests")
   notifications            Notification[]
-  referralEarningsReferred ReferralEarning[]    @relation("ReferralEarningReferred")
+  referralEarningsReferred ReferralEarning[]     @relation("ReferralEarningReferred")
   referralEarnings         ReferralEarning[]
-  referredUsers            Referral[]           @relation("ReferredUser")
-  referrals                Referral[]           @relation("ReferrerUser")
+  referredUsers            Referral[]            @relation("ReferredUser")
+  referrals                Referral[]            @relation("ReferrerUser")
+  rewardHistory            RewardHistory[]
   sessions                 Session[]
   subscriptions            Subscription[]
   transactions             Transaction[]
-  sentTransfers            Transfer[]           @relation("SentTransfers")
-  receivedTransfers        Transfer[]           @relation("ReceivedTransfers")
-  sentRequests             MoneyRequest[]       @relation("SentRequests")
-  receivedRequests         MoneyRequest[]       @relation("ReceivedRequests")
+  receivedTransfers        Transfer[]            @relation("ReceivedTransfers")
+  sentTransfers            Transfer[]            @relation("SentTransfers")
   targetProgress           UserTargetProgress[]
-  rewardHistory            RewardHistory[]
-  
-  // Referral System Extensions
-  passiveReferralGroupId   String?
-  passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
-
-  // RBAC for Admins
-  adminRoleId              String?
   adminRole                AdminRole?            @relation(fields: [adminRoleId], references: [id])
+  passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
 
   @@map("users")
 }
@@ -56,29 +53,26 @@ model AdminRole {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  permissions String[] // e.g. ["users.view", "users.edit", "vendors.manage"]
-  users       User[]
+  permissions String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  users       User[]
 
   @@map("admin_roles")
 }
 
 model FixedReferralRule {
-  id              String                 @id @default(cuid())
-  name            String
-  description     String?
-  commissionType  ReferralCommissionType
-  commissionValue Float // Percentage (e.g., 10 for 10%) or Fixed Amount (e.g., 500)
-  minFundingAmount Float                 @default(0)
-  isActive        Boolean                @default(true)
-
-  // Audience targeting
-  audience        TargetAudience         @default(ALL)
-  specificUserIds Json? // Array of user IDs if audience is SPECIFIC
-
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  id               String                 @id @default(cuid())
+  name             String
+  description      String?
+  commissionType   ReferralCommissionType
+  commissionValue  Float
+  minFundingAmount Float                  @default(0)
+  isActive         Boolean                @default(true)
+  audience         TargetAudience         @default(ALL)
+  specificUserIds  Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   @@map("fixed_referral_rules")
 }
@@ -87,18 +81,13 @@ model PassiveReferralGroup {
   id                String   @id @default(cuid())
   name              String   @unique
   description       String?
-  commissionPercent Float // Percentage of profit (e.g., 10 for 10%)
+  commissionPercent Float
   isActive          Boolean  @default(true)
-  users             User[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  users             User[]
 
   @@map("passive_referral_groups")
-}
-
-enum ReferralCommissionType {
-  PERCENTAGE
-  FIXED_AMOUNT
 }
 
 model Account {
@@ -261,32 +250,30 @@ model Pricing {
 }
 
 model VendorConfig {
-  id               String     @id @default(cuid())
-  vendorName       String     @unique
-  adapterId        String     @unique // "AMIGO", "VTU_NG", "CLUBKONNECT"
-  type             VendorType @default(ALL)
-  isEnabled        Boolean    @default(true)
-  isPrimary        Boolean    @default(false)
-  priority         Int        @default(0)
-  balance          Float      @default(0)
-  supportsAirtime  Boolean    @default(true)
-  supportsData     Boolean    @default(true)
-  supportsElectric Boolean    @default(false)
-  supportsCableTV  Boolean    @default(false)
-  supportsBetting  Boolean    @default(false)
-  supportsEPINS    Boolean    @default(false)
-  credentials      Json
-  lastHealthCheck  DateTime?
-  isHealthy        Boolean    @default(true)
-  failureCount     Int        @default(0)
-  lastFailure      DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-
-  // Relations
-  serviceRoutingsPrimary  ServiceRouting[] @relation("PrimaryVendor")
-  serviceRoutingsFallback ServiceRouting[] @relation("FallbackVendor")
+  id                      String           @id @default(cuid())
+  vendorName              String           @unique
+  isEnabled               Boolean          @default(true)
+  isPrimary               Boolean          @default(false)
+  priority                Int              @default(0)
+  supportsAirtime         Boolean          @default(true)
+  supportsData            Boolean          @default(true)
+  supportsElectric        Boolean          @default(false)
+  supportsCableTV         Boolean          @default(false)
+  supportsBetting         Boolean          @default(false)
+  supportsEPINS           Boolean          @default(false)
+  credentials             Json
+  lastHealthCheck         DateTime?
+  isHealthy               Boolean          @default(true)
+  failureCount            Int              @default(0)
+  lastFailure             DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  adapterId               String           @unique
+  balance                 Float            @default(0)
+  type                    VendorType       @default(ALL)
   dataPlans               DataPlan[]
+  serviceRoutingsFallback ServiceRouting[] @relation("FallbackVendor")
+  serviceRoutingsPrimary  ServiceRouting[] @relation("PrimaryVendor")
 
   @@map("vendor_configs")
 }
@@ -294,14 +281,14 @@ model VendorConfig {
 model ServiceRouting {
   id               String          @id @default(cuid())
   serviceType      TransactionType
-  network          String // MTN, GLO, AIRTEL, 9MOBILE, ETC
+  network          String
   primaryVendorId  String
   fallbackVendorId String?
-  primaryVendor    VendorConfig    @relation("PrimaryVendor", fields: [primaryVendorId], references: [id])
-  fallbackVendor   VendorConfig?   @relation("FallbackVendor", fields: [fallbackVendorId], references: [id])
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+  fallbackVendor   VendorConfig?   @relation("FallbackVendor", fields: [fallbackVendorId], references: [id])
+  primaryVendor    VendorConfig    @relation("PrimaryVendor", fields: [primaryVendorId], references: [id])
 
   @@unique([serviceType, network])
   @@map("service_routings")
@@ -309,28 +296,21 @@ model ServiceRouting {
 
 model DataPlan {
   id           String       @id @default(cuid())
-  planId       String // Vendor's Plan ID
+  planId       String
   network      String
-  planType     String // SME, CG, GIFTING, ETC
+  planType     String
   size         String
   validity     String
   vendorId     String
-  vendor       VendorConfig @relation(fields: [vendorId], references: [id])
   costPrice    Float
   sellingPrice Float
   isActive     Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  vendor       VendorConfig @relation(fields: [vendorId], references: [id])
 
   @@unique([vendorId, planId])
   @@map("data_plans")
-}
-
-enum VendorType {
-  DATA
-  AIRTIME
-  UTILITY
-  ALL
 }
 
 model ProfitMargin {
@@ -352,18 +332,18 @@ model ProfitMargin {
 
 model AmigoPlans {
   id                 String   @id @default(cuid())
-  planId             Int      @unique // Amigo's actual plan ID (5000, 1001, etc.)
-  networkName        String // 'MTN' or 'GLO'
-  dataCapacity       String // e.g., "500MB", "1GB", "200GB"
-  dataCapacityValue  Float // numeric value in GB
-  validityDays       Int // 30 or 60
-  validityLabel      String // e.g., "30 Days", "60 Days"
-  amigoBasePrice     Float // Amigo's official price in ₦
-  adminOverridePrice Float? // Admin-set price in ₦ (if null, use amigoBasePrice)
-  pricePerGB         Float // calculated price per GB
-  efficiencyRating   Float    @default(100) // percentage (100 = 100%)
-  isEnabled          Boolean  @default(true) // can admin disable a plan?
-  margin             Float? // calculated as adminOverridePrice - amigoBasePrice
+  planId             Int      @unique
+  networkName        String
+  dataCapacity       String
+  dataCapacityValue  Float
+  validityDays       Int
+  validityLabel      String
+  amigoBasePrice     Float
+  adminOverridePrice Float?
+  pricePerGB         Float
+  efficiencyRating   Float    @default(100)
+  isEnabled          Boolean  @default(true)
+  margin             Float?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -371,6 +351,121 @@ model AmigoPlans {
   @@index([networkName])
   @@index([isEnabled])
   @@map("amigo_plans")
+}
+
+model Transfer {
+  id         String         @id @default(cuid())
+  senderId   String
+  receiverId String
+  amount     Float
+  status     TransferStatus @default(PENDING)
+  note       String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  receiver   User           @relation("ReceivedTransfers", fields: [receiverId], references: [id])
+  sender     User           @relation("SentTransfers", fields: [senderId], references: [id])
+
+  @@map("transfers")
+}
+
+model MoneyRequest {
+  id          String             @id @default(cuid())
+  requesterId String
+  payerId     String
+  amount      Float
+  status      MoneyRequestStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  payer       User               @relation("ReceivedRequests", fields: [payerId], references: [id])
+  requester   User               @relation("SentRequests", fields: [requesterId], references: [id])
+
+  @@map("money_requests")
+}
+
+model SalesTarget {
+  id                String               @id @default(cuid())
+  title             String
+  description       String?
+  type              TargetType
+  period            TargetPeriod
+  targetValue       Float
+  rewardAmount      Float
+  audience          TargetAudience       @default(ALL)
+  specificUserIds   Json?
+  tierType          TierType             @default(SINGLE)
+  tiers             Json?
+  startDate         DateTime?
+  endDate           DateTime?
+  isRecurring       Boolean              @default(true)
+  serviceType       TransactionType?
+  network           String?
+  isActive          Boolean              @default(true)
+  isVisible         Boolean              @default(true)
+  priority          Int                  @default(0)
+  totalParticipants Int                  @default(0)
+  totalCompletions  Int                  @default(0)
+  totalRewardsPaid  Float                @default(0)
+  createdBy         String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  progress          UserTargetProgress[]
+
+  @@map("sales_targets")
+}
+
+model UserTargetProgress {
+  id               String      @id @default(cuid())
+  userId           String
+  targetId         String
+  currentValue     Float       @default(0)
+  currentTier      Int?
+  isClaimed        Boolean     @default(false)
+  claimedAt        DateTime?
+  claimedAmount    Float       @default(0)
+  periodStart      DateTime
+  periodEnd        DateTime
+  firstProgressAt  DateTime?
+  lastProgressAt   DateTime?
+  transactionCount Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  target           SalesTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId, periodStart])
+  @@index([userId, isClaimed])
+  @@index([targetId, periodStart])
+  @@map("user_target_progress")
+}
+
+model RewardHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  targetId      String
+  progressId    String   @unique
+  amount        Float
+  tier          Int?
+  tierName      String?
+  transactionId String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([targetId, createdAt])
+  @@map("reward_history")
+}
+
+enum ReferralCommissionType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum VendorType {
+  DATA
+  AIRTIME
+  UTILITY
+  ALL
 }
 
 enum Role {
@@ -424,139 +519,6 @@ enum NotificationType {
   PROMOTION
   SYSTEM
   SECURITY
-}
-
-model Transfer {
-  id         String         @id @default(cuid())
-  senderId   String
-  receiverId String
-  amount     Float
-  status     TransferStatus @default(PENDING)
-  note       String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  sender     User           @relation("SentTransfers", fields: [senderId], references: [id])
-  receiver   User           @relation("ReceivedTransfers", fields: [receiverId], references: [id])
-
-  @@map("transfers")
-}
-
-model MoneyRequest {
-  id          String             @id @default(cuid())
-  requesterId String
-  payerId     String
-  amount      Float
-  status      MoneyRequestStatus @default(PENDING)
-  note        String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  requester   User               @relation("SentRequests", fields: [requesterId], references: [id])
-  payer       User               @relation("ReceivedRequests", fields: [payerId], references: [id])
-
-  @@map("money_requests")
-}
-
-model SalesTarget {
-  id           String       @id @default(cuid())
-  title        String
-  description  String?
-  type         TargetType
-  period       TargetPeriod // DAILY, WEEKLY, MONTHLY, CUSTOM
-  targetValue  Float
-  rewardAmount Float
-
-  // Targeting
-  audience        TargetAudience @default(ALL)
-  specificUserIds Json? // List of user IDs for SPECIFIC audience
-
-  // Enhanced fields
-  tierType TierType @default(SINGLE) // SINGLE, MULTIPLE
-  tiers    Json? // Array of tier objects
-
-  // Time-based campaigns
-  startDate   DateTime?
-  endDate     DateTime?
-  isRecurring Boolean   @default(true)
-
-  // Filtering options
-  serviceType TransactionType?
-  network     String?
-
-  // Configuration
-  isActive  Boolean @default(true)
-  isVisible Boolean @default(true) // Hide before startDate
-  priority  Int     @default(0) // Display order
-
-  // Analytics
-  totalParticipants Int   @default(0)
-  totalCompletions  Int   @default(0)
-  totalRewardsPaid  Float @default(0)
-
-  // Meta
-  createdBy String? // Admin user ID
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  progress UserTargetProgress[]
-
-  @@map("sales_targets")
-}
-
-model UserTargetProgress {
-  id       String @id @default(cuid())
-  userId   String
-  targetId String
-
-  // Progress tracking
-  currentValue Float @default(0)
-  currentTier  Int? // For multi-tier targets
-
-  // Claim status
-  isClaimed     Boolean   @default(false)
-  claimedAt     DateTime?
-  claimedAmount Float     @default(0)
-
-  // Time tracking
-  periodStart     DateTime
-  periodEnd       DateTime
-  firstProgressAt DateTime? // When user first made progress
-  lastProgressAt  DateTime? // Last transaction counted
-
-  // Analytics
-  transactionCount Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  target SalesTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, targetId, periodStart])
-  @@index([userId, isClaimed])
-  @@index([targetId, periodStart])
-  @@map("user_target_progress")
-}
-
-// New model for detailed reward history
-model RewardHistory {
-  id         String @id @default(cuid())
-  userId     String
-  targetId   String
-  progressId String @unique
-
-  amount   Float
-  tier     Int?
-  tierName String?
-
-  transactionId String? // Reference to credited transaction
-
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([userId, createdAt])
-  @@index([targetId, createdAt])
-  @@map("reward_history")
 }
 
 enum TierType {

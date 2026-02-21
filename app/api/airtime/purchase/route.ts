@@ -37,6 +37,19 @@ export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, airtimePurchaseSchema)) as z.infer<typeof airtimePurchaseSchema>
 
+  // Check if AIRTIME service is enabled for this network in Pricing table
+  const pricing = await prisma.pricing.findFirst({
+    where: {
+      service: 'AIRTIME',
+      network: data.network,
+    },
+  })
+
+  // If service is globally disabled
+  if (pricing && !pricing.isActive) {
+    throw new BadRequestError(`Airtime purchases are currently disabled for ${data.network}. Please try again later.`)
+  }
+
   // Validate and format phone number
   if (!validateNigerianPhone(data.phone)) {
     throw new BadRequestError('Invalid Nigerian phone number')

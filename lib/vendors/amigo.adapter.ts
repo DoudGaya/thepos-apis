@@ -112,7 +112,7 @@ export class AmigoAdapter implements VendorAdapter {
       baseURL: this.baseURL,
       timeout: 30000,
       headers: {
-        'X-API-Key': this.apiToken, // Changed to X-API-Key as per docs
+        'X-API-Key': this.apiToken,
         'Content-Type': 'application/json',
       },
     })
@@ -275,9 +275,10 @@ export class AmigoAdapter implements VendorAdapter {
 
     try {
       // Make purchase request with retry logic
+      // Note: Endpoint is /data (removed trailing slash as per user request to fix 404)
       const response = await retry(
         async () => {
-          return await this.client.post<AmigoPurchaseResponse>('/data/', request, {
+          return await this.client.post<AmigoPurchaseResponse>('/data', request, {
             headers: {
               'Idempotency-Key': idempotencyKey,
             },

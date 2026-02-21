@@ -20,6 +20,8 @@ interface UserDetail {
     referralCode: string
     referredBy: string | null
     fullName: string
+    emailVerified: string | null
+    phoneVerified: boolean
   }
   stats: {
     totalTransactions: number
@@ -256,11 +258,29 @@ export default function AdminUserDetailPage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Email</label>
-                      <p className="text-sm">{user.user.email}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm">{user.user.email}</p>
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          user.user.emailVerified
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {user.user.emailVerified ? 'Verified' : 'Unverified'}
+                        </span>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Phone</label>
-                      <p className="text-sm">{user.user.phone}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm">{user.user.phone}</p>
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          user.user.phoneVerified
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {user.user.phoneVerified ? 'Verified' : 'Unverified'}
+                        </span>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Role</label>

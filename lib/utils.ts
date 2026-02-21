@@ -13,3 +13,28 @@ export function formatCurrency(amount: number) {
     maximumFractionDigits: 2,
   }).format(amount)
 }
+
+export function parseDataSizeToMb(size: string): number {
+  if (!size) return 0
+  
+  // Remove whitespace and convert to uppercase
+  const normalized = size.toUpperCase().replace(/\s/g, '')
+  const value = parseFloat(normalized)
+  
+  if (isNaN(value)) return 0
+  
+  if (normalized.includes('TB')) {
+    return Math.round(value * 1024 * 1024)
+  }
+  
+  if (normalized.includes('GB')) {
+    return Math.round(value * 1024)
+  }
+
+  if (normalized.includes('KB')) {
+    return Math.round(value / 1024)
+  }
+  
+  // Default to MB (e.g. "500MB" or just "500")
+  return Math.round(value)
+}

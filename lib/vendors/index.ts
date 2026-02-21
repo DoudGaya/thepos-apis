@@ -146,8 +146,36 @@ export class VendorService {
       }
     }
 
-    // 2. Fallback defaults if no routing found
-    if (service === 'DATA') return this.getAdapter('AMIGO')
+    // 2. Check Global Primary Vendor (if enabled and supports service)
+    const primaryVendor = await prisma.vendorConfig.findFirst({
+      where: {
+        isPrimary: true,
+        isEnabled: true,
+      },
+      orderBy: { priority: 'desc' }
+    })
+
+    if (primaryVendor) {
+      let supported = false
+      if (service === 'DATA' && primaryVendor.supportsData) supported = true
+      if (service === 'AIRTIME' && primaryVendor.supportsAirtime) supported = true
+      // Handle alias for Cable TV
+      if ((service === 'CABLE' || service === 'CABLE_TV') && primaryVendor.supportsCableTV) supported = true
+      if (service === 'ELECTRICITY' && primaryVendor.supportsElectric) supported = true
+      if (service === 'BETTING' && primaryVendor.supportsBetting) supported = true
+      if (service === 'EPINS' && primaryVendor.supportsEPINS) supported = true
+
+      if (supported) {
+        try {
+          return await this.getAdapter(primaryVendor.adapterId)
+        } catch (e) {
+          console.warn(`Global primary vendor ${primaryVendor.adapterId} failed init, falling back to defaults`)
+        }
+      }
+    }
+
+    // 3. Fallback defaults if no routing found
+    if (service === 'DATA') return this.getAdapter('SUBANDGAIN')
     if (service === 'AIRTIME') return this.getAdapter('VTPASS')
     if (service === 'ELECTRICITY') return this.getAdapter('VTPASS')
     if (service === 'CABLE' || service === 'CABLE_TV') return this.getAdapter('VTPASS')
@@ -159,7 +187,24 @@ export class VendorService {
 
   async buyService(payload: PurchasePayload): Promise<VendorPurchaseResponse> {
     try {
-      const adapter = await this.getBestVendor(payload.service, payload.network)
+      let adapter: VendorAdapter
+      
+      // If target vendor specified (e.g. from plan details), use it
+      if (payload.targetVendor) {
+        try {
+            adapter = await this.getAdapter(payload.targetVendor)
+            // Verify vendor is enabled? getAdapter handles this? No.
+            // But if we're forcing it, maybe we want to bypass availability check? 
+            // Or maybe check if enabled first?
+            // Let's rely on the caller (purchaseService) to have picked a valid vendor plan.
+        } catch (e: any) {
+             console.warn(`Target vendor ${payload.targetVendor} failed init, falling back to best vendor logic`)
+             adapter = await this.getBestVendor(payload.service, payload.network)
+        }
+      } else {
+        adapter = await this.getBestVendor(payload.service, payload.network)
+      }
+
       return await adapter.buyService(payload)
     } catch (error: any) {
       // If primary failed, we might want to try fallback here if getBestVendor didn't already?
