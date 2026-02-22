@@ -291,6 +291,7 @@ model ServiceRouting {
   primaryVendor    VendorConfig    @relation("PrimaryVendor", fields: [primaryVendorId], references: [id])
 
   @@unique([serviceType, network])
+  @@index([serviceType, network, isActive])
   @@map("service_routings")
 }
 
@@ -310,6 +311,8 @@ model DataPlan {
   vendor       VendorConfig @relation(fields: [vendorId], references: [id])
 
   @@unique([vendorId, planId])
+  @@index([network, isActive])
+  @@index([network, isActive, vendorId])
   @@map("data_plans")
 }
 

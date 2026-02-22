@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   serverExternalPackages: ['@prisma/client', 'bcryptjs', 'jsonwebtoken', 'nodemailer'],
   env: {
     PAIRGATE_API_KEY: process.env.PAIRGATE_API_KEY,

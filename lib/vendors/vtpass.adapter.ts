@@ -39,7 +39,7 @@ const VTPASS_SERVICE_IDS = {
   },
   // Data
   DATA: {
-    MTN: 'mtn-data',
+    MTN: 'mtn-data', // Try 'mtn-data' first. If fails, user might want to try 'mtn-direct-data' or similar if it exists?
     GLO: 'glo-data',
     AIRTEL: 'airtel-data',
     '9MOBILE': 'etisalat-data',
@@ -308,11 +308,12 @@ export class VTPassAdapter implements VendorAdapter {
 
       const data = response.data
       if (data.response_description !== '000') {
-        console.warn(`[VTPass] getPlans warning: ${data.response_description}`)
+        console.warn(`[VTPass] getPlans failed for ${serviceID}: ${JSON.stringify(data)}`)
         return []
       }
 
       const variations = data.content?.varations || data.content?.variations || []
+      console.log(`[VTPass] Found ${variations.length} plans for ${network} (${serviceID})`)
 
       return variations.map((v: any) => ({
         id: v.variation_code,
@@ -440,16 +441,21 @@ export class VTPassAdapter implements VendorAdapter {
     }
 
     // Determine service ID and build request body based on service type
+    // Ensure network key is uppercase for consistent lookup
+    const networkKey = payload.network.toUpperCase() as keyof typeof VTPASS_SERVICE_IDS.AIRTIME
+    
     if (payload.service === 'AIRTIME') {
-      serviceID = VTPASS_SERVICE_IDS.AIRTIME[payload.network as keyof typeof VTPASS_SERVICE_IDS.AIRTIME]
+      serviceID = VTPASS_SERVICE_IDS.AIRTIME[networkKey]
       requestBody.serviceID = serviceID
       requestBody.amount = payload.amount
     } else if (payload.service === 'DATA') {
-      serviceID = VTPASS_SERVICE_IDS.DATA[payload.network as keyof typeof VTPASS_SERVICE_IDS.DATA]
+      serviceID = VTPASS_SERVICE_IDS.DATA[networkKey as keyof typeof VTPASS_SERVICE_IDS.DATA]
       requestBody.serviceID = serviceID
       requestBody.billersCode = payload.phone
       requestBody.variation_code = payload.planId
       requestBody.amount = payload.amount
+      
+      console.log(`[VTPass] Purchasing DATA on ${payload.network} (ID: ${serviceID}). Plan: ${payload.planId}`)
     } else if (payload.service === 'CABLE_TV' || payload.service === 'CABLE') {
       const provider = (payload.metadata?.provider || 'DSTV').toUpperCase()
       serviceID = VTPASS_SERVICE_IDS.CABLE_TV[provider as keyof typeof VTPASS_SERVICE_IDS.CABLE_TV] || 'dstv'
@@ -494,6 +500,16 @@ export class VTPassAdapter implements VendorAdapter {
           null
         )
       }
+    }
+    
+    // Validate serviceID
+    if (!serviceID) {
+      throw new VendorError(
+        `Service ID could not be determined for ${payload.service} on network ${payload.network}`,
+        'VTPASS',
+        400,
+        { service: payload.service, network: payload.network }
+      )
     }
 
     console.log(`[VTPass] Purchase request:`, { serviceID, requestId, service: payload.service })

@@ -9,6 +9,7 @@
 import { prisma } from '../prisma'
 import { vendorService } from '../vendors'
 import { pricingService } from './pricing.service'
+import { notificationService } from './NotificationService'
 import { generateReference } from '../api-utils'
 import { generateIdempotencyKey } from '../utils/idempotency'
 import { normalizePhone, detectNetwork } from '../utils/phone-normalizer'
@@ -196,11 +197,12 @@ export class PurchaseService {
       amount: pricing.costPrice,
       planId: request.planId,
       idempotencyKey,
-      targetVendor: request.targetVendor,
+      targetVendor:      request.targetVendor,
+      fallbackPlanDbId:  request.metadata?.fallbackPlanDbId,
       metadata: {
         ...request.metadata,
         transactionId: transaction.id,
-        userId: user.id,
+        userId:        user.id,
       },
     })
 
@@ -212,53 +214,166 @@ export class PurchaseService {
   }
 
   /**
-   * Process vendor purchase asynchronously
+   * Detect whether an error is an INSUFFICIENT VENDOR BALANCE error
+   * (i.e. the vendor's own wallet is low — NOT the user's balance)
+   */
+  private isVendorBalanceError(error: any): boolean {
+    if (error?.name !== 'VendorError') return false
+    const msg: string = (error?.message || '').toLowerCase()
+    return (
+      msg.includes('insufficient balance') ||
+      msg.includes('insufficient fund') ||
+      msg.includes('low balance') ||
+      msg.includes('wallet balance')
+    )
+  }
+
+  /**
+   * Process vendor purchase asynchronously.
+   *
+   * On vendor-side insufficient balance, automatically retries with the next
+   * available vendor plan (same network/size/type/validity) without creating
+   * a new wallet deduction — reuses the same transaction record.
    */
   private async processPurchaseAsync(
     transactionId: string,
     payload: PurchasePayload
   ): Promise<void> {
-    try {
-      // Call vendor service with automatic failover
-      const result = await vendorService.buyService(payload)
+    const triedVendors = new Set<string>()
+    if (payload.targetVendor) triedVendors.add(payload.targetVendor)
 
-      // Update transaction with vendor response
-      await prisma.transaction.update({
-        where: { id: transactionId },
-        data: {
-          status: this.mapVendorStatusToLocal(result.status),
-          vendorName: result.vendorName,
-          vendorReference: result.vendorReference,
-          vendorStatus: result.status,
-          vendorResponse: { message: result.message, ...result.metadata },
-          vendorCallAt: new Date(),
-          vendorResponseAt: new Date(),
-        },
-      })
+    let currentPayload = payload
 
-      // If failed, refund the user
-      if (result.status === 'FAILED') {
-        await this.refundTransaction(transactionId)
-      }
-    } catch (error: any) {
-      console.error('Vendor purchase failed:', error)
+    while (true) {
+      try {
+        const result = await vendorService.buyService(currentPayload)
 
-      // Update transaction as failed
-      await prisma.transaction.update({
-        where: { id: transactionId },
-        data: {
-          status: 'FAILED',
-          vendorResponse: {
-            error: error.message,
-            timestamp: new Date().toISOString(),
+        // Update transaction with vendor response
+        const updatedTx = await prisma.transaction.update({
+          where: { id: transactionId },
+          data: {
+            status: this.mapVendorStatusToLocal(result.status),
+            vendorName: result.vendorName,
+            vendorReference: result.vendorReference,
+            vendorStatus: result.status,
+            vendorResponse: { message: result.message, ...result.metadata },
+            vendorCallAt: new Date(),
+            vendorResponseAt: new Date(),
           },
-          vendorCallAt: new Date(),
-          vendorResponseAt: new Date(),
-        },
-      })
+          select: { userId: true, sellingPrice: true, type: true },
+        })
 
-      // Refund the user
-      await this.refundTransaction(transactionId)
+        if (result.status === 'FAILED') {
+          await this.refundTransaction(transactionId)
+          notificationService.notifyUser(
+            updatedTx.userId,
+            'Purchase Failed',
+            `Your ₦${updatedTx.sellingPrice.toLocaleString()} ${this.formatServiceName(updatedTx.type)} purchase could not be completed. Amount refunded to wallet.`,
+            'TRANSACTION',
+            { transactionId, type: 'TRANSACTION', refund: true }
+          ).catch((e: any) => console.error('[Notification] purchase failed:', e.message))
+        } else {
+          notificationService.notifyUser(
+            updatedTx.userId,
+            'Purchase Successful',
+            `Your ₦${updatedTx.sellingPrice.toLocaleString()} ${this.formatServiceName(updatedTx.type)} purchase is complete`,
+            'TRANSACTION',
+            { transactionId, type: 'TRANSACTION' }
+          ).catch((e: any) => console.error('[Notification] purchase success:', e.message))
+        }
+        return // success or terminal failure — stop looping
+
+      } catch (error: any) {
+        const isBalanceError = this.isVendorBalanceError(error)
+
+        if (isBalanceError && payload.fallbackPlanDbId) {
+          // ── Vendor balance failover ──────────────────────────────────────
+          // Look up the original plan to get its specs
+          const originalPlan = await prisma.dataPlan.findUnique({
+            where: { id: payload.fallbackPlanDbId },
+            select: { size: true, planType: true, validity: true, network: true },
+          })
+
+          if (originalPlan) {
+            // Find next enabled vendor that has an identical plan
+            const nextPlan = await prisma.dataPlan.findFirst({
+              where: {
+                network:   originalPlan.network,
+                size:      originalPlan.size,
+                planType:  originalPlan.planType,
+                validity:  originalPlan.validity,
+                isActive:  true,
+                vendor: {
+                  isEnabled: true,
+                  adapterId: { notIn: Array.from(triedVendors) },
+                },
+              },
+              orderBy: [
+                { vendor: { isPrimary: 'desc' } },
+                { costPrice: 'asc' },
+              ],
+              include: { vendor: true },
+            })
+
+            if (nextPlan) {
+              console.warn(
+                `[Failover] Vendor ${currentPayload.targetVendor} has insufficient balance. ` +
+                `Switching to ${nextPlan.vendor.adapterId} (plan ${nextPlan.id})`
+              )
+              triedVendors.add(nextPlan.vendor.adapterId)
+              currentPayload = {
+                ...currentPayload,
+                planId:       nextPlan.planId,
+                targetVendor: nextPlan.vendor.adapterId,
+                amount:       nextPlan.costPrice,
+                // fresh idempotency key so the new vendor call isn't deduped
+                idempotencyKey: `${payload.idempotencyKey}_fo${triedVendors.size}`,
+                metadata: {
+                  ...currentPayload.metadata,
+                  failoverVendor:  nextPlan.vendor.adapterId,
+                  failoverPlanId:  nextPlan.id,
+                  failoverReason:  error.message,
+                },
+              }
+              continue // retry loop with new vendor
+            }
+          }
+
+          // No more fallback vendors available
+          console.error(
+            `[Failover] All vendors exhausted (tried: ${Array.from(triedVendors).join(', ')}). ` +
+            `Marking transaction ${transactionId} as failed.`
+          )
+        } else {
+          console.error('Vendor purchase failed:', error)
+        }
+
+        // ── Terminal failure ─────────────────────────────────────────────
+        const failedTx = await prisma.transaction.update({
+          where: { id: transactionId },
+          data: {
+            status: 'FAILED',
+            vendorResponse: {
+              error:     error.message,
+              triedVendors: Array.from(triedVendors),
+              timestamp: new Date().toISOString(),
+            },
+            vendorCallAt:     new Date(),
+            vendorResponseAt: new Date(),
+          },
+          select: { userId: true, sellingPrice: true, type: true },
+        })
+
+        await this.refundTransaction(transactionId)
+        notificationService.notifyUser(
+          failedTx.userId,
+          'Purchase Failed',
+          `Your ₦${failedTx.sellingPrice.toLocaleString()} ${this.formatServiceName(failedTx.type)} purchase could not be completed. Amount refunded to wallet.`,
+          'TRANSACTION',
+          { transactionId, type: 'TRANSACTION', refund: true }
+        ).catch((e: any) => console.error('[Notification] terminal failure:', e.message))
+        return
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { notificationService } from '@/lib/services/NotificationService'
 import vtuService from '@/lib/vtu'
 import { calculateCableTVPricing, formatTransactionDetails } from '@/lib/services/pricing'
 import {
@@ -82,14 +83,13 @@ export const POST = apiHandler(async (req) => {
       },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: dbUser.id,
-        title: 'Cable TV Subscription Successful',
-        message: `${provider} subscription successful. Cost: ₦${sellingPrice.toLocaleString()}`,
-        type: 'TRANSACTION',
-      },
-    })
+    await notificationService.notifyUser(
+      dbUser.id,
+      'Purchase Successful',
+      `Your ₦${sellingPrice.toLocaleString()} ${provider} Cable TV subscription is complete`,
+      'TRANSACTION',
+      { transactionId: transaction.id, type: 'TRANSACTION' }
+    )
 
     return successResponse({
       message: 'Subscription successful',
@@ -106,14 +106,13 @@ export const POST = apiHandler(async (req) => {
       data: { status: 'FAILED' },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: dbUser.id,
-        title: 'Subscription Failed',
-        message: `Amount refunded: ₦${sellingPrice.toLocaleString()}`,
-        type: 'SYSTEM',
-      },
-    })
+    await notificationService.notifyUser(
+      dbUser.id,
+      'Purchase Failed',
+      `Your ₦${sellingPrice.toLocaleString()} ${provider} Cable TV subscription could not be completed. Amount refunded to wallet.`,
+      'TRANSACTION',
+      { transactionId: transaction.id, type: 'TRANSACTION', refund: true }
+    )
 
     throw new BadRequestError(error.message || 'Subscription failed')
   }

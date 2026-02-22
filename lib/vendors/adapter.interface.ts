@@ -40,7 +40,8 @@ export interface PurchasePayload {
   meterType?: 'PREPAID' | 'POSTPAID'  // For electricity
   idempotencyKey: string
   metadata?: Record<string, any>
-  targetVendor?: string // Optional: Force a specific vendor (e.g. for plans tied to a vendor)
+  targetVendor?: string         // Optional: Force a specific vendor (e.g. for plans tied to a vendor)
+  fallbackPlanDbId?: string     // Optional: DB UUID of the DataPlan — enables vendor failover inside processPurchaseAsync
 }
 
 export interface VendorPurchaseResponse {

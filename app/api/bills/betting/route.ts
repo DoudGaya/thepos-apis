@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { notificationService } from '@/lib/services/NotificationService'
 import vtuService from '@/lib/vtu'
 import { calculateBettingPricing, formatTransactionDetails } from '@/lib/services/pricing'
 import {
@@ -80,14 +81,13 @@ export const POST = apiHandler(async (req) => {
       },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: dbUser.id,
-        title: 'Betting Wallet Funded',
-        message: `${provider} wallet funded successfully. Amount: ₦${vendorCost.toLocaleString()}`,
-        type: 'TRANSACTION',
-      },
-    })
+    await notificationService.notifyUser(
+      dbUser.id,
+      'Purchase Successful',
+      `Your ₦${sellingPrice.toLocaleString()} ${provider} betting wallet funding is complete`,
+      'TRANSACTION',
+      { transactionId: transaction.id, type: 'TRANSACTION' }
+    )
 
     return successResponse({
       message: 'Betting wallet funded successfully',
@@ -104,14 +104,13 @@ export const POST = apiHandler(async (req) => {
       data: { status: 'FAILED' },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: dbUser.id,
-        title: 'Betting Funding Failed',
-        message: `Amount refunded: ₦${sellingPrice.toLocaleString()}`,
-        type: 'SYSTEM',
-      },
-    })
+    await notificationService.notifyUser(
+      dbUser.id,
+      'Purchase Failed',
+      `Your ₦${sellingPrice.toLocaleString()} ${provider} betting wallet funding could not be completed. Amount refunded to wallet.`,
+      'TRANSACTION',
+      { transactionId: transaction.id, type: 'TRANSACTION', refund: true }
+    )
 
     throw new BadRequestError(error.message || 'Betting wallet funding failed')
   }

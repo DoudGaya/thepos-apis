@@ -68,8 +68,8 @@ interface AmigoPurchaseResponse {
 const AMIGO_NETWORK_MAP: Partial<Record<NetworkType, number>> = {
   MTN: 1,
   GLO: 2,
-  AIRTEL: 4,
-  '9MOBILE': 9,
+  AIRTEL: 0, // Not supported yet - returns error on Amigo
+  '9MOBILE': 0, // Not supported yet - returns error on Amigo
   SMILE: 0, // Not supported
 }
 
@@ -112,7 +112,7 @@ export class AmigoAdapter implements VendorAdapter {
       baseURL: this.baseURL,
       timeout: 30000,
       headers: {
-        'X-API-Key': this.apiToken,
+        'Authorization': `Token ${this.apiToken}`,
         'Content-Type': 'application/json',
       },
     })
@@ -249,13 +249,16 @@ export class AmigoAdapter implements VendorAdapter {
     }
 
     // Map network to Amigo network_id
-    const networkId = AMIGO_NETWORK_MAP[payload.network]
+    // Ensure network key is uppercase to match our mapping keys
+    const networkKey = payload.network.toUpperCase() as NetworkType
+    const networkId = AMIGO_NETWORK_MAP[networkKey]
+    
     if (!networkId || networkId === 0) {
       throw new VendorError(
         `Network ${payload.network} not supported by Amigo`,
         'AMIGO',
         400,
-        { network: payload.network, supported: ['MTN', 'GLO', 'AIRTEL', '9MOBILE'] }
+        { network: payload.network, supported: ['MTN', 'GLO'] }
       )
     }
 
@@ -267,18 +270,26 @@ export class AmigoAdapter implements VendorAdapter {
       network: networkId,
       mobile_number: normalizedPhone,
       plan: parseInt(payload.planId), // Convert to number
-      Ported_number: true, // Always assume ported for safety
+      Ported_number: false, // Default to false unless known ported (Amigo fails for Glo native numbers if true)
     }
+
+    // Basic heuristic: If we detect ported number (e.g. mismatch prefix), set true?
+    // For now, simpler to default false as most users are not ported.
+    // If Amigo requires explicit true for ported, this might fail ported transactions.
+    // But failing Glo Native is worse.
+
+    // Diagnostic log for debugging purchase issues
+    console.log(`[Amigo] Preparing Purchase payload:`, JSON.stringify(request));
 
     // Generate idempotency key if not provided
     const idempotencyKey = payload.idempotencyKey || uuidv4()
 
     try {
       // Make purchase request with retry logic
-      // Note: Endpoint is /data (removed trailing slash as per user request to fix 404)
+      // Note: Endpoint is /data/ (added trailing slash as per Amigo docs)
       const response = await retry(
         async () => {
-          return await this.client.post<AmigoPurchaseResponse>('/data', request, {
+          return await this.client.post<AmigoPurchaseResponse>('/data/', request, {
             headers: {
               'Idempotency-Key': idempotencyKey,
             },
@@ -289,7 +300,10 @@ export class AmigoAdapter implements VendorAdapter {
           baseDelay: 2000,
           maxDelay: 10000,
           shouldRetry: (error: any) => {
-            // Retry on 5xx errors or network issues
+            // Do NOT retry vendor balance errors — they won't succeed on the same vendor
+            const msg: string = (error?.message || '').toLowerCase()
+            if (msg.includes('insufficient balance') || msg.includes('insufficient fund')) return false
+            // Retry on 5xx errors or network issues only
             return !error.response || error.response.status >= 500
           },
         }
@@ -351,55 +365,12 @@ export class AmigoAdapter implements VendorAdapter {
 
   /**
    * Fetch all plans from Amigo API
+   * Note: The /plans/efficiency endpoint appears to be deprecated/removed (404).
+   * Typically Amigo plans are static. We'll use the hardcoded fallback plans directly.
    */
   private async fetchPlansFromAPI(): Promise<ServicePlan[]> {
-    try {
-      const response = await this.client.get<AmigoNetworkPlans>('/plans/efficiency')
-
-      if (!response.data.ok) {
-        throw new Error('Failed to fetch plans from Amigo')
-      }
-
-      const allPlans: ServicePlan[] = []
-
-      // Process MTN plans
-      if (response.data.MTN) {
-        const mtnPlans = response.data.MTN.map((plan) => this.mapPlanToServicePlan(plan, 'MTN'))
-        allPlans.push(...mtnPlans)
-        this.planCache.set('MTN', mtnPlans)
-      }
-
-      // Process Glo plans
-      if (response.data.Glo) {
-        const gloPlans = response.data.Glo.map((plan) => this.mapPlanToServicePlan(plan, 'GLO'))
-        allPlans.push(...gloPlans)
-        this.planCache.set('GLO', gloPlans)
-      }
-
-      // Process Airtel plans (when available)
-      if (response.data.Airtel) {
-        const airtelPlans = response.data.Airtel.map((plan) => this.mapPlanToServicePlan(plan, 'AIRTEL'))
-        allPlans.push(...airtelPlans)
-        this.planCache.set('AIRTEL', airtelPlans)
-      }
-
-      // Process 9mobile plans (when available)
-      if (response.data['9mobile']) {
-        const nmobilePlans = response.data['9mobile'].map((plan) => this.mapPlanToServicePlan(plan, '9MOBILE'))
-        allPlans.push(...nmobilePlans)
-        this.planCache.set('9MOBILE', nmobilePlans)
-      }
-
-      // Update cache expiry
-      this.planCacheExpiry = new Date(Date.now() + this.CACHE_TTL_MS)
-
-      return allPlans
-    } catch (error: any) {
-      console.warn('[Amigo] API fetch failed, using fallback plans:', error.message)
-      
-      // Use fallback plans
-      return this.getFallbackPlans()
-    }
+    // Directly use fallback plans to avoid 404 errors on startup
+    return this.getFallbackPlans()
   }
 
   /**

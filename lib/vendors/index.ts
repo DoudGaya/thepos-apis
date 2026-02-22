@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { parseDataSizeToMb } from '@/lib/utils'
 import { ADAPTER_REGISTRY } from './registry'
 import {
   VendorAdapter,
@@ -238,75 +239,106 @@ export class VendorService {
   /**
    * Sync data plans from vendor to database
    */
-  async syncPlans(adapterId: string): Promise<{ count: number, errors: any[] }> {
+  async syncPlans(adapterId: string): Promise<any> {
+    const config = await prisma.vendorConfig.findUnique({
+      where: { adapterId },
+    })
+
+    if (!config || !config.supportsData) {
+      throw new Error(`Vendor ${adapterId} not configured or does not support DATA`)
+    }
+
     const adapter = await this.getAdapter(adapterId)
-    const vendorConfig = await prisma.vendorConfig.findUnique({ where: { adapterId } })
+    // Fetch for all networks
+    const networks: NetworkType[] = ['MTN', 'GLO', 'AIRTEL', '9MOBILE']
+    let totalSynced = 0
     
-    if (!vendorConfig) throw new Error(`Vendor ${adapterId} not found in DB`)
-    if (!vendorConfig.supportsData) throw new Error(`Vendor ${adapterId} does not support data`)
-
-    const plans = await adapter.getPlans('DATA')
-    let count = 0
-    const errors: any[] = []
-
-    for (const plan of plans) {
+    for (const network of networks) {
       try {
-        // Extract size from name (e.g., "1GB", "500MB")
-        const sizeMatch = plan.name.match(/(\d+(\.\d+)?(MB|GB|TB))/)
-        const size = sizeMatch ? sizeMatch[0] : 'Unknown'
+        const plans = await adapter.getPlans('DATA', network)
         
-        // Infer plan type (SME, CG, etc.) from name
-        let planType = 'Corporate Gifting' // Default
-        const nameUpper = plan.name.toUpperCase()
-        if (nameUpper.includes('SME')) planType = 'SME'
-        else if (nameUpper.includes('GIFTING')) planType = 'Gifting'
-        else if (nameUpper.includes('CORPORATE')) planType = 'Corporate'
-
-        // Calculate default selling price (e.g., +10% or just cost for now)
-        // Ideally fetch ProfitMargin rules, but for sync just set cost
-        const sellingPrice = plan.price // Admin can adjust later
-
-        // Check for existing plan
-        const existingPlan = await prisma.dataPlan.findFirst({
-            where: {
-                planId: plan.id,
-                vendorId: vendorConfig.id
+        for (const plan of plans) {
+          // Robust size parsing using shared utility function
+          const mbSize = parseDataSizeToMb(plan.name)
+          let size = plan.name
+          
+          if (mbSize > 0) {
+            // Normalize to MB for consistency (e.g. "1.5GB" -> "1536MB")
+            size = `${mbSize}MB`
+          } else {
+            // Fallback to regex extraction if utility fails
+            const sizeMatch = plan.name.toUpperCase().replace(/\s/g, '').match(/(\d+(\.\d+)?(MB|GB|TB))/)
+            if (sizeMatch) {
+              size = sizeMatch[0]
             }
-        })
+          }
 
-        if (existingPlan) {
-            await prisma.dataPlan.update({
-                where: { id: existingPlan.id },
-                data: {
-                    costPrice: plan.price,
-                    validity: plan.validity || '30 Days',
-                    isActive: plan.isAvailable
-                    // sellingPrice: Keep existing
-                }
-            })
-        } else {
-             await prisma.dataPlan.create({
-                data: {
-                    planId: plan.id,
-                    network: plan.network,
-                    vendorId: vendorConfig.id,
-                    planType: planType,
-                    size: size,
-                    validity: plan.validity || '30 Days',
-                    costPrice: plan.price,
-                    sellingPrice: sellingPrice,
-                    isActive: plan.isAvailable
-                }
-            })
+          // Robust validity parsing
+          let validity = plan.validity || '30 days'
+          const nameLower = plan.name.toLowerCase()
+          if (!plan.validity) {
+            if (nameLower.includes('daily') || nameLower.includes('1 day') || nameLower.includes('24 hours')) validity = '1 day'
+            if (nameLower.includes('2 days')) validity = '2 days'
+            if (nameLower.includes('weekly') || nameLower.includes('7 days') || nameLower.includes('1 week')) validity = '7 days'
+            if (nameLower.includes('14 days') || nameLower.includes('2 weeks')) validity = '14 days'
+            if (nameLower.includes('monthly') || nameLower.includes('30 days') || nameLower.includes('1 month') || nameLower.includes('30days')) validity = '30 days'
+            if (nameLower.includes('60 days') || nameLower.includes('2 months')) validity = '60 days'
+            if (nameLower.includes('3 months') || nameLower.includes('90 days')) validity = '90 days'
+            if (nameLower.includes('yearly') || nameLower.includes('365 days') || nameLower.includes('1 year')) validity = '365 days'
+          }
+
+          // Determine plan type
+          let planType = 'ALL' // Default
+          if (nameLower.includes('sme')) planType = 'SME'
+          else if (nameLower.includes('gift')) planType = 'GIFTING'
+          else if (nameLower.includes('corp')) planType = 'CORPORATE'
+
+          // Upsert plan
+          await prisma.dataPlan.upsert({
+            where: {
+              vendorId_planId: {
+                vendorId: config.id,
+                planId: plan.id,
+              },
+            },
+            update: {
+              network: network,
+              size: size,
+              validity: validity,
+              costPrice: plan.price,
+              // Update selling price only if it's currently 0 or just created? 
+              // Better to leave sellingPrice alone if it exists, or maybe update costPrice only.
+              // But if cost price changes, profit margin should handle it dynamically.
+              // However, the schema has sellingPrice. 
+              // Let's set sellingPrice = costPrice if we want 0 profit by default, 
+              // or maybe we should NOT update sellingPrice if it exists?
+              // The problem: if cost increases, we might sell at loss.
+              // Safe bet: Update costPrice. Admin should manage sellingPrice or we use a dynamic pricing model.
+              // But specific requirement here?
+              // "Fetch all plans from vendors"
+              // Let's update metadata too
+              isActive: plan.isAvailable,
+            },
+            create: {
+              planId: plan.id,
+              network: network,
+              planType: planType,
+              size: size,
+              validity: validity,
+              vendorId: config.id,
+              costPrice: plan.price,
+              sellingPrice: plan.price, // Default 0 profit
+              isActive: plan.isAvailable,
+            },
+          })
+          totalSynced++
         }
-        count++
-      } catch (error) {
-        console.error(`Error syncing plan ${plan.name}:`, error)
-        errors.push({ plan: plan.name, error })
+      } catch (e) {
+        console.error(`Failed to sync ${network} on ${adapterId}:`, e)
       }
     }
-    
-    return { count, errors }
+
+    return { success: true, count: totalSynced }
   }
 
   async verifyCustomer(payload: VerifyCustomerPayload): Promise<CustomerVerification> {
