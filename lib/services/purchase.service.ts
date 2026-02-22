@@ -111,8 +111,9 @@ export class PurchaseService {
         margin: { type: 'FIXED', value: request.dataPlanPrice - costPrice },
       }
     } 
-    // Priority 2: Special case: AIRTIME uses 1:1 pricing (Amount = Cost), no profit added
-    else if (request.service === 'AIRTIME') {
+    // Priority 2: Special case: AIRTIME and ELECTRICITY use 1:1 pricing (Amount = Cost),
+    // no profit added — the user specifies the exact face value they want
+    else if (request.service === 'AIRTIME' || request.service === 'ELECTRICITY') {
       pricing = {
         costPrice,
         sellingPrice: costPrice, // 1:1 pricing
@@ -407,8 +408,12 @@ export class PurchaseService {
       throw new Error('Amount is required for airtime purchase')
     }
 
+    if (request.service === 'ELECTRICITY' && !request.amount) {
+      throw new Error('Amount is required for electricity purchase')
+    }
+
     if (
-      ['DATA', 'CABLE', 'ELECTRICITY', 'BETTING', 'EPINS'].includes(request.service) &&
+      ['DATA', 'CABLE', 'CABLE_TV', 'BETTING', 'EPINS'].includes(request.service) &&
       !request.planId
     ) {
       throw new Error(`Plan ID is required for ${request.service} purchase`)

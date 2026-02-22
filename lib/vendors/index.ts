@@ -20,6 +20,18 @@ export class VendorService {
   private adapterCache: Map<string, VendorAdapter> = new Map()
 
   /**
+   * Code-enforced primary vendor per service type.
+   * Takes precedence over the global DB `isPrimary` flag but yields to
+   * explicit ServiceRouting table entries (per-service/network overrides).
+   */
+  private static readonly SERVICE_PRIMARY_VENDOR: Partial<Record<ServiceType, string>> = {
+    AIRTIME:     'VTPASS',
+    ELECTRICITY: 'VTPASS',
+    CABLE:       'VTPASS',
+    CABLE_TV:    'VTPASS',
+  }
+
+  /**
    * Clear the adapter cache (useful when credentials change)
    */
   clearCache(adapterId?: string) {
@@ -112,10 +124,23 @@ export class VendorService {
   }
 
   /**
-   * Get the best vendor for a service/network based on routing rules
+   * Get the best vendor for a service/network based on routing rules.
+   * Priority: SERVICE_PRIMARY_VENDOR (code) > ServiceRouting (DB) > Global DB primary > hardcoded defaults
    */
   private async getBestVendor(service: ServiceType, network?: NetworkType): Promise<VendorAdapter> {
-    // 1. Check ServiceRouting
+    // 1. Code-enforced primary vendor — always wins for pinned services
+    const preferredAdapterId = VendorService.SERVICE_PRIMARY_VENDOR[service]
+    if (preferredAdapterId) {
+      try {
+        const preferred = await this.getAdapter(preferredAdapterId)
+        console.log(`[VendorService] Using service-preferred vendor ${preferredAdapterId} for ${service}`)
+        return preferred
+      } catch (e) {
+        console.warn(`[VendorService] Preferred vendor ${preferredAdapterId} unavailable for ${service}, falling back to routing`)
+      }
+    }
+
+    // 2. Check ServiceRouting (DB per-service/network overrides)
     if (network) {
       const routing = await prisma.serviceRouting.findUnique({
         where: {
@@ -147,7 +172,7 @@ export class VendorService {
       }
     }
 
-    // 2. Check Global Primary Vendor (if enabled and supports service)
+    // 3. Check Global Primary Vendor (if enabled and supports service)
     const primaryVendor = await prisma.vendorConfig.findFirst({
       where: {
         isPrimary: true,
@@ -175,7 +200,7 @@ export class VendorService {
       }
     }
 
-    // 3. Fallback defaults if no routing found
+    // 4. Fallback defaults if no routing found
     if (service === 'DATA') return this.getAdapter('SUBANDGAIN')
     if (service === 'AIRTIME') return this.getAdapter('VTPASS')
     if (service === 'ELECTRICITY') return this.getAdapter('VTPASS')

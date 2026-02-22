@@ -80,6 +80,7 @@ export const POST = apiHandler(async (request: Request) => {
       recipient: formattedPhone,
       amount: data.amount,
       idempotencyKey: data.idempotencyKey,
+      targetVendor: 'VTPASS',
       metadata: {
         source: 'web_app',
         userAgent: request.headers.get('user-agent') || 'unknown',

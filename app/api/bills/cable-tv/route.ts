@@ -1,119 +1,97 @@
+/**
+ * Cable TV Purchase API
+ * POST - Subscribe to cable TV (DStv, GOtv, Startimes) via VTPass
+ */
+
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { notificationService } from '@/lib/services/NotificationService'
-import vtuService from '@/lib/vtu'
-import { calculateCableTVPricing, formatTransactionDetails } from '@/lib/services/pricing'
+import { comparePassword } from '@/lib/auth'
+import { purchaseService } from '@/lib/services/purchase.service'
+import { vendorService } from '@/lib/vendors'
 import {
   apiHandler,
   successResponse,
   getAuthenticatedUser,
   validateRequestBody,
-  generateReference,
   BadRequestError,
   InsufficientBalanceError,
 } from '@/lib/api-utils'
 
-const cableTVProviders = ['DSTV', 'GOTV', 'STARTIMES'] as const
-
 const cableTVPurchaseSchema = z.object({
-  provider: z.enum(cableTVProviders),
-  smartcardNumber: z.string().min(10),
-  planCode: z.string().min(1),
-  vendorCost: z.number().positive(),
-  planName: z.string().optional(),
+  provider: z.string().min(1, 'Provider is required'),       // 'dstv' | 'gotv' | 'startimes'
+  smartcardNumber: z.string().min(10, 'Invalid smartcard number'),
+  packageId: z.string().min(1, 'Package is required'),       // variation_code e.g. 'dstv-padi'
+  subscriptionType: z.enum(['renew', 'change']).default('renew'),
+  customerPhone: z.string().optional(),
+  pin: z.string().min(4, 'Transaction PIN is required').max(6, 'PIN must be 4-6 digits'),
 })
 
-export const POST = apiHandler(async (req) => {
-  const user = await getAuthenticatedUser()
+export const POST = apiHandler(async (req: Request) => {
+  const user = await getAuthenticatedUser(req)
   const body = await validateRequestBody(req, cableTVPurchaseSchema)
-  const { provider, smartcardNumber, planCode, vendorCost, planName } = body as z.infer<typeof cableTVPurchaseSchema>
+  const { provider, smartcardNumber, packageId, subscriptionType, customerPhone, pin } =
+    body as z.infer<typeof cableTVPurchaseSchema>
 
-  const { sellingPrice, profit } = calculateCableTVPricing(vendorCost)
-
+  // Verify Transaction PIN
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, credits: true },
+    select: { pinHash: true },
   })
 
-  if (!dbUser) throw new BadRequestError('User not found')
-  if (dbUser.credits < sellingPrice) {
-    throw new InsufficientBalanceError(
-      `Insufficient balance. Required: ₦${sellingPrice.toLocaleString()}, Available: ₦${dbUser.credits.toLocaleString()}`
-    )
+  if (!dbUser?.pinHash) {
+    throw new BadRequestError('Transaction PIN not set. Please set a PIN in your profile.')
   }
 
-  const reference = generateReference('CABLE')
-  const transaction = await prisma.transaction.create({
-    data: {
-      userId: dbUser.id,
-      type: 'CABLE',
-      amount: sellingPrice,
-      status: 'PENDING',
-      reference,
-      details: formatTransactionDetails(vendorCost, sellingPrice, profit, {
-        description: `${provider} - ${planName || planCode}`,
-        provider,
-        smartcardNumber,
-        planCode,
-        planName,
-      }),
-    },
-  })
+  const isPinValid = await comparePassword(pin, dbUser.pinHash)
+  if (!isPinValid) {
+    throw new BadRequestError('Invalid transaction PIN')
+  }
+
+  // Normalise provider to uppercase for VTPass (DSTV, GOTV, STARTIMES)
+  const vtpassProvider = provider.toUpperCase() as 'DSTV' | 'GOTV' | 'STARTIMES' | 'SHOWMAX'
+
+  // Look up plan price from VTPass so the user can't manipulate it
+  let planPrice = 0
+  try {
+    const plans = await vendorService.getPlans('CABLE_TV', vtpassProvider as any, 'VTPASS')
+    const plan = plans.find(p => p.id === packageId)
+    if (plan) {
+      planPrice = plan.price
+    }
+  } catch (e) {
+    console.warn('[cable-tv] Could not fetch plan price from VTPass, proceeding without:', e)
+  }
+
+  if (!planPrice) {
+    throw new BadRequestError('Could not determine plan price. Please try again.')
+  }
 
   try {
-    await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { credits: { decrement: sellingPrice } },
-    })
-
-    const vtuResponse = await vtuService.purchaseCableTV(provider, smartcardNumber, planCode)
-
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: 'COMPLETED',
-        details: formatTransactionDetails(vendorCost, sellingPrice, profit, {
-          description: `${provider} - ${planName || planCode}`,
-          provider,
-          smartcardNumber,
-          planCode,
-          planName,
-          vtuTransactionId: vtuResponse.transaction_id,
-        }),
+    const result = await purchaseService.purchase({
+      userId: user.id,
+      service: 'CABLE_TV',
+      network: vtpassProvider as any,
+      recipient: smartcardNumber,
+      planId: packageId,
+      amount: planPrice,
+      metadata: {
+        provider: vtpassProvider,
+        subscriptionType,
+        customerPhone,
       },
     })
 
-    await notificationService.notifyUser(
-      dbUser.id,
-      'Purchase Successful',
-      `Your ₦${sellingPrice.toLocaleString()} ${provider} Cable TV subscription is complete`,
-      'TRANSACTION',
-      { transactionId: transaction.id, type: 'TRANSACTION' }
-    )
-
     return successResponse({
-      message: 'Subscription successful',
-      data: { transaction, provider, smartcardNumber, vendorCost, sellingPrice, profit, reference },
-    })
+      transactionId: result.transaction.id,
+      reference: result.transaction.reference,
+      status: result.transaction.status,
+      message: result.message,
+    }, 'Cable TV subscription initiated')
+
   } catch (error: any) {
-    await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { credits: { increment: sellingPrice } },
-    })
-
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: { status: 'FAILED' },
-    })
-
-    await notificationService.notifyUser(
-      dbUser.id,
-      'Purchase Failed',
-      `Your ₦${sellingPrice.toLocaleString()} ${provider} Cable TV subscription could not be completed. Amount refunded to wallet.`,
-      'TRANSACTION',
-      { transactionId: transaction.id, type: 'TRANSACTION', refund: true }
-    )
-
-    throw new BadRequestError(error.message || 'Subscription failed')
+    if (error.message?.includes('Insufficient balance')) {
+      throw new InsufficientBalanceError(error.message)
+    }
+    throw error
   }
 })

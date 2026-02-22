@@ -457,7 +457,8 @@ export class VTPassAdapter implements VendorAdapter {
       
       console.log(`[VTPass] Purchasing DATA on ${payload.network} (ID: ${serviceID}). Plan: ${payload.planId}`)
     } else if (payload.service === 'CABLE_TV' || payload.service === 'CABLE') {
-      const provider = (payload.metadata?.provider || 'DSTV').toUpperCase()
+      // Provider comes through as payload.network (e.g. 'DSTV', 'GOTV', 'STARTIMES')
+      const provider = (payload.network || payload.metadata?.provider || 'DSTV').toUpperCase()
       serviceID = VTPASS_SERVICE_IDS.CABLE_TV[provider as keyof typeof VTPASS_SERVICE_IDS.CABLE_TV] || 'dstv'
       requestBody.serviceID = serviceID
       requestBody.billersCode = payload.customerId
@@ -465,11 +466,13 @@ export class VTPassAdapter implements VendorAdapter {
       requestBody.amount = payload.amount
       requestBody.subscription_type = payload.metadata?.subscriptionType || 'renew'
     } else if (payload.service === 'ELECTRICITY') {
-      const provider = (payload.metadata?.provider || 'IKEJA').toUpperCase()
+      // Provider comes through as payload.network (e.g. 'IKEJA', 'EKO', 'ABUJA')
+      const provider = (payload.network || payload.metadata?.provider || 'IKEJA').toUpperCase()
       serviceID = VTPASS_SERVICE_IDS.ELECTRICITY[provider as keyof typeof VTPASS_SERVICE_IDS.ELECTRICITY] || 'ikeja-electric'
       requestBody.serviceID = serviceID
       requestBody.billersCode = payload.customerId
-      requestBody.variation_code = payload.meterType?.toLowerCase() || 'prepaid'
+      // meterType comes via metadata.meterType (PREPAID/POSTPAID) or planId
+      requestBody.variation_code = (payload.metadata?.meterType || payload.planId || 'prepaid').toLowerCase()
       requestBody.amount = payload.amount
     } else if (payload.service === 'EDUCATION' || payload.service === 'EPINS') {
       const examName = (payload.metadata?.examName || 'WAEC').toUpperCase()
