@@ -1,3 +1,0 @@
-VTPass Sandbox Request IDs:
-Airtime Request ID: 202601121113lpk5l42b
-Data Request ID: 202601121113pckvwf4k
