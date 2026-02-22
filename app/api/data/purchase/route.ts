@@ -290,7 +290,7 @@ export const POST = apiHandler(async (request: Request) => {
         createdAt: result.transaction.createdAt,
       },
       plan: {
-        name: finalPlan.name || finalPlan.size, // Fallback if name is empty
+        name: finalPlan.size,
         network: data.network,
         validity: finalPlan.validity,
         costPrice: finalPlan.costPrice,
