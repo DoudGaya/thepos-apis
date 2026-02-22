@@ -35,7 +35,7 @@ async function main() {
     update: {
       isEnabled: true,
       supportsAirtime: true,
-      supportsElectricity: true,
+      supportsElectric: true,
       supportsCable: true,
     },
     create: {
@@ -47,7 +47,7 @@ async function main() {
       priority: 1,
       supportsData: true,
       supportsAirtime: true,
-      supportsElectricity: true,
+      supportsElectric: true,
       supportsCable: true,
       credentials: {
         apiKey: process.env.VTPASS_API_KEY || 'placeholder_key',
@@ -73,7 +73,7 @@ async function main() {
       priority: 2,
       supportsData: true,
       supportsAirtime: true,
-      supportsElectricity: true,
+      supportsElectric: true,
       supportsCable: true,
       credentials: {
         username: process.env.SUBANDGAIN_USERNAME || 'placeholder_user',
