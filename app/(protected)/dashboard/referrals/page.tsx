@@ -49,7 +49,7 @@ export default function ReferralsPage() {
 
   const copyToClipboard = () => {
     if (stats?.referralCode) {
-      navigator.clipboard.writeText(`https://NillarPay.app/register?ref=${stats.referralCode}`);
+      navigator.clipboard.writeText(`https://pay.nillar.com/register?ref=${stats.referralCode}`);
       toast({
         title: 'Copied!',
         description: 'Referral link copied to clipboard',
@@ -108,7 +108,7 @@ export default function ReferralsPage() {
             <div className="flex space-x-2">
               <Input 
                 readOnly 
-                value={`https://NillarPay.app/register?ref=${stats?.referralCode || '...'}`} 
+                value={`https://pay.nillar.com/register?ref=${stats?.referralCode || '...'}`} 
               />
               <Button size="icon" variant="outline" onClick={copyToClipboard}>
                 <Copy className="h-4 w-4" />

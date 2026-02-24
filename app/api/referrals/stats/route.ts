@@ -29,14 +29,14 @@ export const GET = apiHandler(async (request: Request) => {
         paidEarnings,
         earningsHistory
     ] = await Promise.all([
-        // Total referrals
+        // Total referrals — referredBy stores the referrer's user.id (not the code)
         prisma.user.count({
-        where: { referredBy: referralCode }
+        where: { referredBy: user.id }
         }),
-        // Active referrals (made at least 1 transaction)
+        // Active referrals (made at least 1 completed transaction)
         prisma.user.count({
-        where: { 
-            referredBy: referralCode,
+        where: {
+            referredBy: user.id,
             transactions: { some: { status: 'COMPLETED' } }
         }
         }),

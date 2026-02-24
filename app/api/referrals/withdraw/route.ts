@@ -28,6 +28,14 @@ export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser()
   const data = (await validateRequestBody(request, withdrawalSchema)) as z.infer<typeof withdrawalSchema>
 
+  // Cashout is only allowed on the 28th of each month
+  const today = new Date()
+  if (today.getDate() !== 28) {
+    const nextCashout = new Date(today.getFullYear(), today.getMonth() + (today.getDate() < 28 ? 0 : 1), 28)
+    const formatted = nextCashout.toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })
+    throw new BadRequestError(`Cashout is only available on the 28th of each month. Next cashout date: ${formatted}`)
+  }
+
   // Get available referral balance
   const earnings = await prisma.referralEarning.aggregate({
     where: {

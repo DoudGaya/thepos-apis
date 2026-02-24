@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'NillarPay - Buy Data, Airtime & Pay Bills Instantly',
     description: 'Join 50,000+ resellers earning daily with instant delivery and the best prices in Nigeria.',
-    url: 'https://NillarPay.ng',
+    url: 'https://pay.nillar.com',
     siteName: 'NillarPay',
     images: [
       {
