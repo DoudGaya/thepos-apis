@@ -147,12 +147,13 @@ export async function POST(request: NextRequest) {
                 email: userEmail,
                 referralCode,
                 isVerified: true,
+                phoneVerified: true,
                 role: 'USER'
             }
         })
     } else if (user && type === 'REGISTER') {
       
-      const updateData: any = { isVerified: true };
+      const updateData: any = { isVerified: true, phoneVerified: true };
       
       // If logged-in user is verifying a phone number for the first time
       if (token && token.sub === user.id && !user.phone && formattedPhone) {

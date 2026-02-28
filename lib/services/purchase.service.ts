@@ -10,6 +10,7 @@ import { prisma } from '../prisma'
 import { vendorService } from '../vendors'
 import { pricingService } from './pricing.service'
 import { notificationService } from './NotificationService'
+import { referralService } from './ReferralService'
 import { generateReference } from '../api-utils'
 import { generateIdempotencyKey } from '../utils/idempotency'
 import { normalizePhone, detectNetwork } from '../utils/phone-normalizer'
@@ -261,7 +262,7 @@ export class PurchaseService {
             vendorCallAt: new Date(),
             vendorResponseAt: new Date(),
           },
-          select: { userId: true, sellingPrice: true, type: true },
+          select: { userId: true, sellingPrice: true, type: true, profit: true },
         })
 
         if (result.status === 'FAILED') {
@@ -281,6 +282,14 @@ export class PurchaseService {
             'TRANSACTION',
             { transactionId, type: 'TRANSACTION' }
           ).catch((e: any) => console.error('[Notification] purchase success:', e.message))
+
+          // Process referral commission for successful purchases (fire-and-forget)
+          referralService.processTransactionCommission(
+            updatedTx.userId,
+            updatedTx.sellingPrice,
+            transactionId,
+            updatedTx.profit ?? 0
+          ).catch((e: any) => console.error('[Referral] commission processing error:', e.message))
         }
         return // success or terminal failure — stop looping
 

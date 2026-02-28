@@ -50,15 +50,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update user wallet balance immediately
+    // Check if this is the user's first funding (for referral bonus)
+    const userData = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { hasFundedWallet: true },
+    });
+    const isFirstFunding = !userData?.hasFundedWallet;
+
+    // Update user wallet balance and mark as funded
     await prisma.user.update({
       where: { id: decoded.userId },
       data: {
-        credits: {
-          increment: amount,
-        },
+        credits: { increment: amount },
+        hasFundedWallet: true,
       },
     });
+
+    // Process referral first-funding bonus if applicable (fire-and-forget)
+    if (isFirstFunding) {
+      const { referralService } = await import('@/lib/services/ReferralService');
+      referralService.processFirstFundingBonus(decoded.userId, amount)
+        .catch((err: any) => console.error('[Referral] test-fund bonus error:', err));
+    }
 
     console.log(`Test wallet funding completed for user ${decoded.userId}: ₦${amount}`);
 

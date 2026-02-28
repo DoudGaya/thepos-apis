@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === 'production',
     })
 
     // If authenticated, redirect to dashboard
@@ -29,6 +30,7 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === 'production',
     })
 
     // If no token, redirect to login
@@ -54,6 +56,7 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === 'production',
     })
 
     // If no token, redirect to login
@@ -119,7 +122,6 @@ export async function middleware(request: NextRequest) {
       '/api/store/quick-checkout',
       '/api/auth/mobile-login',
       '/api/auth/set-password',
-      '/api/auth/set-pin'
     ];
 
     // Specific NextAuth internal routes to allow

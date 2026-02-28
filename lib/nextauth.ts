@@ -43,6 +43,7 @@ adapter.createUser = async (data) => {
 
 export const authOptions: NextAuthOptions = {
   adapter: adapter as any,
+  useSecureCookies: process.env.NODE_ENV === 'production',
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",

@@ -5,31 +5,56 @@ import { z } from 'zod'
 
 export const runtime = 'nodejs'
 
+// `identifier` accepts email or phone. `email` kept as alias for backward compat.
 const loginSchema = z.object({
-  email: z.string().email('Valid email is required'),
+  identifier: z.string().min(1, 'Email or phone number is required').optional(),
+  email: z.string().min(1).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+}).refine(data => data.identifier || data.email, {
+  message: 'Email or phone number is required',
 })
+
+/** Returns true when the value looks like a phone number rather than an email */
+function isPhoneNumber(value: string): boolean {
+  return !value.includes('@') && /^[+\d]/.test(value.trim())
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password } = loginSchema.parse(body)
+    const parsed = loginSchema.parse(body)
+    const rawIdentifier = (parsed.identifier || parsed.email || '').trim()
+    const { password } = parsed
 
-    // Find user by email (case-insensitive to support legacy mixed-case records)
-    const user = await prisma.user.findFirst({
-      where: { 
-        email: {
-          equals: email.toLowerCase(),
-          mode: 'insensitive'
-        }
-      },
-    })
+    let user: any = null
+
+    if (isPhoneNumber(rawIdentifier)) {
+      // Try both raw and E.164-formatted phone numbers
+      const formattedPhone = formatPhoneNumber(rawIdentifier)
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { phone: rawIdentifier },
+            { phone: formattedPhone },
+          ],
+        },
+      })
+    } else {
+      // Email lookup — case-insensitive to support legacy mixed-case records
+      user = await prisma.user.findFirst({
+        where: {
+          email: { equals: rawIdentifier.toLowerCase(), mode: 'insensitive' },
+        },
+      })
+    }
 
     if (!user) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'No account found with this email address' 
+        {
+          success: false,
+          message: isPhoneNumber(rawIdentifier)
+            ? 'No account found with this phone number'
+            : 'No account found with this email address',
         },
         { status: 404 }
       )

@@ -104,6 +104,12 @@ export class ReferralService {
       }
     });
 
+    // Mark the referral record as COMPLETED on first successful transaction
+    await prisma.referral.updateMany({
+      where: { referrerId: user.referredBy, referredId: userId, status: 'PENDING' },
+      data: { status: 'COMPLETED' },
+    });
+
     await notificationService.notifyUser(
       user.referredBy,
       'Referral Commission Earned',
@@ -111,11 +117,15 @@ export class ReferralService {
       'GENERAL',
       { sourceUserId: userId, amount: commission, type }
     );
+
+    console.log(`[Referral] Commission ₦${commission.toFixed(2)} (${type}) credited to referrer ${user.referredBy} from transaction ${transactionId}`);
   }
 
   /**
    * Process Fixed Referral Bonus
-   * Called when a referred user funds their wallet for the first time
+   * Called when a referred user funds their wallet for the first time.
+   * Guards against double-crediting via hasFundedWallet flag.
+   * Falls back to config.referrerBonus when no FixedReferralRule is configured.
    */
   async processFirstFundingBonus(userId: string, fundingAmount: number) {
     const user = await prisma.user.findUnique({
@@ -127,6 +137,18 @@ export class ReferralService {
     });
 
     if (!user?.referredBy) return;
+
+    // Guard: only process once per referred user
+    if (user.hasFundedWallet) {
+      console.log(`[Referral] First-funding bonus already processed for user ${userId}`);
+      return;
+    }
+
+    // Mark wallet as funded immediately to prevent race conditions
+    await prisma.user.update({
+      where: { id: userId },
+      data: { hasFundedWallet: true },
+    });
     
     // Find active Fixed Referral Rules
     const rules = await prisma.fixedReferralRule.findMany({
@@ -137,22 +159,27 @@ export class ReferralService {
       orderBy: { commissionValue: 'desc' }
     });
 
-    if (!rules || rules.length === 0) return;
-
-    // Pick the first applicable rule
-    const rule = rules[0];
-
-    // Check Audience Targeting (Simple check for now)
-    if (rule.audience === 'SPECIFIC') {
-        // TODO: Implement specific audience check
-    }
-
     let bonus = 0;
-    if (rule.commissionType === 'FIXED_AMOUNT') {
-      bonus = rule.commissionValue;
+    let description = '';
+    let ruleId: string | undefined;
+
+    if (rules && rules.length > 0) {
+      const rule = rules[0];
+      ruleId = rule.id;
+      // Check Audience Targeting (Simple check for now)
+      if (rule.audience === 'SPECIFIC') {
+          // TODO: Implement specific audience check
+      }
+      if (rule.commissionType === 'FIXED_AMOUNT') {
+        bonus = rule.commissionValue;
+      } else {
+        bonus = fundingAmount * (rule.commissionValue / 100);
+      }
+      description = `First-funding Referral Bonus: ${rule.name}`;
     } else {
-      // Percentage of the funding amount
-      bonus = fundingAmount * (rule.commissionValue / 100);
+      // Fallback: use hardcoded referrer bonus of ₦100 when no rules configured
+      bonus = this.config.referrerBonus;
+      description = 'First-funding Referral Bonus';
     }
 
     if (bonus <= 0) return;
@@ -162,10 +189,10 @@ export class ReferralService {
       amount: bonus,
       type: TransactionType.REFERRAL_BONUS,
       reference: `REF-FIXED-${userId}`,
-      description: `Referral Bonus: ${rule.name}`,
+      description,
       metadata: {
         sourceUserId: userId,
-        ruleId: rule.id,
+        ruleId,
         fundingAmount
       }
     });
@@ -177,18 +204,26 @@ export class ReferralService {
         amount: bonus,
         type: 'FIXED_BONUS',
         status: 'PAID',
-        description: `Fixed Bonus from rule: ${rule.name}`,
+        description,
         paidAt: new Date()
       }
+    });
+
+    // Mark the referral record as funded (not yet completed — that happens on first purchase)
+    await prisma.referral.updateMany({
+      where: { referrerId: user.referredBy, referredId: userId, status: 'PENDING' },
+      data: { status: 'PENDING' }, // keep PENDING until first transaction
     });
 
     await notificationService.notifyUser(
       user.referredBy,
       'Referral Bonus',
-      `You earned ₦${bonus.toFixed(2)} for referring a new user!`,
+      `You earned ₦${bonus.toFixed(2)} for referring a new user who funded their wallet!`,
       'GENERAL',
       { sourceUserId: userId, amount: bonus }
     );
+
+    console.log(`[Referral] First-funding bonus ₦${bonus} credited to referrer ${user.referredBy} (referred user: ${userId})`);
   }
 
   /**
