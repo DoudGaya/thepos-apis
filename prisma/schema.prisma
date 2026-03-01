@@ -45,6 +45,7 @@ model User {
   targetProgress           UserTargetProgress[]
   adminRole                AdminRole?            @relation(fields: [adminRoleId], references: [id])
   passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
+  withdrawalRequests       WithdrawalRequest[]
 
   @@map("users")
 }
@@ -88,6 +89,22 @@ model PassiveReferralGroup {
   users             User[]
 
   @@map("passive_referral_groups")
+}
+
+model WithdrawalRequest {
+  id            String            @id @default(cuid())
+  userId        String
+  amount        Float
+  bankName      String
+  accountNumber String
+  accountName   String
+  status        WithdrawalStatus  @default(PENDING)
+  adminNote     String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("withdrawal_requests")
 }
 
 model Account {
@@ -560,4 +577,10 @@ enum TargetType {
   AMOUNT_SPENT
   TRANSACTION_COUNT
   DATA_VOLUME
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

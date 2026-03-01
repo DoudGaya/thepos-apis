@@ -1,6 +1,7 @@
 /**
  * Referral Withdrawal API
- * POST - Withdraw referral commission to main wallet
+ * POST  — Submit a bank-account withdrawal request for referral commission.
+ *          Cash is NOT credited immediately; an admin fulfils the payout.
  */
 
 import { z } from 'zod'
@@ -10,143 +11,151 @@ import {
   successResponse,
   getAuthenticatedUser,
   validateRequestBody,
-  generateReference,
   BadRequestError,
   InsufficientBalanceError,
 } from '@/lib/api-utils'
 
-// Withdrawal validation schema
+// ── Validation ──────────────────────────────────────────────────────────────
+
 const withdrawalSchema = z.object({
-  amount: z.number().min(500, 'Minimum withdrawal amount is ₦500').max(1000000, 'Maximum withdrawal amount is ₦1,000,000'),
+  amount: z
+    .number()
+    .min(2000, 'Minimum withdrawal amount is ₦2,000')
+    .max(1_000_000, 'Maximum withdrawal amount is ₦1,000,000'),
+  bankName: z.string().min(2, 'Bank name is required').max(100),
+  accountNumber: z
+    .string()
+    .length(10, 'Account number must be exactly 10 digits')
+    .regex(/^\d+$/, 'Account number must contain only digits'),
+  accountName: z.string().min(3, 'Account name is required').max(120),
 })
+
+type WithdrawalBody = z.infer<typeof withdrawalSchema>
 
 /**
  * POST /api/referrals/withdraw
- * Withdraw referral commission to main wallet
+ * Submit a referral commission withdrawal request (admin-mediated payout)
  */
 export const POST = apiHandler(async (request: Request) => {
-  const user = await getAuthenticatedUser()
-  const data = (await validateRequestBody(request, withdrawalSchema)) as z.infer<typeof withdrawalSchema>
+  const user = await getAuthenticatedUser(request)
+  const data = (await validateRequestBody(request, withdrawalSchema)) as WithdrawalBody
 
   // Cashout is only allowed on the 28th of each month
   const today = new Date()
   if (today.getDate() !== 28) {
-    const nextCashout = new Date(today.getFullYear(), today.getMonth() + (today.getDate() < 28 ? 0 : 1), 28)
-    const formatted = nextCashout.toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })
-    throw new BadRequestError(`Cashout is only available on the 28th of each month. Next cashout date: ${formatted}`)
-  }
-
-  // Get available referral balance
-  const earnings = await prisma.referralEarning.aggregate({
-    where: {
-      userId: user.id,
-    },
-    _sum: {
-      amount: true,
-    },
-  })
-
-  const withdrawn = await prisma.referralEarning.aggregate({
-    where: {
-      userId: user.id,
-      status: 'WITHDRAWN',
-    },
-    _sum: {
-      amount: true,
-    },
-  })
-
-  const totalEarned = earnings._sum.amount || 0
-  const totalWithdrawn = withdrawn._sum.amount || 0
-  const availableBalance = totalEarned - totalWithdrawn
-
-  // Check if user has sufficient referral balance
-  if (availableBalance < data.amount) {
-    throw new InsufficientBalanceError(
-      `Insufficient referral balance. Available: ₦${availableBalance.toLocaleString()}, Requested: ₦${data.amount.toLocaleString()}`
+    const nextCashout = new Date(
+      today.getFullYear(),
+      today.getMonth() + (today.getDate() < 28 ? 0 : 1),
+      28,
+    )
+    const formatted = nextCashout.toLocaleDateString('en-NG', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+    throw new BadRequestError(
+      `Withdrawals are only available on the 28th of each month. Next withdrawal date: ${formatted}`,
     )
   }
 
-  // Generate unique reference
-  const reference = generateReference('REF_WITHDRAW')
+  // Prevent duplicate pending requests in the same month
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const existing = await prisma.withdrawalRequest.findFirst({
+    where: {
+      userId: user.id,
+      status: 'PENDING',
+      createdAt: { gte: monthStart },
+    },
+  })
+  if (existing) {
+    throw new BadRequestError(
+      'You already have a pending withdrawal request for this month. Please wait for it to be processed before submitting another.',
+    )
+  }
 
-  // Perform withdrawal in a transaction
-  await prisma.$transaction(async (tx) => {
-    // Transfer to main wallet
-    await tx.user.update({
-      where: { id: user.id },
-      data: {
-        credits: {
-          increment: data.amount,
-        },
-      },
-    })
+  // Compute available balance (earned – already withdrawn/locked)
+  const [earnedAgg, lockedAgg] = await Promise.all([
+    prisma.referralEarning.aggregate({
+      where: { userId: user.id },
+      _sum: { amount: true },
+    }),
+    prisma.referralEarning.aggregate({
+      where: { userId: user.id, status: 'WITHDRAWN' },
+      _sum: { amount: true },
+    }),
+  ])
 
-    // Mark earnings as withdrawn (up to the withdrawal amount)
-    const pendingEarnings = await tx.referralEarning.findMany({
-      where: {
-        userId: user.id,
-        status: 'PENDING',
-      },
+  const totalEarned = earnedAgg._sum.amount ?? 0
+  const totalWithdrawn = lockedAgg._sum.amount ?? 0
+  const availableBalance = totalEarned - totalWithdrawn
+
+  if (availableBalance < data.amount) {
+    throw new InsufficientBalanceError(
+      `Insufficient referral balance. Available: ₦${availableBalance.toLocaleString()}, Requested: ₦${data.amount.toLocaleString()}`,
+    )
+  }
+
+  // Lock PAID earnings + create withdrawal request in one transaction
+  const withdrawalRequest = await prisma.$transaction(async (tx) => {
+    // Mark PAID earnings as WITHDRAWN up to requested amount
+    const paidEarnings = await tx.referralEarning.findMany({
+      where: { userId: user.id, status: 'PAID' },
       orderBy: { createdAt: 'asc' },
     })
 
-    let remainingAmount = data.amount
-    for (const earning of pendingEarnings) {
-      if (remainingAmount <= 0) break
-
-      if (earning.amount <= remainingAmount) {
+    let remaining = data.amount
+    for (const earning of paidEarnings) {
+      if (remaining <= 0) break
+      if (earning.amount <= remaining) {
         await tx.referralEarning.update({
           where: { id: earning.id },
           data: { status: 'WITHDRAWN' },
         })
-        remainingAmount -= earning.amount
+        remaining -= earning.amount
       }
     }
 
-    // Create transaction record
-    await tx.transaction.create({
+    // Create the withdrawal request record
+    const req = await tx.withdrawalRequest.create({
       data: {
         userId: user.id,
-        type: 'REFERRAL_BONUS',
         amount: data.amount,
-        status: 'COMPLETED',
-        reference,
-        details: {
-          source: 'referral_commission',
-          availableBalance,
-        },
+        bankName: data.bankName,
+        accountNumber: data.accountNumber,
+        accountName: data.accountName,
+        status: 'PENDING',
       },
     })
 
-    // Create notification
+    // Notify the user
     await tx.notification.create({
       data: {
         userId: user.id,
-        title: 'Commission Withdrawn',
-        message: `₦${data.amount.toLocaleString()} referral commission transferred to your main wallet`,
+        title: 'Withdrawal Request Submitted',
+        message: `Your withdrawal request of ₦${data.amount.toLocaleString()} has been submitted and is under review. Payouts are processed within 2–5 business days.`,
         type: 'TRANSACTION',
         isRead: false,
       },
     })
+
+    return req
   })
 
-  // Get updated balances
-  const updatedUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      credits: true,
-    },
-  })
+  const newAvailableBalance = availableBalance - data.amount
 
-  const newReferralBalance = availableBalance - data.amount
-
-  return successResponse({
-    withdrawal: {
-      amount: data.amount,
-      reference,
-      newMainBalance: updatedUser?.credits || 0,
-      newReferralBalance,
+  return successResponse(
+    {
+      request: {
+        id: withdrawalRequest.id,
+        amount: withdrawalRequest.amount,
+        bankName: withdrawalRequest.bankName,
+        accountNumber: withdrawalRequest.accountNumber,
+        accountName: withdrawalRequest.accountName,
+        status: withdrawalRequest.status,
+        createdAt: withdrawalRequest.createdAt,
+      },
+      newAvailableBalance,
     },
-  }, 'Commission withdrawn successfully')
+    'Withdrawal request submitted successfully. Our team will process it within 2–5 business days.',
+  )
 })

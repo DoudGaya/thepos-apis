@@ -56,23 +56,17 @@ export class ReferralService {
     if (!referrer) return;
 
     let commission = 0;
-    let type = 'AGENT_COMMISSION';
+    let type = 'PASSIVE_COMMISSION';
     let description = 'Transaction commission';
     let isPassive = false;
 
-    // Check Passive Referral Group
+    // Only award commission to referrers who belong to an active PassiveReferralGroup.
+    // Users in no group earn zero per-transaction commission.
     const passiveGroup = referrer.passiveReferralGroup;
-    if (passiveGroup && passiveGroup.isActive) {
-      if (profit > 0) {
-        // Commission based on Profit
-        commission = profit * (passiveGroup.commissionPercent / 100);
-        type = 'PASSIVE_COMMISSION';
-        description = `Passive commission from ${passiveGroup.name}`;
-        isPassive = true;
-      }
-    } else {
-      // Legacy / Default Commission (Percentage of Amount)
-      commission = amount * this.config.commissionPercentage;
+    if (passiveGroup && passiveGroup.isActive && profit > 0) {
+      commission = profit * (passiveGroup.commissionPercent / 100);
+      description = `Passive commission from ${passiveGroup.name}`;
+      isPassive = true;
     }
 
     if (commission < 1) return;
@@ -166,10 +160,6 @@ export class ReferralService {
     if (rules && rules.length > 0) {
       const rule = rules[0];
       ruleId = rule.id;
-      // Check Audience Targeting (Simple check for now)
-      if (rule.audience === 'SPECIFIC') {
-          // TODO: Implement specific audience check
-      }
       if (rule.commissionType === 'FIXED_AMOUNT') {
         bonus = rule.commissionValue;
       } else {
@@ -177,8 +167,12 @@ export class ReferralService {
       }
       description = `First-funding Referral Bonus: ${rule.name}`;
     } else {
-      // Fallback: use hardcoded referrer bonus of ₦100 when no rules configured
-      bonus = this.config.referrerBonus;
+      // Fallback: ₦100 hardcoded bonus, but only when the referred user funds ≥ ₦1,000.
+      if (fundingAmount < 1000) {
+        console.log(`[Referral] First-funding bonus skipped — funding amount ₦${fundingAmount} < ₦1,000 minimum`);
+        return;
+      }
+      bonus = this.config.referrerBonus; // ₦100
       description = 'First-funding Referral Bonus';
     }
 
