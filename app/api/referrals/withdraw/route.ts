@@ -40,23 +40,25 @@ export const POST = apiHandler(async (request: Request) => {
   const user = await getAuthenticatedUser(request)
   const data = (await validateRequestBody(request, withdrawalSchema)) as WithdrawalBody
 
-  // Cashout is only allowed on the 28th of each month
   const today = new Date()
-  if (today.getDate() !== 28) {
-    const nextCashout = new Date(
-      today.getFullYear(),
-      today.getMonth() + (today.getDate() < 28 ? 0 : 1),
-      28,
-    )
-    const formatted = nextCashout.toLocaleDateString('en-NG', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-    throw new BadRequestError(
-      `Withdrawals are only available on the 28th of each month. Next withdrawal date: ${formatted}`,
-    )
-  }
+
+  // Cashout is only allowed on the 28th of each month
+  // TODO: re-enable after testing
+  // if (today.getDate() !== 28) {
+  //   const nextCashout = new Date(
+  //     today.getFullYear(),
+  //     today.getMonth() + (today.getDate() < 28 ? 0 : 1),
+  //     28,
+  //   )
+  //   const formatted = nextCashout.toLocaleDateString('en-NG', {
+  //     day: 'numeric',
+  //     month: 'long',
+  //     year: 'numeric',
+  //   })
+  //   throw new BadRequestError(
+  //     `Withdrawals are only available on the 28th of each month. Next withdrawal date: ${formatted}`,
+  //   )
+  // }
 
   // Prevent duplicate pending requests in the same month
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)

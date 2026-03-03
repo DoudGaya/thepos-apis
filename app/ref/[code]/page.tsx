@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 
 interface Props {
-  params: { code: string }
+  params: Promise<{ code: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const referrer = await getReferrer(params.code)
+  const { code } = await params
+  const referrer = await getReferrer(code)
   const name = referrer ? `${referrer.firstName}'s` : 'a friend\'s'
   return {
     title: `You're invited! Join NillarPay via ${name} referral`,
@@ -25,7 +26,8 @@ async function getReferrer(code: string) {
 }
 
 export default async function ReferralLandingPage({ params }: Props) {
-  const code = params.code.toUpperCase()
+  const { code: rawCode } = await params
+  const code = rawCode.toUpperCase()
   const referrer = await getReferrer(code)
 
   if (!referrer) {
@@ -50,15 +52,18 @@ export default async function ReferralLandingPage({ params }: Props) {
           __html: `
             (function() {
               var deepLink = ${JSON.stringify(deepLink)};
-              var fallback  = ${JSON.stringify(playStoreUrl)};
-              var start = Date.now();
-              var timer = setTimeout(function() {
-                if (Date.now() - start < 2000) {
-                  // App not installed — do nothing, let user tap store buttons
-                }
-              }, 1500);
-              window.addEventListener('blur', function() { clearTimeout(timer); });
-              window.location.href = deepLink;
+              // Wait for the page to paint before attempting the deep link so
+              // users always see the landing page (some browsers navigate away
+              // on unknown URI schemes, showing a blank page otherwise).
+              setTimeout(function() {
+                var iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                setTimeout(function() {
+                  document.body.removeChild(iframe);
+                }, 2000);
+              }, 500);
             })();
           `,
         }}
