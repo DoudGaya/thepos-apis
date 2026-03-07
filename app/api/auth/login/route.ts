@@ -104,8 +104,17 @@ export async function POST(request: NextRequest) {
     const accessToken = generateToken({ userId: user.id, role: user.role })
     const refreshToken = generateToken({ userId: user.id, role: user.role }, '7d')
 
-    // Return user data without password
-    const { passwordHash, ...userWithoutPassword } = user
+    // Determine which onboarding steps are still incomplete
+    const requiresPinSetup = !user.pinHash
+    const requiresNameSetup = !user.firstName || !user.lastName
+
+    // Return user data without sensitive hashes
+    const { passwordHash, pinHash, ...userWithoutSecrets } = user
+    const safeUser = {
+      ...userWithoutSecrets,
+      hasPinSet: !requiresPinSetup,
+      hasNames: !requiresNameSetup,
+    }
 
     return NextResponse.json({
       message: 'Login successful',
@@ -113,7 +122,9 @@ export async function POST(request: NextRequest) {
       token: accessToken,
       accessToken,
       refreshToken,
-      user: userWithoutPassword,
+      requiresPinSetup,
+      requiresNameSetup,
+      user: safeUser,
     })
   } catch (error) {
     console.error('Login error:', error)
