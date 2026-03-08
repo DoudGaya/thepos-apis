@@ -5,14 +5,14 @@
  * No sensitive user data is exposed.
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
-  _request: Request,
-  { params }: { params: { code: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
 ) {
-  const { code } = params
+  const { code } = await params
 
   if (!code || typeof code !== 'string') {
     return NextResponse.json({ error: 'Invalid referral code' }, { status: 400 })

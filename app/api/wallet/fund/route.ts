@@ -113,15 +113,27 @@ export const POST = apiHandler(async (request: Request) => {
         });
       }
 
-      // Fallback: Web Flow (Extract payment URL)
-      const paymentUrl = paymentResponse.data?.nextAction?.redirectUrl || paymentResponse.data?.cashierUrl;
+      // Separate deep-link (OPay app invoke) from web cashier fallback.
+      // When evokeOpay=true and OPay app is installed, nextAction.actionType
+      // is 'OPAY_AP_INVOKE' with an opay:// scheme URL in redirectUrl.
+      const nextAction = paymentResponse.data?.nextAction;
+      const isAppInvoke =
+        nextAction?.actionType === 'OPAY_AP_INVOKE' ||
+        (nextAction?.redirectUrl && !nextAction.redirectUrl.startsWith('http'));
 
-      if (!paymentUrl) {
+      const opayDeepLink: string | null = isAppInvoke
+        ? (nextAction?.redirectUrl ?? null)
+        : null;
+      const cashierUrl: string | null =
+        paymentResponse.data?.cashierUrl ??
+        (!isAppInvoke ? (nextAction?.redirectUrl ?? null) : null);
+
+      if (!opayDeepLink && !cashierUrl) {
         console.error('❌ [Fund] OPay response missing payment URL/params:', paymentResponse);
         throw new Error('OPay did not return a valid payment configuration');
       }
 
-      console.log('✅ [Fund] OPay payment URL:', paymentUrl);
+      console.log('✅ [Fund] OPay URLs — deepLink:', opayDeepLink, 'cashier:', cashierUrl);
 
       // Update transaction with OPay details
       await prisma.transaction.update({
@@ -138,8 +150,10 @@ export const POST = apiHandler(async (request: Request) => {
       return NextResponse.json({
         success: true,
         data: {
-          authorizationUrl: paymentUrl,
-          reference: paymentResponse.data.reference,
+          opayDeepLink,                     // opay:// — open OPay app directly (null if not available)
+          cashierUrl,                       // https:// — web checkout fallback
+          authorizationUrl: cashierUrl,     // backward-compat alias
+          reference: paymentResponse.data.reference || reference,
           publicKey: process.env.OPAY_PUBLIC_KEY,
           transaction: {
             id: transaction.id,

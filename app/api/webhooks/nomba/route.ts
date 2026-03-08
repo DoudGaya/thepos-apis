@@ -14,62 +14,83 @@ export async function POST(request: NextRequest) {
 
         console.log(`Nomba webhook received: ${event}`, data);
 
-        if (event === 'order.payment.successful' || event === 'payment.successful') {
-            // Adjust event name based on actual Nomba webhook documentation if different
-            // The prompt doesn't specify the exact webhook event name for success, assuming standard naming.
-            // We will assume data contains orderReference.
-
+        if (event === 'order.payment.successful' || event === 'payment.successful' || event === 'checkout.order.payment.successful') {
+            // Support various webhook payload shapes from Nomba
+            // - data.orderReference  → our local reference (e.g. "FUNDMMGNVKCG479WO6T")
+            // - data.reference       → fallback
+            // - data.orderId         → Nomba's UUID (fallback, matched via details.nombaOrderReference)
             const reference = data.orderReference || data.reference;
+            const nombaOrderId = data.orderId;
             const amount = data.amount;
 
-            if (!reference) {
+            if (!reference && !nombaOrderId) {
                 console.error('Nomba webhook missing reference');
                 return NextResponse.json({ message: 'Invalid payload' }, { status: 400 });
             }
 
-            const transaction = await prisma.transaction.findFirst({
-                where: { reference },
-            });
+            let transaction = reference
+                ? await prisma.transaction.findFirst({ where: { reference } })
+                : null;
+
+            // Fallback: look up by Nomba's orderId stored in transaction details
+            if (!transaction && nombaOrderId) {
+                transaction = await prisma.transaction.findFirst({
+                    where: {
+                        details: {
+                            path: ['nombaOrderReference'],
+                            equals: nombaOrderId,
+                        },
+                    },
+                });
+            }
 
             if (!transaction) {
-                console.log(`Transaction not found: ${reference}`);
+                console.log(`Nomba webhook: Transaction not found for reference=${reference} orderId=${nombaOrderId}`);
                 return NextResponse.json({ message: 'Transaction not found' }, { status: 404 });
             }
 
-            if (transaction.status === 'COMPLETED') {
-                console.log(`Transaction already completed: ${reference}`);
+            // Atomic: only proceed if status is still PENDING — prevents double-credit
+            // when the webhook fires at the same time as the verify endpoint poll.
+            const creditAmount = amount ? parseFloat(amount) : transaction.amount;
+
+            const webhookResult = await prisma.$transaction(async (tx) => {
+                const updated = await tx.transaction.updateMany({
+                    where: { id: transaction.id, status: 'PENDING' },
+                    data: { status: 'COMPLETED' },
+                });
+
+                if (updated.count === 0) {
+                    return { credited: false };
+                }
+
+                await tx.transaction.update({
+                    where: { id: transaction.id },
+                    data: {
+                        details: {
+                            ...(transaction.details as object || {}),
+                            nombaWebhook: {
+                                event,
+                                data,
+                                processed_at: new Date().toISOString(),
+                            },
+                        },
+                    },
+                });
+
+                await tx.user.update({
+                    where: { id: transaction.userId },
+                    data: { credits: { increment: creditAmount } },
+                });
+
+                return { credited: true };
+            });
+
+            if (!webhookResult.credited) {
+                console.log(`Nomba webhook: Transaction already completed (concurrent): ${transaction.reference}`);
                 return NextResponse.json({ message: 'Already processed' });
             }
 
-            // Update transaction status
-            await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: {
-                    status: 'COMPLETED',
-                    details: {
-                        ...(transaction.details as object || {}),
-                        nombaWebhook: {
-                            event,
-                            data,
-                            processed_at: new Date().toISOString(),
-                        }
-                    },
-                },
-            });
-
-            // Credit User Wallet
-            // Ensure amount is in correct unit. Nomba docs say "10000.00" so likely Naira.
-            // Prisma expects Float/Decimal.
-            await prisma.user.update({
-                where: { id: transaction.userId },
-                data: {
-                    credits: {
-                        increment: parseFloat(amount),
-                    },
-                },
-            });
-
-            console.log(`Wallet funding completed via Nomba webhook for user ${transaction.userId}: ₦${amount}`);
+            console.log(`Wallet funding completed via Nomba webhook for user ${transaction.userId}: ₦${creditAmount} (ref=${transaction.reference})`);
             return NextResponse.json({ message: 'Webhook processed successfully' });
         }
 

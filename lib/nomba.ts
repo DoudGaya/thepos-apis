@@ -79,7 +79,8 @@ class NombaService {
                     headers: { 
                         'Content-Type': 'application/json',
                         'accountId': this.config.accountId
-                    }
+                    },
+                    timeout: 10000, // 10s
                 }
             );
 
@@ -143,7 +144,7 @@ class NombaService {
             const response: AxiosResponse<InitializeTransactionResponse> = await axios.post(
                 `${this.config.baseURL}/v1/checkout/order`,
                 payload,
-                { headers }
+                { headers, timeout: 15000 } // 15s
             );
 
             console.log('[NOMBA] Initialize response:', JSON.stringify(response.data, null, 2));
@@ -156,6 +157,25 @@ class NombaService {
         } catch (error: any) {
             console.error('Nomba initialize transaction error:', error.response?.data || error.message);
             throw new Error(error.response?.data?.description || error.message || 'Failed to initialize payment');
+        }
+    }
+
+    /**
+     * Verify an order status by its orderReference
+     * Calls GET /v1/checkout/order/{orderReference}
+     */
+    async verifyOrder(orderReference: string): Promise<any> {
+        try {
+            const headers = await this.getHeaders();
+            const response = await axios.get(
+                `${this.config.baseURL}/v1/checkout/order/${orderReference}`,
+                { headers, timeout: 8000 } // 8s — fail fast so DB connections aren't held
+            );
+            console.log('[NOMBA] Verify order response:', JSON.stringify(response.data, null, 2));
+            return response.data;
+        } catch (error: any) {
+            console.error('Nomba verify order error:', error.response?.data || error.message);
+            throw new Error(error.response?.data?.description || error.message || 'Failed to verify Nomba order');
         }
     }
 

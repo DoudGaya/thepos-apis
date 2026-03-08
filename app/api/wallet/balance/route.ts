@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
           network: true,
           recipient: true,
           vendorName: true,
+          reference: true,
         },
       }),
       // @ts-ignore
