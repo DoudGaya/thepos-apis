@@ -19,7 +19,7 @@ export const DELETE = apiHandler(async (request: Request) => {
   const pendingTx = await prisma.transaction.count({
     where: {
       userId: user.id,
-      status: { in: ['PENDING', 'PROCESSING'] },
+      status: 'PENDING',
     },
   })
 
