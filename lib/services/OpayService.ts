@@ -208,9 +208,9 @@ class OpayService {
         };
 
         try {
-            // For cashier/create, the documentation and PHP example specify using "Bearer {PublicKey}"
-            // NOT the HMAC signature (which is for status/query).
-            const authHeader = `Bearer ${this.publicKey}`;
+            // OPay cashier/create requires HMAC-SHA512 of the request body signed with the secret key,
+            // same as all other OPay server-to-server calls.  Using the raw public key causes 403.
+            const authHeader = this.generateAuthHeader(payload);
             const endpoint = '/api/v1/international/cashier/create';
 
             logger.debug('[OPay] Sending request to:', this.baseUrl + endpoint);
@@ -242,12 +242,15 @@ class OpayService {
                 throw new Error(response.data.message || 'OPay initialization failed');
             }
         } catch (error: any) {
-            logger.error('[OPay] HTTP Request failed', error);
-            throw new Error(`OPay initialization failed: ${error.message}`);
+            logger.error('[OPay] HTTP Request failed', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message,
+            });
+            const detail = error.response?.data?.message || error.response?.data || error.message;
+            throw new Error(`OPay initialization failed: ${detail}`);
         }
     }
-
-
     /**
      * Verify OPay payment
      * Query cashier status endpoint
