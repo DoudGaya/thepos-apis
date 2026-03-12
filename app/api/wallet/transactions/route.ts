@@ -191,7 +191,7 @@ function getTransactionDescription(transaction: any): string {
 function getRecipient(transaction: any): string | undefined {
   const details = transaction.details || {};
   const metadata = details.metadata || {};
-  return details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
+  return transaction.recipient || details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
 }
 
 function getNetwork(transaction: any): string | undefined {

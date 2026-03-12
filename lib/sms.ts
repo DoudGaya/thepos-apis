@@ -38,8 +38,8 @@ class SMSService {
 
   constructor() {
     // Initialize Termii
-    this.apiKey = process.env.TERMII_API_KEY || 'TLPKjucDosWbPhSjyoUlxSQSclkPPEiyFzJmdOfaLCUFLtywTdWObsYBAMaiwg';
-    this.senderId = process.env.TERMII_SENDER_ID || 'CCSA';
+    this.apiKey = process.env.TERMII_API_KEY || '';
+    this.senderId = process.env.TERMII_SENDER_ID || 'NillarPay';
     this.baseUrl = process.env.TERMII_BASE_URL || 'https://v3.api.termii.com';
 
     // Initialize Sendchamp
@@ -76,7 +76,7 @@ class SMSService {
     if (this.apiKey) {
       try {
         console.log('🔄 Testing Termii connection...');
-        await axios.get(`${this.baseUrl}/api/get-balance?api_key=${this.apiKey}`, { timeout: 10000 });
+        await axios.get(`${this.baseUrl}/api/get-balance?api_key=${this.apiKey}`, { timeout: 5000 });
         console.log('✅ Termii connection successful');
         termiiOk = true;
       } catch (error: any) {
@@ -94,7 +94,7 @@ class SMSService {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           },
-          timeout: 10000
+          timeout: 5000
         });
         console.log('✅ Sendchamp connection successful');
         sendchampOk = true;
@@ -120,7 +120,7 @@ class SMSService {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      timeout: 15000
+      timeout: 5000
     });
 
     return response.data;
@@ -144,7 +144,7 @@ class SMSService {
 
         const response = await axios.post(`${this.baseUrl}/api/sms/send`, payload, {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 15000
+          timeout: 5000
         });
 
         console.log('✅ SMS sent successfully via Termii');

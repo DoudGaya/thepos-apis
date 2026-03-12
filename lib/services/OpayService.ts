@@ -75,7 +75,7 @@ class OpayService {
         this.publicKey = process.env.OPAY_PUBLIC_KEY || '';
         this.secretKey = process.env.OPAY_SECRET_KEY || '';
         this.merchantId = process.env.OPAY_MERCHANT_ID || '';
-        this.baseUrl = process.env.OPAY_BASE_URL || 'https://api.opaycheckout.com';
+        this.baseUrl = process.env.OPAY_BASE_URL || 'https://api.ng.opaycheckout.com';
 
         // Production-safe logging - only log configuration status
         logger.info('[OPay] Service initialized', {
@@ -143,7 +143,7 @@ class OpayService {
             const authHeader = this.generateAuthHeader(payload);
 
             const response = await this.client.post<OpayPaymentResponse>(
-                '/api/v1/international/cashier/create',
+                '/api/v1/cashier/create',
                 payload,
                 {
                     headers: {
@@ -211,7 +211,7 @@ class OpayService {
             // OPay cashier/create requires HMAC-SHA512 of the request body signed with the secret key,
             // same as all other OPay server-to-server calls.  Using the raw public key causes 403.
             const authHeader = this.generateAuthHeader(payload);
-            const endpoint = '/api/v1/international/cashier/create';
+            const endpoint = '/api/v1/cashier/create';
 
             logger.debug('[OPay] Sending request to:', this.baseUrl + endpoint);
 
@@ -269,7 +269,7 @@ class OpayService {
             const authHeader = this.generateAuthHeader(payload);
 
             const response = await this.client.post<OpayVerificationResponse>(
-                '/api/v1/international/cashier/status',
+                '/api/v1/cashier/status',
                 payload,
                 {
                     headers: {

@@ -1,125 +1,30 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-interface EmailOptions {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.EMAIL_FROM || 'noreply@nillar.com';
+
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<boolean> {
+  try {
+    console.log(`📧 Sending email to: ${to} | Subject: ${subject}`);
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html, text });
+    if (error) {
+      console.error('❌ Email sending failed:', error);
+      return false;
+    }
+    console.log('✅ Email sent successfully');
+    return true;
+  } catch (err: any) {
+    console.error('❌ Email sending failed:', err?.message ?? err);
+    return false;
+  }
 }
 
 class EmailService {
-  private transporter?: nodemailer.Transporter;
-  private _usingTestAccount = false;
-  private _testAccount: any = null;
-
-  constructor() {
-    // Support both Gmail service and custom SMTP servers
-    const smtpConfig: any = {
-      tls: {
-        rejectUnauthorized: false
-      }
-    };
-
-    // Check if using custom SMTP server
-    if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
-      if (process.env.SMTP_HOST === 'smtp.gmail.com') {
-        // Special handling for Gmail to avoid timeout issues
-        console.log('📧 Email service using Gmail (service preset) for robust connection');
-        this.transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-          tls: {
-            rejectUnauthorized: false
-          }
-        });
-      } else {
-        // Standard SMTP configuration
-        smtpConfig.host = process.env.SMTP_HOST;
-        smtpConfig.port = parseInt(process.env.SMTP_PORT);
-        smtpConfig.secure = process.env.SMTP_PORT === '465'; // true for 465, false for other ports
-        smtpConfig.auth = {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        };
-        console.log(`📧 Email service using SMTP server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
-        this.transporter = nodemailer.createTransport(smtpConfig);
-      }
-    } else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      // Try using Gmail or configured provider via 'service' when explicit host/port not provided
-      smtpConfig.service = 'gmail';
-      smtpConfig.auth = {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      };
-      console.log('📧 Email service using Gmail (service) with provided SMTP_USER');
-      this.transporter = nodemailer.createTransport(smtpConfig);
-    } else {
-      // No SMTP configured — create a test account using Ethereal for development
-      console.log('📧 No SMTP configuration found — creating Ethereal test account for development');
-      // createTestAccount is async; set transporter once created
-      nodemailer.createTestAccount()
-        .then((testAccount) => {
-          this._testAccount = testAccount
-          this._usingTestAccount = true
-          this.transporter = nodemailer.createTransport({
-            host: testAccount.smtp.host,
-            port: testAccount.smtp.port,
-            secure: testAccount.smtp.secure,
-            auth: {
-              user: testAccount.user,
-              pass: testAccount.pass,
-            },
-          })
-          console.log(`📧 Ethereal test account created — user: ${testAccount.user}`)
-        })
-        .catch((err) => {
-          console.error('❌ Failed to create Ethereal test account:', err)
-          // As a last resort, create a no-op transporter that throws on send
-          this.transporter = nodemailer.createTransport({ jsonTransport: true })
-        })
-    }
-  }
-
-  async sendEmail({ to, subject, text, html }: EmailOptions): Promise<boolean> {
-    try {
-      console.log(`📧 Attempting to send email to: ${to}`);
-      console.log(`📧 Subject: ${subject}`);
-
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || process.env.SMTP_USER,
-        to,
-        subject,
-        text,
-        html: html || text,
-      };
-
-      if (!this.transporter) {
-        console.error('❌ No mail transporter configured')
-        return false
-      }
-
-      const result = await this.transporter.sendMail(mailOptions as any);
-      console.log('✅ Email sent successfully:', result?.messageId || '(no messageId)');
-
-      // If using Ethereal test account, print preview URL
-      try {
-        if (this._usingTestAccount) {
-          const preview = nodemailer.getTestMessageUrl(result)
-          if (preview) console.log('📧 Preview URL:', preview)
-        }
-      } catch (err) {
-        // ignore preview errors
-      }
-
-      return true;
-    } catch (error: any) {
-      console.error('❌ Email sending failed:', error && error.stack ? error.stack : error)
-      return false;
-    }
-  }
 
   async sendPasswordResetOTP(email: string, otp: string): Promise<boolean> {
     const subject = 'Password Reset Code - Nillar Pay';
@@ -177,12 +82,7 @@ class EmailService {
       </html>
     `;
 
-    return await this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text: `Your Nillar Pay password reset code is: ${otp}. This code expires in 10 minutes.`
-    });
+    return sendEmail(email, subject, html, `Your Nillar Pay password reset code is: ${otp}. This code expires in 10 minutes.`);
   }
 
   async sendOTP(email: string, otp: string): Promise<boolean> {
@@ -241,27 +141,20 @@ class EmailService {
       </html>
     `;
 
-    return await this.sendEmail({
-      to: email,
-      subject,
-      html,
-      text: `Your Nillar Pay verification code is: ${otp}. This code expires in 10 minutes.`
-    });
+    return sendEmail(email, subject, html, `Your Nillar Pay verification code is: ${otp}. This code expires in 10 minutes.`);
+  }
+
+  async sendEmail({ to, subject, html, text }: { to: string; subject: string; html: string; text: string }): Promise<boolean> {
+    return sendEmail(to, subject, html, text);
   }
 
   async testConnection(): Promise<boolean> {
-    try {
-      if (!this.transporter) {
-        console.warn('⚠️ testConnection: no transporter configured')
-        return false
-      }
-      await this.transporter.verify();
-      console.log('✅ Email service connection verified');
-      return true;
-    } catch (error: any) {
-      console.error('❌ Email service connection failed:', error.message);
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('⚠️ RESEND_API_KEY is not set');
       return false;
     }
+    console.log('✅ Resend email service configured');
+    return true;
   }
 }
 

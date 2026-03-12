@@ -177,14 +177,14 @@ export async function POST(request: NextRequest) {
       expiresAt: otp.expiresAt,
     })
 
-    // Send OTP via SMS
+    // Send OTP via SMS — hard 8-second deadline so the route always responds promptly
+    const smsDeadline = new Promise<void>((resolve) => setTimeout(resolve, 8000))
     try {
       const smsPhone = smsService.formatPhoneForSMS(formattedPhone)
-      const typeLabel = parsed.type === 'REGISTER' ? 'registration' : 
-                        parsed.type === 'LOGIN' ? 'login' : 
-                        parsed.type === 'SOCIAL_ONBOARDING' ? 'account verification' : 'password reset'
-      const message = `Your ${typeLabel} OTP is: ${otpCode}. Valid for 10 minutes. Do not share this code.`
-      await smsService.sendOTP(smsPhone, otpCode)
+      await Promise.race([
+        smsService.sendOTP(smsPhone, otpCode),
+        smsDeadline,
+      ])
       console.log(`📱 SMS sent successfully to ${formattedPhone}`)
     } catch (smsError) {
       console.error('❌ Failed to send SMS:', smsError)
@@ -192,16 +192,11 @@ export async function POST(request: NextRequest) {
       // Continue - SMS is not critical for backend flow
     }
 
-    // Send OTP via Email if provided
+    // Send OTP via Email if provided — non-blocking
     if (parsed.email) {
-      try {
-        await emailService.sendOTP(parsed.email, otpCode)
-        console.log(`📧 Email sent successfully to ${parsed.email}`)
-      } catch (emailError) {
-        console.error('❌ Failed to send email:', emailError)
-        console.log(`💡 Use this OTP for testing: ${otpCode}`)
-        // Continue - Email is not critical for backend flow
-      }
+      emailService.sendOTP(parsed.email, otpCode)
+        .then(() => console.log(`📧 Email sent successfully to ${parsed.email}`))
+        .catch((emailError: any) => console.error('❌ Failed to send email:', emailError))
     }
 
     return NextResponse.json({

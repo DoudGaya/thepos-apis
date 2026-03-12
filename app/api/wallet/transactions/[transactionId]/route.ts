@@ -69,13 +69,13 @@ function transformTransaction(transaction: any) {
     timeline: buildTimeline(transaction),
     // Populate customerInfo for frontend compatibility
     customerInfo: {
-      phone: details.phoneNumber || details.recipient || (details.metadata && (details.metadata.phoneNumber || details.metadata.recipient)),
-      meterNumber: details.meterNumber || (details.metadata && details.metadata.meterNumber),
+      phone: details.phoneNumber || details.recipient || (details.metadata && (details.metadata.phoneNumber || details.metadata.recipient)) || transaction.recipient,
+      meterNumber: details.meterNumber || (details.metadata && details.metadata.meterNumber) || transaction.recipient,
       name: details.customerName || details.accountName || (details.metadata && (details.metadata.customerName || details.metadata.accountName)),
       address: details.customerAddress || (details.metadata && details.metadata.customerAddress),
       token: details.token || (details.metadata && details.metadata.token),
       packageName: details.plan || details.planName || details.planCode || (details.metadata && (details.metadata.planCode || details.metadata.planName)),
-      smartCardNumber: details.smartCardNumber || (details.metadata && details.metadata.smartCardNumber),
+      smartCardNumber: details.smartCardNumber || (details.metadata && details.metadata.smartCardNumber) || transaction.recipient,
     },
   };
 }
@@ -156,7 +156,7 @@ function getTransactionDescription(transaction: any): string {
 function getRecipient(transaction: any): string | undefined {
   const details = transaction.details || {};
   const metadata = details.metadata || {};
-  return details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
+  return transaction.recipient || details.recipient || details.phoneNumber || details.accountNumber || metadata.phoneNumber || metadata.recipient;
 }
 
 function getNetwork(transaction: any): string | undefined {
