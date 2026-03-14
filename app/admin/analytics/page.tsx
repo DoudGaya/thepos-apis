@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import { PageLoader } from '@/app/admin/_components/page-loader'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 
 interface SalesData {
@@ -131,13 +132,7 @@ export default function AdminAnalyticsPage() {
     return dateStr
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading analytics data...</div>
-      </div>
-    )
-  }
+  if (loading) return <PageLoader />
 
   return (
     <div className="space-y-6">

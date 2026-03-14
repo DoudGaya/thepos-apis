@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import opayService from '@/lib/services/OpayService';
+import { referralService } from '@/lib/services/ReferralService';
 
 export async function POST(request: NextRequest) {
     console.log('🔔 [OPay Webhook] Received callback');
@@ -134,6 +135,10 @@ export async function POST(request: NextRequest) {
                 userId: transaction.userId,
                 amount: amountInNaira,
             });
+
+            // Fire referral first-funding bonus (fire-and-forget)
+            referralService.processFirstFundingBonus(transaction.userId, amountInNaira)
+              .catch((e: any) => console.error('[Referral] OPay first-funding bonus error:', e.message));
 
             return NextResponse.json({
                 success: true,

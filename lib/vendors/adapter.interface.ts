@@ -5,7 +5,7 @@ export type VendorName = 'AMIGO' | 'VTPASS' | 'SUBANDGAIN' | 'EBILLS' | 'MONNIFY
 
 export type ServiceType = 'AIRTIME' | 'DATA' | 'ELECTRICITY' | 'CABLE' | 'CABLE_TV' | 'BETTING' | 'EPINS' | 'EDUCATION' | 'OTHER'
 
-export type NetworkType = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE' | 'SMILE' | 'SPECTRANET' | 'WAEC' | 'JAMB' | 'DSTV' | 'GOTV' | 'STARTIMES' | 'SHOWMAX' | 'OTHERS'
+export type NetworkType = 'MTN' | 'GLO' | 'AIRTEL' | '9MOBILE' | 'SMILE' | 'SPECTRANET' | 'WAEC' | 'WAEC_REG' | 'JAMB' | 'NECO' | 'DSTV' | 'GOTV' | 'STARTIMES' | 'SHOWMAX' | 'OTHERS'
 
 export type VendorTransactionStatus =
   | 'PROCESSING'    // Vendor is processing

@@ -1,7 +1,7 @@
 import '@/app/globals.css'
 import type { Metadata } from 'next'
-// import { Inter } from 'next/font/google'
 import { SessionProvider } from '@/app/components/SessionProvider'
+import { ThemeProvider } from 'next-themes'
 
 // const inter = Inter({ subsets: ['latin'] })
 const inter = { className: 'font-sans' }
@@ -53,10 +53,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-white dark:bg-black`} suppressHydrationWarning>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+      <body className={inter.className} suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <SessionProvider>
+            {children}
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

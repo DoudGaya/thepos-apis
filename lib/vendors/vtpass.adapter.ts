@@ -291,6 +291,19 @@ export class VTPassAdapter implements VendorAdapter {
       }
       // Only default if still undefined
       if (!serviceID) serviceID = 'dstv'
+    } else if (service === 'EDUCATION') {
+      if (network) {
+        // WAEC → 'waec', WAEC_REG → 'waec-registration', JAMB → 'jamb', NECO → 'neco' (not on VTPass, returns [])
+        const eduMap: Record<string, string> = {
+          WAEC:     'waec',
+          WAEC_REG: 'waec-registration',
+          JAMB:     'jamb',
+          NECO:     'neco',
+        }
+        serviceID = eduMap[network.toUpperCase()] ?? 'waec'
+      } else {
+        serviceID = 'waec'
+      }
     }
 
     if (!serviceID) {
@@ -307,8 +320,8 @@ export class VTPassAdapter implements VendorAdapter {
       )
 
       const data = response.data
-      if (data.response_description !== '000') {
-        console.warn(`[VTPass] getPlans failed for ${serviceID}: ${JSON.stringify(data)}`)
+      if (!VTPASS_SUCCESS_CODES.includes(data.response_description)) {
+        console.warn(`[VTPass] getPlans non-success for ${serviceID} (code: ${data.response_description}): ${JSON.stringify(data)}`)
         return []
       }
 

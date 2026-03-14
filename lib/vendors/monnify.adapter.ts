@@ -63,8 +63,10 @@ const NETWORK_KEYWORDS: Record<string, string[]> = {
   GOTV:       ['gotv', 'go tv'],
   STARTIMES:  ['startimes', 'star times'],
   SHOWMAX:    ['showmax'],
-  WAEC:       ['waec', 'west african'],
+  WAEC:       ['waec', 'west african', 'wassce'],
+  WAEC_REG:   ['waec registration', 'waec reg'],
   JAMB:       ['jamb', 'utme'],
+  NECO:       ['neco', 'national examinations', 'national exam council'],
   // DISCOs
   IKEJA:      ['ikeja', 'ikedc'],
   EKO:        ['eko', 'ekedc'],

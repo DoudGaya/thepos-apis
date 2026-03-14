@@ -19,7 +19,8 @@ import {
   ChevronsUpDown,
   BadgeCheck,
   Target,
-  Gift, // Added
+  Gift,
+  Trash2,
 } from "lucide-react"
 
 import {
@@ -56,6 +57,7 @@ const navigation = [
   { name: 'Sales Targets', href: '/admin/targets', icon: Target, permission: PERMISSIONS.TARGETS_VIEW },
   { name: 'Referral System', href: '/admin/referrals', icon: Gift, permission: PERMISSIONS.REFERRALS_VIEW },
   { name: 'Push Notifications', href: '/admin/notifications', icon: Bell, permission: PERMISSIONS.NOTIFICATIONS_SEND },
+  { name: 'Deletion Requests', href: '/admin/deletion-requests', icon: Trash2, permission: PERMISSIONS.USERS_DELETE },
   { name: 'Settings', href: '/admin/settings', icon: Settings, permission: PERMISSIONS.SETTINGS_MANAGE },
 ]
 

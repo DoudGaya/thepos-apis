@@ -1,7 +1,7 @@
 /**
  * POST /api/user/delete-request
  * Public (unauthenticated) endpoint — accepts account deletion requests submitted via the web form.
- * Sends an internal notification email to the support team.
+ * Persists the request to the database and sends an internal notification email to the support team.
  */
 
 import { NextResponse } from 'next/server'
@@ -33,7 +33,19 @@ export async function POST(request: Request) {
         ],
       },
       select: { id: true, email: true, firstName: true, lastName: true },
-    }).catch(() => null) // never fail the request on DB error
+    }).catch(() => null)
+
+    // Persist the deletion request to the database
+    await prisma.deletionRequest.create({
+      data: {
+        identifier: clean,
+        reason: reason?.trim() || null,
+        userId: user?.id || null,
+        status: 'PENDING',
+      },
+    }).catch((err) => {
+      logger.error('Failed to persist deletion request:', err)
+    })
 
     // Notify the support team
     const adminEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER
@@ -49,8 +61,8 @@ export async function POST(request: Request) {
           <p><strong>Submitted at:</strong> ${new Date().toISOString()}</p>
           <hr />
           <p style="font-size:12px;color:#666">
-            Please process this deletion request within 30 days. 
-            If a wallet balance exists, follow the refund procedure before deletion.
+            Please process this deletion request within 30 days.
+            Review it at: <a href="${process.env.NEXTAUTH_URL || ''}/admin/deletion-requests">Admin Panel</a>
           </p>
         `,
         text: `Account Deletion Request\n\nIdentifier: ${clean}\n${user ? `Matched user: ${user.firstName} ${user.lastName} (ID: ${user.id})` : 'No matching account found.'}\n${reason ? `Reason: ${reason.trim()}\n` : ''}Submitted at: ${new Date().toISOString()}`,
@@ -81,12 +93,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Your deletion request has been submitted. You will be contacted within 30 days.',
+      message: 'Your deletion request has been received and will be processed within 30 days.',
     })
   } catch (err) {
-    logger.error('DELETE REQUEST error:', err)
+    logger.error('Deletion request error:', err)
     return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred. Please try again later.' },
+      { success: false, error: 'Something went wrong. Please try again.' },
       { status: 500 }
     )
   }

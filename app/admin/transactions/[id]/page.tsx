@@ -2,19 +2,33 @@
 
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { PageLoader } from '@/app/admin/_components/page-loader'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 interface TransactionDetail {
   id: string
   reference: string
   type: string
   amount: number
+  costPrice: number
+  sellingPrice: number
+  profit: number
   status: string
   network: string | null
-  details: any
+  recipient: string | null
+  vendorName: string | null
+  vendorReference: string | null
+  vendorStatus: string | null
+  vendorCallAt: string | null
+  vendorResponseAt: string | null
   createdAt: string
   updatedAt: string
+  details: any
   user: {
     id: string
     firstName: string
@@ -22,276 +36,159 @@ interface TransactionDetail {
     email: string
     phone: string
   }
-  vendorConfig?: {
-    id: string
-    vendorName: string
-    isHealthy: boolean
-  }
 }
 
 export default function AdminTransactionDetailPage() {
   const params = useParams()
-  const transactionId = params.id as string
+  const txId = params.id as string
   const [transaction, setTransaction] = useState<TransactionDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (transactionId) {
-      fetchTransactionDetail()
-    }
-  }, [transactionId])
+  useEffect(() => { if (txId) fetchTransaction() }, [txId])
 
-  const fetchTransactionDetail = async () => {
+  const fetchTransaction = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const response = await fetch(`/api/admin/transactions/${transactionId}`)
-      const result = await response.json()
-
-      if (result.success) {
-        setTransaction(result.data)
+      const res = await fetch(`/api/admin/transactions/${txId}`)
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setError(data.error ?? 'Transaction not found')
+        return
       }
-    } catch (error) {
-      console.error('Failed to fetch transaction detail:', error)
+      setTransaction(data.data.transaction)
+    } catch (e: any) {
+      setError('Failed to load transaction')
     } finally {
       setLoading(false)
     }
   }
 
-  const updateTransactionStatus = async (newStatus: string) => {
-    if (!transaction) return
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(n)
 
-    setUpdating(true)
-    try {
-      const response = await fetch(`/api/admin/transactions/${transactionId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        setTransaction({ ...transaction, status: newStatus, updatedAt: new Date().toISOString() })
-        alert('Transaction status updated successfully')
-      } else {
-        alert('Failed to update transaction status')
-      }
-    } catch (error) {
-      console.error('Failed to update transaction:', error)
-      alert('Failed to update transaction status')
-    } finally {
-      setUpdating(false)
+  const StatusBadge = ({ status }: { status: string }) => {
+    const map: Record<string,string> = {
+      COMPLETED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+      PENDING:   'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+      FAILED:    'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     }
+    return <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${map[status] ?? 'bg-muted text-muted-foreground'}`}>{status}</span>
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount)
-  }
+  if (loading) return <PageLoader />
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading transaction details...</div>
-      </div>
-    )
-  }
+  if (error || !transaction) return (
+    <div className="space-y-4">
+      <Link href="/admin/transactions" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-3.5 w-3.5" />Back to Transactions
+      </Link>
+      <div className="text-destructive">{error ?? 'Transaction not found'}</div>
+    </div>
+  )
 
-  if (!transaction) {
-    return (
-      <div className="text-center text-red-500">
-        Transaction not found
-      </div>
-    )
-  }
+  const tx = transaction
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link
-            href="/admin/transactions"
-            className="text-blue-600 hover:text-blue-800 text-sm"
-          >
-            ← Back to Transactions
+          <Link href="/admin/transactions" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-1">
+            <ArrowLeft className="h-3.5 w-3.5" />Back to Transactions
           </Link>
-          <h1 className="text-2xl font-semibold">Transaction Details</h1>
-          <p className="text-sm text-gray-600">ID: {transaction.id}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{tx.reference || tx.id.slice(-12)}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">ID: {tx.id}</p>
         </div>
-        <div className="flex gap-2">
-          {transaction.status === 'PENDING' && (
-            <>
-              <button
-                onClick={() => updateTransactionStatus('COMPLETED')}
-                disabled={updating}
-                className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50"
-              >
-                {updating ? 'Updating...' : 'Mark Completed'}
-              </button>
-              <button
-                onClick={() => updateTransactionStatus('FAILED')}
-                disabled={updating}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {updating ? 'Updating...' : 'Mark Failed'}
-              </button>
-            </>
-          )}
-          {transaction.status === 'FAILED' && (
-            <button
-              onClick={() => updateTransactionStatus('PENDING')}
-              disabled={updating}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
-            >
-              {updating ? 'Updating...' : 'Retry Transaction'}
-            </button>
-          )}
+        <div className="flex items-center gap-3">
+          <StatusBadge status={tx.status} />
+          <Button variant="outline" size="sm" onClick={fetchTransaction}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh
+          </Button>
         </div>
       </div>
 
-      {/* Transaction Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Transaction Info</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Reference</label>
-              <p className="text-sm font-mono">{transaction.reference || transaction.id}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Type</label>
-              <p className="text-sm">{transaction.type}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Amount</label>
-              <p className="text-lg font-semibold">{formatCurrency(transaction.amount)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Status</label>
-              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                transaction.status === 'COMPLETED'
-                  ? 'bg-green-100 text-green-800'
-                  : transaction.status === 'PENDING'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : transaction.status === 'FAILED'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {transaction.status}
-              </span>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Network</label>
-              <p className="text-sm">{transaction.network || 'N/A'}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">User Information</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-600">Name</label>
-              <p className="text-sm">{transaction.user.firstName} {transaction.user.lastName}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Email</label>
-              <p className="text-sm">{transaction.user.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Phone</label>
-              <p className="text-sm">{transaction.user.phone}</p>
-            </div>
-            <div>
-              <Link
-                href={`/admin/users/${transaction.user.id}`}
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                View User Profile →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Vendor Information</h3>
-          {transaction.vendorConfig ? (
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-600">Vendor Name</label>
-                <p className="text-sm">{transaction.vendorConfig.vendorName}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Health Status</label>
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  transaction.vendorConfig.isHealthy
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {transaction.vendorConfig.isHealthy ? 'Healthy' : 'Unhealthy'}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No vendor information available</p>
-          )}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Amount',       value: formatCurrency(tx.amount) },
+          { label: 'Cost Price',   value: formatCurrency(tx.costPrice) },
+          { label: 'Selling Price',value: formatCurrency(tx.sellingPrice) },
+          { label: 'Profit',       value: formatCurrency(tx.profit) },
+        ].map(c => (
+          <Card key={c.label}>
+            <CardContent className="pt-4 pb-3 px-4">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{c.label}</p>
+              <p className="text-xl font-bold mt-1">{c.value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Transaction Details */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-medium mb-4">Transaction Details</h3>
-        {transaction.details ? (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-              {JSON.stringify(transaction.details, null, 2)}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Transaction Details</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {[
+              { label: 'Type',      value: tx.type },
+              { label: 'Network',   value: tx.network ?? '—' },
+              { label: 'Recipient', value: tx.recipient ?? '—' },
+              { label: 'Status',    value: tx.status },
+              { label: 'Created',   value: format(new Date(tx.createdAt), 'PPpp') },
+              { label: 'Updated',   value: format(new Date(tx.updatedAt), 'PPpp') },
+            ].map(f => (
+              <div key={f.label} className="flex items-start justify-between gap-4">
+                <span className="text-muted-foreground shrink-0">{f.label}</span>
+                <span className="text-right font-medium text-foreground">{f.value}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Vendor Information</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {[
+              { label: 'Vendor Name',  value: tx.vendorName ?? '—' },
+              { label: 'Vendor Ref',   value: tx.vendorReference ?? '—' },
+              { label: 'Vendor Status',value: tx.vendorStatus ?? '—' },
+              { label: 'Call Time',    value: tx.vendorCallAt ? format(new Date(tx.vendorCallAt), 'PPpp') : '—' },
+              { label: 'Response Time',value: tx.vendorResponseAt ? format(new Date(tx.vendorResponseAt), 'PPpp') : '—' },
+            ].map(f => (
+              <div key={f.label} className="flex items-start justify-between gap-4">
+                <span className="text-muted-foreground shrink-0">{f.label}</span>
+                <span className="text-right font-medium text-foreground">{f.value}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">User</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">{tx.user.firstName} {tx.user.lastName}</p>
+              <p className="text-sm text-muted-foreground">{tx.user.email}</p>
+              <p className="text-sm text-muted-foreground">{tx.user.phone}</p>
+            </div>
+            <Link href={`/admin/users/${tx.user.id}`}>
+              <Button variant="outline" size="sm">View User</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {tx.details && (
+        <Card>
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Transaction Payload</CardTitle></CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-muted/40 rounded-md p-4 overflow-x-auto text-muted-foreground max-h-64">
+              {JSON.stringify(tx.details, null, 2)}
             </pre>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">No additional details available</p>
-        )}
-      </div>
-
-      {/* Timeline */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-medium mb-4">Transaction Timeline</h3>
-        <div className="space-y-4">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Transaction Created</p>
-              <p className="text-sm text-gray-500">{format(new Date(transaction.createdAt), 'PPP p')}</p>
-            </div>
-          </div>
-
-          {transaction.updatedAt !== transaction.createdAt && (
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Last Updated</p>
-                <p className="text-sm text-gray-500">{format(new Date(transaction.updatedAt), 'PPP p')}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

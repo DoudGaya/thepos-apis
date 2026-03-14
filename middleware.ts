@@ -122,6 +122,7 @@ export async function middleware(request: NextRequest) {
       '/api/store/quick-checkout',
       '/api/auth/mobile-login',
       '/api/auth/set-password',
+      '/api/user/delete-request',
     ];
 
     // Specific NextAuth internal routes to allow

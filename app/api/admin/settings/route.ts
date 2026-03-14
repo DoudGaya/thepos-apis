@@ -151,6 +151,21 @@ export const GET = apiHandler(async (request: Request) => {
     },
   }
 
+  // Merge persisted payment gateway enabled/disabled overrides saved by PATCH handler
+  const paymentConfig = await prisma.appSetting.findUnique({ where: { key: 'payment_methods_config' } })
+  if (paymentConfig?.value && typeof paymentConfig.value === 'object') {
+    const saved = paymentConfig.value as Record<string, { enabled: boolean }>
+    if (saved.paystack !== undefined) settings.payment.paystack.enabled = saved.paystack.enabled
+    if (saved.opay !== undefined) settings.payment.opay.enabled = saved.opay.enabled
+    if (saved.nomba !== undefined) settings.payment.nomba.enabled = saved.nomba.enabled
+    if (saved.monnify_va !== undefined) settings.payment.monnify.enabled = saved.monnify_va.enabled
+  }
+
+  // Referral settings
+  const referralConfig = await prisma.appSetting.findUnique({ where: { key: 'referral_withdrawals_open' } })
+  const withdrawalsOpen = referralConfig?.value === true || referralConfig?.value === 'true'
+  const referral = { withdrawalsOpen, cashoutDay: 28 }
+
   // Get some dynamic stats from database
   const [totalUsers, activeUsers, totalTransactions] = await Promise.all([
     prisma.user.count(),
@@ -175,6 +190,7 @@ export const GET = apiHandler(async (request: Request) => {
 
   return successResponse({
     ...settings,
+    referral,
     stats: {
       totalUsers,
       activeUsers,
@@ -301,8 +317,12 @@ const notificationSettingsSchema = z.object({
  * Update settings for a specific category
  * Body: { category: 'general|payment|system|email|security|notifications', settings: {...} }
  */
+const referralSettingsSchema = z.object({
+  withdrawalsOpen: z.boolean().optional(),
+})
+
 const updateSettingsSchema = z.object({
-  category: z.enum(['general', 'payment', 'system', 'email', 'security', 'notifications']),
+  category: z.enum(['general', 'payment', 'system', 'email', 'security', 'notifications', 'referral']),
   // Pass settings through as-is; each category validates with its own schema in the switch block
   settings: z.record(z.unknown()),
 })
@@ -312,7 +332,7 @@ export const PATCH = apiHandler(async (request: Request) => {
 
   const body = await validateRequestBody(request, updateSettingsSchema)
   const { category, settings } = body as {
-    category: 'general' | 'payment' | 'system' | 'email' | 'security' | 'notifications'
+    category: 'general' | 'payment' | 'system' | 'email' | 'security' | 'notifications' | 'referral'
     settings: any
   }
 
@@ -336,6 +356,9 @@ export const PATCH = apiHandler(async (request: Request) => {
       break
     case 'notifications':
       validatedSettings = notificationSettingsSchema.parse(settings)
+      break
+    case 'referral':
+      validatedSettings = referralSettingsSchema.parse(settings)
       break
   }
 
@@ -380,6 +403,14 @@ export const PATCH = apiHandler(async (request: Request) => {
       update: {
         value: paymentMethodsConfig,
       },
+    })
+  }
+
+  if (category === 'referral') {
+    await prisma.appSetting.upsert({
+      where: { key: 'referral_withdrawals_open' },
+      create: { key: 'referral_withdrawals_open', value: validatedSettings.withdrawalsOpen ?? false, category: 'referral' },
+      update: { value: validatedSettings.withdrawalsOpen ?? false },
     })
   }
 

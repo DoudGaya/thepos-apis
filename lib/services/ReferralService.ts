@@ -60,13 +60,23 @@ export class ReferralService {
     let description = 'Transaction commission';
     let isPassive = false;
 
-    // Only award commission to referrers who belong to an active PassiveReferralGroup.
-    // Users in no group earn zero per-transaction commission.
+    // Passive group members earn a % of the transaction profit
     const passiveGroup = referrer.passiveReferralGroup;
     if (passiveGroup && passiveGroup.isActive && profit > 0) {
       commission = profit * (passiveGroup.commissionPercent / 100);
       description = `Passive commission from ${passiveGroup.name}`;
       isPassive = true;
+    } else {
+      // Non-group referrers earn a tiered AGENT_COMMISSION based on transaction amount
+      type = 'AGENT_COMMISSION';
+      if (amount < 1000) {
+        commission = 50;
+      } else if (amount <= 5000) {
+        commission = 75;
+      } else {
+        commission = 100;
+      }
+      description = 'Agent Commission';
     }
 
     if (commission < 1) return;
@@ -144,14 +154,22 @@ export class ReferralService {
       data: { hasFundedWallet: true },
     });
     
-    // Find active Fixed Referral Rules
-    const rules = await prisma.fixedReferralRule.findMany({
+    // Find active Fixed Referral Rules that match the funding amount
+    const rawRules = await prisma.fixedReferralRule.findMany({
       where: { 
         isActive: true,
         minFundingAmount: { lte: fundingAmount }
       },
       orderBy: { commissionValue: 'desc' }
     });
+
+    // Filter by audience — SPECIFIC rules only apply to targeted user IDs
+    const rules = rawRules.filter(rule =>
+      rule.audience === 'ALL' ||
+      (rule.audience === 'SPECIFIC' &&
+        Array.isArray(rule.specificUserIds) &&
+        (rule.specificUserIds as string[]).includes(userId))
+    );
 
     let bonus = 0;
     let description = '';

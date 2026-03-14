@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { PageLoader } from "@/app/admin/_components/page-loader"
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react"
 import { PERMISSIONS } from "@/lib/rbac"
 import { Button } from "@/components/ui/button"
@@ -156,7 +157,7 @@ export function RolesManagement() {
     }
   }
 
-  if (loading) return <div>Loading roles...</div>
+  if (loading) return <PageLoader />
 
   return (
     <div className="space-y-4">

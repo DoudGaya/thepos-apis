@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,6 +24,9 @@ export function AdminHeader({ title, breadcrumbs }: AdminHeaderProps) {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
+        <div className="ml-auto">
+          <ThemeToggle />
+        </div>
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <Breadcrumb>
             <BreadcrumbList>

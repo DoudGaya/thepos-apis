@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { referralService } from '@/lib/services/ReferralService';
 
 // Nomba webhook endpoint
 export async function POST(request: NextRequest) {
@@ -91,6 +92,11 @@ export async function POST(request: NextRequest) {
             }
 
             console.log(`Wallet funding completed via Nomba webhook for user ${transaction.userId}: ₦${creditAmount} (ref=${transaction.reference})`);
+
+            // Fire referral first-funding bonus (fire-and-forget)
+            referralService.processFirstFundingBonus(transaction.userId, creditAmount)
+              .catch((e: any) => console.error('[Referral] Nomba first-funding bonus error:', e.message));
+
             return NextResponse.json({ message: 'Webhook processed successfully' });
         }
 

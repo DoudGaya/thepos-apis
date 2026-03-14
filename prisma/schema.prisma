@@ -49,6 +49,7 @@ model User {
   passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
   withdrawalRequests       WithdrawalRequest[]
   virtualAccount           VirtualAccount?
+  deletionRequests         DeletionRequest[]
 
   @@map("users")
 }
@@ -597,6 +598,28 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 
   @@map("app_settings")
+}
+
+model DeletionRequest {
+  id        String                @id @default(cuid())
+  identifier String
+  reason    String?
+  status    DeletionRequestStatus @default(PENDING)
+  userId    String?
+  adminId   String?
+  adminNote String?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  user      User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("deletion_requests")
+}
+
+enum DeletionRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
 }
 
 model VirtualAccount {
