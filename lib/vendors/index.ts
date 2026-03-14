@@ -118,6 +118,15 @@ export class VendorService {
       }
     }
 
+    // For MONNIFY (bills/VAS — reuses same credentials as Virtual Account module)
+    if (adapterId === 'MONNIFY') {
+      return {
+        apiKey: process.env.MONNIFY_API_KEY || dbCredentials?.apiKey,
+        secretKey: process.env.MONNIFY_SECRET_KEY || dbCredentials?.secretKey,
+        baseUrl: process.env.MONNIFY_BASE_URL || dbCredentials?.baseUrl || 'https://sandbox.monnify.com',
+      }
+    }
+
 
     // For other vendors, use database credentials as-is
     return dbCredentials || {}
@@ -190,6 +199,8 @@ export class VendorService {
       if (service === 'ELECTRICITY' && primaryVendor.supportsElectric) supported = true
       if (service === 'BETTING' && primaryVendor.supportsBetting) supported = true
       if (service === 'EPINS' && primaryVendor.supportsEPINS) supported = true
+      // EDUCATION maps to EPINS support flag (same category in the schema)
+      if (service === 'EDUCATION' && primaryVendor.supportsEPINS) supported = true
 
       if (supported) {
         try {
@@ -205,6 +216,7 @@ export class VendorService {
     if (service === 'AIRTIME') return this.getAdapter('VTPASS')
     if (service === 'ELECTRICITY') return this.getAdapter('VTPASS')
     if (service === 'CABLE' || service === 'CABLE_TV') return this.getAdapter('VTPASS')
+    if (service === 'EDUCATION' || service === 'EPINS') return this.getAdapter('VTPASS')
 
     // Last resort: Try to find any enabled vendor that supports the service
     // (This part is tricky without querying all vendors, so we'll just throw for now)
@@ -367,7 +379,10 @@ export class VendorService {
   }
 
   async verifyCustomer(payload: VerifyCustomerPayload): Promise<CustomerVerification> {
-    const adapter = await this.getBestVendor(payload.service)
+    // Pass serviceProvider as network so routing can pick the right vendor
+    // (e.g. 'IKEJA' for electricity, 'DSTV' for cable)
+    const routingNetwork = (payload.serviceProvider as any) || undefined
+    const adapter = await this.getBestVendor(payload.service, routingNetwork)
     if (!adapter.verifyCustomer) {
       throw new Error(`Vendor ${adapter.getName()} does not support customer verification`)
     }
@@ -398,7 +413,12 @@ export class VendorService {
         balance = bal.balance
         status = 'Active'
       } catch (e: any) {
-        status = `Error: ${e.message}`
+        // 501 = balance not supported by this vendor (expected, not a health issue)
+        if (e?.statusCode === 501 || e?.message?.includes('does not expose')) {
+          status = 'Active (no balance)'
+        } else {
+          status = `Error: ${e.message}`
+        }
       }
       statuses.push({
         ...config,

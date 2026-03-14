@@ -24,9 +24,22 @@ interface SettingsData {
       enabled: boolean
       testMode: boolean
     }
-    flutterwave: {
+    opay: {
       publicKey: string
       secretKey: string
+      enabled: boolean
+    }
+    nomba: {
+      clientId: string
+      clientSecret: string
+      accountId: string
+      enabled: boolean
+    }
+    monnify: {
+      apiKey: string
+      secretKey: string
+      contractCode: string
+      baseUrl: string
       enabled: boolean
       testMode: boolean
     }
@@ -477,15 +490,15 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
-              {/* Flutterwave */}
+              {/* OPay */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-md font-medium">Flutterwave</h3>
+                  <h3 className="text-md font-medium">OPay</h3>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={settings.payment.flutterwave.enabled}
-                      onChange={(e) => handleSettingChange('payment', 'flutterwave.enabled', e.target.checked)}
+                      checked={settings.payment.opay?.enabled ?? false}
+                      onChange={(e) => handleSettingChange('payment', 'opay.enabled', e.target.checked)}
                       className="mr-2"
                     />
                     Enabled
@@ -499,10 +512,10 @@ export default function AdminSettingsPage() {
                     </label>
                     <input
                       type="password"
-                      value={settings.payment.flutterwave.publicKey}
-                      onChange={(e) => handleSettingChange('payment', 'flutterwave.publicKey', e.target.value)}
+                      value={settings.payment.opay?.publicKey ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'opay.publicKey', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="FLWPUBK_TEST-..."
+                      placeholder="OPAYPUB..."
                     />
                   </div>
 
@@ -512,24 +525,143 @@ export default function AdminSettingsPage() {
                     </label>
                     <input
                       type="password"
-                      value={settings.payment.flutterwave.secretKey}
-                      onChange={(e) => handleSettingChange('payment', 'flutterwave.secretKey', e.target.value)}
+                      value={settings.payment.opay?.secretKey ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'opay.secretKey', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="FLWSECK_TEST-..."
+                      placeholder="OPAYPRV..."
                     />
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-4">
+              {/* Nomba */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-md font-medium">Nomba</h3>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={settings.payment.flutterwave.testMode}
-                      onChange={(e) => handleSettingChange('payment', 'flutterwave.testMode', e.target.checked)}
+                      checked={settings.payment.nomba?.enabled ?? false}
+                      onChange={(e) => handleSettingChange('payment', 'nomba.enabled', e.target.checked)}
                       className="mr-2"
                     />
-                    Test Mode
+                    Enabled
                   </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Client ID
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.payment.nomba?.clientId ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'nomba.clientId', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nomba client ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Client Secret
+                    </label>
+                    <input
+                      type="password"
+                      value={settings.payment.nomba?.clientSecret ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'nomba.clientSecret', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nomba client secret"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Account ID
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.payment.nomba?.accountId ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'nomba.accountId', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nomba account ID"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Monnify Virtual Accounts */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-md font-medium">Monnify — Virtual Accounts</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Users get a dedicated bank account; wallet is credited automatically on transfer</p>
+                  </div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={settings.payment.monnify?.enabled ?? false}
+                      onChange={(e) => handleSettingChange('payment', 'monnify.enabled', e.target.checked)}
+                      className="mr-2"
+                    />
+                    Enabled
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={settings.payment.monnify?.apiKey ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'monnify.apiKey', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="MK_..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Secret Key
+                    </label>
+                    <input
+                      type="password"
+                      value={settings.payment.monnify?.secretKey ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'monnify.secretKey', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Monnify secret key"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contract Code
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.payment.monnify?.contractCode ?? ''}
+                      onChange={(e) => handleSettingChange('payment', 'monnify.contractCode', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Monnify contract code"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Base URL
+                    </label>
+                    <select
+                      value={settings.payment.monnify?.baseUrl ?? 'https://sandbox.monnify.com'}
+                      onChange={(e) => handleSettingChange('payment', 'monnify.baseUrl', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="https://sandbox.monnify.com">Sandbox (testing)</option>
+                      <option value="https://api.monnify.com">Production (live)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -545,7 +677,9 @@ export default function AdminSettingsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="paystack">Paystack</option>
-                    <option value="flutterwave">Flutterwave</option>
+                    <option value="opay">OPay</option>
+                    <option value="nomba">Nomba</option>
+                    <option value="monnify_va">Monnify Virtual Account</option>
                   </select>
                 </div>
 

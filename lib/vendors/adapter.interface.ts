@@ -1,7 +1,7 @@
 // Vendor Adapter Interface and Types
 // This file defines the contract that all vendor adapters must implement
 
-export type VendorName = 'AMIGO' | 'VTPASS' | 'SUBANDGAIN' | 'EBILLS'
+export type VendorName = 'AMIGO' | 'VTPASS' | 'SUBANDGAIN' | 'EBILLS' | 'MONNIFY'
 
 export type ServiceType = 'AIRTIME' | 'DATA' | 'ELECTRICITY' | 'CABLE' | 'CABLE_TV' | 'BETTING' | 'EPINS' | 'EDUCATION' | 'OTHER'
 

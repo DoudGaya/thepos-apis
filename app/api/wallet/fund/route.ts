@@ -16,7 +16,7 @@ import nombaService from '@/lib/nomba'
 // Fund wallet validation schema
 const fundWalletSchema = z.object({
   amount: z.number().min(100, 'Minimum funding amount is ₦100').max(500000, 'Maximum funding amount is ₦500,000'),
-  paymentMethod: z.enum(['paystack', 'opay', 'nomba']).default('paystack'),
+  paymentMethod: z.enum(['paystack', 'opay', 'nomba', 'monnify_va']).default('paystack'),
   callbackUrl: z.string().url().optional(),
 })
 
@@ -199,6 +199,49 @@ export const POST = apiHandler(async (request: Request) => {
         },
       }, 'Nomba payment initialized successfully');
 
+    } else if (paymentMethod === 'monnify_va') {
+      // Monnify Virtual Account — no checkout needed, user transfers to their dedicated account
+      const virtualAccount = await prisma.virtualAccount.findUnique({
+        where: { userId: user.id },
+      })
+
+      // Clean up the informational-only pending transaction; funding happens via webhook
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          details: {
+            paymentMethod: 'monnify_va',
+            note: 'Initiated via virtual account — actual funding occurs on webhook receipt',
+            initiatedAt: new Date().toISOString(),
+          },
+        },
+      })
+
+      if (!virtualAccount) {
+        return successResponse(
+          {
+            paymentMethod: 'monnify_va',
+            stubbed: true,
+            message: 'Virtual account not set up yet. Visit the virtual account screen to create one.',
+          },
+          'Please set up your virtual account first'
+        )
+      }
+
+      return successResponse(
+        {
+          paymentMethod: 'monnify_va',
+          stubbed: false,
+          accountNumber: virtualAccount.accountNumber,
+          accountName: virtualAccount.accountName,
+          bankName: virtualAccount.bankName,
+          bankCode: virtualAccount.bankCode,
+          accountReference: virtualAccount.accountReference,
+          instruction: `Transfer ₦${amount.toLocaleString('en-NG')} to the account above. Your wallet will be credited automatically once the transfer is confirmed.`,
+        },
+        'Transfer to virtual account to fund your wallet'
+      )
     } else {
       // Initialize Paystack payment (existing code)
       const paystackResponse = await paystackService.initializeTransaction({

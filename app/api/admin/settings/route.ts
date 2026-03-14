@@ -42,14 +42,27 @@ export const GET = apiHandler(async (request: Request) => {
       paystack: {
         publicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
         secretKey: process.env.PAYSTACK_SECRET_KEY || '',
-        enabled: process.env.PAYSTACK_ENABLED === 'true',
+        enabled: process.env.PAYSTACK_ENABLED !== 'false',
         testMode: process.env.PAYSTACK_TEST_MODE === 'true',
       },
-      flutterwave: {
-        publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY || '',
-        secretKey: process.env.FLUTTERWAVE_SECRET_KEY || '',
-        enabled: process.env.FLUTTERWAVE_ENABLED === 'true',
-        testMode: process.env.FLUTTERWAVE_TEST_MODE === 'true',
+      opay: {
+        publicKey: process.env.OPAY_PUBLIC_KEY || '',
+        secretKey: process.env.OPAY_SECRET_KEY || '',
+        enabled: process.env.OPAY_ENABLED !== 'false',
+      },
+      nomba: {
+        clientId: process.env.NOMBA_CLIENT_ID || '',
+        clientSecret: process.env.NOMBA_CLIENT_SECRET || '',
+        accountId: process.env.NOMBA_ACCOUNT_ID || '',
+        enabled: process.env.NOMBA_ENABLED !== 'false',
+      },
+      monnify: {
+        apiKey: process.env.MONNIFY_API_KEY || '',
+        secretKey: process.env.MONNIFY_SECRET_KEY || '',
+        contractCode: process.env.MONNIFY_CONTRACT_CODE || '',
+        baseUrl: process.env.MONNIFY_BASE_URL || 'https://sandbox.monnify.com',
+        enabled: process.env.MONNIFY_ENABLED === 'true',
+        testMode: process.env.MONNIFY_BASE_URL?.includes('sandbox') ?? true,
       },
       defaultGateway: process.env.DEFAULT_PAYMENT_GATEWAY || 'paystack',
       currency: process.env.PAYMENT_CURRENCY || 'NGN',
@@ -193,13 +206,26 @@ const paymentSettingsSchema = z.object({
     enabled: z.boolean().optional(),
     testMode: z.boolean().optional(),
   }).optional(),
-  flutterwave: z.object({
+  opay: z.object({
     publicKey: z.string().optional(),
     secretKey: z.string().optional(),
     enabled: z.boolean().optional(),
+  }).optional(),
+  nomba: z.object({
+    clientId: z.string().optional(),
+    clientSecret: z.string().optional(),
+    accountId: z.string().optional(),
+    enabled: z.boolean().optional(),
+  }).optional(),
+  monnify: z.object({
+    apiKey: z.string().optional(),
+    secretKey: z.string().optional(),
+    contractCode: z.string().optional(),
+    baseUrl: z.string().url().optional(),
+    enabled: z.boolean().optional(),
     testMode: z.boolean().optional(),
   }).optional(),
-  defaultGateway: z.enum(['paystack', 'flutterwave']).optional(),
+  defaultGateway: z.enum(['paystack', 'opay', 'nomba', 'monnify_va']).optional(),
   currency: z.string().length(3).optional(),
 })
 
@@ -277,14 +303,8 @@ const notificationSettingsSchema = z.object({
  */
 const updateSettingsSchema = z.object({
   category: z.enum(['general', 'payment', 'system', 'email', 'security', 'notifications']),
-  settings: z.union([
-    generalSettingsSchema,
-    paymentSettingsSchema,
-    systemSettingsSchema,
-    emailSettingsSchema,
-    securitySettingsSchema,
-    notificationSettingsSchema,
-  ]),
+  // Pass settings through as-is; each category validates with its own schema in the switch block
+  settings: z.record(z.unknown()),
 })
 
 export const PATCH = apiHandler(async (request: Request) => {
@@ -341,9 +361,26 @@ export const PATCH = apiHandler(async (request: Request) => {
     if (validatedSettings.paystack?.secretKey && !validatedSettings.paystack.secretKey.startsWith('sk_')) {
       throw new BadRequestError('Invalid Paystack secret key format')
     }
-    if (validatedSettings.flutterwave?.secretKey && !validatedSettings.flutterwave.secretKey.startsWith('FLWSECK-')) {
-      throw new BadRequestError('Invalid Flutterwave secret key format')
+
+    // Persist payment method toggles to DB for runtime use by /api/wallet/payment-options
+    const paymentMethodsConfig: Record<string, { enabled: boolean }> = {
+      paystack: { enabled: validatedSettings.paystack?.enabled ?? true },
+      opay: { enabled: validatedSettings.opay?.enabled ?? true },
+      nomba: { enabled: validatedSettings.nomba?.enabled ?? true },
+      monnify_va: { enabled: validatedSettings.monnify?.enabled ?? false },
     }
+
+    await prisma.appSetting.upsert({
+      where: { key: 'payment_methods_config' },
+      create: {
+        key: 'payment_methods_config',
+        value: paymentMethodsConfig,
+        category: 'payment',
+      },
+      update: {
+        value: paymentMethodsConfig,
+      },
+    })
   }
 
   if (category === 'email') {

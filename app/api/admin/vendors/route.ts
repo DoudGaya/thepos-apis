@@ -10,15 +10,24 @@ import {
   requirePermission,
 } from '@/lib/api-utils'
 import vtuService from '@/lib/vtu'
+import { vendorService } from '@/lib/vendors'
 
 /**
  * GET /api/admin/vendors
- * Monitor all vendor services (VTU.NG, Paystack)
+ * Monitor all vendor services (VTU.NG, Paystack, adapter-based vendors)
  */
 export const GET = apiHandler(async (request: Request) => {
   await requirePermission(PERMISSIONS.VENDORS_VIEW, request)
-  
-  // Check VTU.NG service status and balance
+
+  // ── Adapter-based vendors status (VTPASS, AMIGO, SUBANDGAIN, EBILLS, MONNIFY) ──
+  let adapterVendorsStatus: any[] = []
+  try {
+    adapterVendorsStatus = await vendorService.getAllVendorsStatus()
+  } catch (e: any) {
+    console.warn('[Admin Vendors] Could not fetch adapter vendor statuses:', e.message)
+  }
+
+  // ── Legacy VTU.NG status (kept for backwards compatibility) ──
   let vtuStatus = {
     name: 'VTU.NG',
     status: 'unknown' as 'active' | 'inactive' | 'unknown' | 'error',
@@ -34,10 +43,9 @@ export const GET = apiHandler(async (request: Request) => {
   }
 
   try {
-    // Try to get VTU balance to verify service is working
     const balance = await vtuService.checkBalance()
     vtuStatus.balance = balance
-    vtuStatus.status = balance > 1000 ? 'active' : 'inactive' // Warn if balance is low
+    vtuStatus.status = balance > 1000 ? 'active' : 'inactive'
     vtuStatus.services = {
       airtime: 'active',
       data: 'active',
@@ -121,6 +129,7 @@ export const GET = apiHandler(async (request: Request) => {
       vtu: vtuStatus,
       paystack: paystackStatus,
     },
+    adapterVendors: adapterVendorsStatus,
     environment: envStatus,
     transactionStats: recentStats,
     recommendations: generateRecommendations(vtuStatus, paystackStatus, envStatus),

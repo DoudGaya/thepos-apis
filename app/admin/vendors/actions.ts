@@ -28,7 +28,13 @@ export async function syncBalances() {
       })
       
       console.log(`[Admin] Synced balance for ${vendor.vendorName}: ₦${balanceData.balance} from ${vendor.adapterId}`)
-    } catch (error) {
+    } catch (error: any) {
+      // 501 = vendor doesn't expose a balance endpoint (e.g. Monnify Bills API).
+      // This is expected, not a failure — skip health-flag update.
+      if (error?.statusCode === 501 || error?.message?.includes('does not expose')) {
+        console.log(`[Admin] Skipping balance sync for ${vendor.vendorName}: balance not supported`)
+        continue
+      }
       console.error(`Failed to sync balance for ${vendor.vendorName}:`, error)
       await prisma.vendorConfig.update({
         where: { id: vendor.id },

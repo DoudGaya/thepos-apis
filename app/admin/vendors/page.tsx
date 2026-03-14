@@ -95,7 +95,10 @@ export default async function VendorsPage() {
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Wallet Balance</p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(vendor.balance)}
+                    {vendor.adapterId === 'MONNIFY'
+                      ? <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
+                      : formatCurrency(vendor.balance)
+                    }
                   </p>
                 </div>
                 <div>

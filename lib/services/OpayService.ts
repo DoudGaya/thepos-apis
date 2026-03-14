@@ -75,7 +75,7 @@ class OpayService {
         this.publicKey = process.env.OPAY_PUBLIC_KEY || '';
         this.secretKey = process.env.OPAY_SECRET_KEY || '';
         this.merchantId = process.env.OPAY_MERCHANT_ID || '';
-        this.baseUrl = process.env.OPAY_BASE_URL || 'https://api.ng.opaycheckout.com';
+        this.baseUrl = process.env.OPAY_BASE_URL || 'https://liveapi.opaycheckout.com';
 
         // Production-safe logging - only log configuration status
         logger.info('[OPay] Service initialized', {
@@ -140,14 +140,13 @@ class OpayService {
         };
 
         try {
-            const authHeader = this.generateAuthHeader(payload);
-
+            // Cashier Create uses Bearer {PublicKey} — NOT HMAC (docs: payment-authentication)
             const response = await this.client.post<OpayPaymentResponse>(
-                '/api/v1/cashier/create',
+                '/api/v1/international/cashier/create',
                 payload,
                 {
                     headers: {
-                        'Authorization': authHeader,
+                        'Authorization': `Bearer ${this.publicKey}`,
                         'MerchantId': this.merchantId,
                     },
                 }
@@ -208,16 +207,14 @@ class OpayService {
         };
 
         try {
-            // OPay cashier/create requires HMAC-SHA512 of the request body signed with the secret key,
-            // same as all other OPay server-to-server calls.  Using the raw public key causes 403.
-            const authHeader = this.generateAuthHeader(payload);
-            const endpoint = '/api/v1/cashier/create';
+            // Cashier Create uses Bearer {PublicKey} — NOT HMAC (docs: payment-authentication)
+            const endpoint = '/api/v1/international/cashier/create';
 
             logger.debug('[OPay] Sending request to:', this.baseUrl + endpoint);
 
             const response = await this.client.post(endpoint, payload, {
                 headers: {
-                    'Authorization': authHeader,
+                    'Authorization': `Bearer ${this.publicKey}`,
                     'MerchantId': this.merchantId,
                 },
             });
@@ -258,18 +255,18 @@ class OpayService {
     async verifyPayment(reference: string, orderNo?: string): Promise<OpayVerificationResponse> {
         logger.debug('[OPay] Verifying payment:', reference);
 
+        // Status query payload must only contain reference + country (docs: query-payment-status)
         const payload = {
-            publicKey: this.publicKey,
-            merchantId: this.merchantId,
-            reference: reference,
-            countryCode: 'NG',
+            reference,
+            country: 'NG',
         };
 
         try {
+            // Status/refund queries use HMAC-SHA512 signature (docs: payment-authentication)
             const authHeader = this.generateAuthHeader(payload);
 
             const response = await this.client.post<OpayVerificationResponse>(
-                '/api/v1/cashier/status',
+                '/api/v1/international/cashier/status',
                 payload,
                 {
                     headers: {

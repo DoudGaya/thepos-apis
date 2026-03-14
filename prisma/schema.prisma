@@ -28,6 +28,8 @@ model User {
   pushToken                String?
   emailVerified            DateTime?
   phoneVerified            Boolean               @default(false)
+  bvn                      String?               // CBN-required KYC for virtual account
+  nin                      String?               // Alternative to BVN for virtual account KYC
   accounts                 Account[]
   receivedRequests         MoneyRequest[]        @relation("ReceivedRequests")
   sentRequests             MoneyRequest[]        @relation("SentRequests")
@@ -46,6 +48,7 @@ model User {
   adminRole                AdminRole?            @relation(fields: [adminRoleId], references: [id])
   passiveReferralGroup     PassiveReferralGroup? @relation(fields: [passiveReferralGroupId], references: [id])
   withdrawalRequests       WithdrawalRequest[]
+  virtualAccount           VirtualAccount?
 
   @@map("users")
 }
@@ -583,4 +586,33 @@ enum WithdrawalStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model VirtualAccount {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  accountReference String   @unique
+  bankName         String
+  bankCode         String
+  accountNumber    String
+  accountName      String
+  reservationRef   String   @unique
+  status           String   @default("ACTIVE")
+  monnifyRaw       Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("virtual_accounts")
 }
